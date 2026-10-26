@@ -50,7 +50,9 @@ window.Meeting = (() => {
 
   function portraits() {
     const box = document.getElementById('mt-portraits'); if (!box) return;
-    box.style.gridTemplateColumns = 'repeat(' + (order().length + (S.guest ? 1 : 0)) + ', 1fr)';
+    // round 32: every guest of the year sits at the table from the start; the one on the agenda now is lit
+    const gs = (S.guests || []).slice(); if (S.guest && !gs.some(g => g.name === S.guest.name)) gs.push(S.guest);
+    box.style.gridTemplateColumns = 'repeat(' + (order().length + gs.length) + ', 1fr)';
     box.innerHTML = order().map(id => {
       const a = S.shown[id] != null ? S.shown[id] : dir(id).attitude, L = Directors.level(a);
       const v = S.votes[id];
@@ -58,7 +60,8 @@ window.Meeting = (() => {
         '<img src="' + Directors.face(id) + '" alt=""><div class="mt-pn">' + esc(sn(id)) + '</div>' +
         '<div class="mt-mood ' + L[2] + '">' + L[1] + '</div>' +
         (v ? '<div class="mt-stamp ' + (v === 'FOR' ? 'for' : 'against') + '">' + v + '</div>' : '') + '</div>';
-    }).join('') + (S.guest ? '<div class="mt-p guest' + (S.speaking === 'guest' ? ' talking' : '') + '"><img src="' + S.guest.face + '" alt=""><div class="mt-pn">' + esc(S.guest.name) + '</div><div class="mt-mood mt-guest">Guest</div></div>' : '');
+    }).join('') + gs.map(g => { const on = S.guest && S.guest.name === g.name;
+      return '<div class="mt-p guest' + (on ? ' on' : ' waiting') + (on && S.speaking === 'guest' ? ' talking' : '') + '"><img src="' + g.face + '" alt=""><div class="mt-pn">' + esc(g.name) + '</div><div class="mt-mood mt-guest">' + (on ? 'Guest' : 'Waiting') + '</div></div>'; }).join('');
   }
 
   /* The chat: lines queue up, each appears after a short "typing" pause. */
@@ -102,10 +105,12 @@ window.Meeting = (() => {
     const box = document.getElementById('mt-actions');
     box.innerHTML = (prompt ? '<div class="mt-prompt">' + prompt + '</div>' : '') + '<div class="mt-btns">' + list.map((a, i) =>
       '<button class="mt-btn' + (a.primary ? ' primary' : '') + '"' + (a.disabled ? ' disabled title="' + esc(a.why || '') + '"' : '') + ' data-i="' + i + '">' +
-      '<b>' + esc(a.label) + '</b>' + (a.detail ? '<span>' + esc(a.detail) + '</span>' : '') + '</button>').join('') + '</div>';
+      '<b>' + esc(a.label) + '</b>' + (a.detail ? '<span>' + esc(a.detail) + '</span>' : '') + (a.disabled && a.why ? '<span class="mt-why">\u{1F512} ' + esc(a.why) + '</span>' : '') + '</button>').join('') + '</div>';
     box.querySelectorAll('.mt-btn').forEach(b => b.onclick = () => { if (b.disabled) return; box.innerHTML = ''; list[+b.dataset.i].go(); });
   }
   const mood = id => { Directors.refresh(); S.shown[id] = dir(id).attitude; portraits(); };
+  /* round 32: the meeting reads in chunks. After each block of talk, you press Continue. */
+  function pause(next, label) { if (!S) return; actions([{ label: label || 'Continue', primary: true, go: next }]); }
 
   // ---------------------------------------------------------------- open
   function open() {
@@ -135,6 +140,8 @@ window.Meeting = (() => {
       }
       Directors.refresh();
     }
+    if (window.Story && Story.agenda && b._storyYear !== year) { b._storyYear = year; S.items = Story.agenda(year) || []; }   // round 32: guests known from the start
+    S.guests = []; (S.items || []).forEach(it => { if (it.guest && !S.guests.some(g => g.name === it.guest.name)) S.guests.push(it.guest); });
     portraits();
     beatOpen();
   }
@@ -143,6 +150,11 @@ window.Meeting = (() => {
   function beatOpen() {
     const y = Directors.ytd(), rows = Directors.scorecard();
     say(CH(), pick(['Let’s begin. Year ' + S.year + ' in numbers.', 'Good morning. The numbers first, then the questions.']));
+    // round 32: the room knows when the economy turns
+    const ph = window.Arc && Arc.phase ? Arc.phase() : null;
+    if (ph === 'crisis' || ph === 'aftershock') say(CH(), CH() === 'williams' ? 'Son, we are in a crisis. Nobody expects records this year. I expect us to be standing next year: cash, covenants, no surprises.' : 'We are in a crisis. Keep us afloat this year: cash, covenants, no surprises.');
+    else if (ph === 'warning' && dir('okafor')) say('okafor', 'Before the numbers: the banks are getting nervous. Whatever we decide today, decide it as if money will cost more next year.');
+    else if (ph === 'recovery') say(CH(), 'The worst is behind us. Prices are low. This is when good companies buy.');
     say('note', '', '<table class="mt-sc">' + rows.map(r => '<tr><td>' + esc(r.k) + '</td><td class="v">' + esc(r.v) + '</td><td class="w">' + esc(r.want) +
       '</td><td>' + (r.ok == null ? '—' : r.ok ? '<span class="ok">✓</span>' : '<span class="no">✗</span>') + '</td><td class="who">' + esc(sn(r.id)) + '</td></tr>').join('') + '</table>');
     if (y) say('petrova', y.you >= y.sector - 0.005
@@ -150,7 +162,7 @@ window.Meeting = (() => {
       : pick(['We returned ' + pct(y.you) + '. ' + (y.bench === 'rivals' ? 'The rivals averaged ' : 'The sector did ') + pct(y.sector) + '. Investors noticed the gap.', pct(y.you) + ' against ' + pct(y.sector) + (y.bench === 'rivals' ? ' for our rivals' : ' for the sector') + '. That is the number I hear about.']));
     const sp = priceSpark(); if (sp) say('note', '', sp);
     (G().board._lastEarned || []).forEach(e => say('note', e));
-    pump(beatPersonal);
+    pump(() => pause(beatPersonal));
   }
   const pct = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
   /* round 24: the share price since you started, and against what the buildings are worth (NAV) */
@@ -206,7 +218,7 @@ window.Meeting = (() => {
       say(p.id, p.kept ? 'Last year you promised to fix it. You did. I’ll trust your word next time.' : 'You gave me your word last year. You didn’t keep it.');
       S.q[S.q.length - 1].mood = dir(p.id).attitude;
     });
-    pump(beatDeparture);
+    pump(() => pause(beatDeparture));
   }
 
   // ---------------------------------------------------------------- 2b. a director pushed out (round 8)
@@ -278,7 +290,8 @@ window.Meeting = (() => {
     if (!window.Story || !Story.agenda) { beatAgenda(); return; }
     const b = G().board;
     if (b._storyYear !== S.year) { b._storyYear = S.year; S.items = Story.agenda(S.year) || []; } else S.items = S.items || [];
-    runItems(S.items, 0, beatAgenda);
+    if (S.items.length) say(CH(), pick(['Now, business. ' + (S.guests.length ? 'We have guests today.' : ''), 'To the agenda.' + (S.guests.length ? ' Our guests have waited long enough.' : '')]).trim());
+    pump(() => runItems(S.items, 0, beatAgenda));
   }
   /* Play agenda items one by one (stories, the pay committee):
      { lines, guest, note, card | choices | effect } */
@@ -288,7 +301,7 @@ window.Meeting = (() => {
     S.guest = it.guest || null; portraits();
     (it.lines || []).forEach(l => { if (l[0] === 'note' || l[0] === 'guest' || dir(l[0])) say(l[0], l[1]); });
     if (it.note) say('note', it.note);
-    const next = () => { S.guest = null; portraits(); pump(() => runItems(list, i + 1, done)); };
+    const next = () => { S.guest = null; portraits(); pump(() => (i + 1 < list.length ? pause(() => runItems(list, i + 1, done)) : runItems(list, i + 1, done))); };   // round 32: a breath between items
     if (it.effect) { pump(() => { const msg = it.effect(); if (msg) say('note', msg); Directors.refresh(); next(); }); return; }
     if (it.choices) {
       pump(() => actions(it.choices.map(ch => ({ label: ch.label, detail: ch.detail, primary: ch.primary, disabled: ch.disabled, why: ch.why,

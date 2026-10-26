@@ -26,7 +26,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* click through: skip the typing, then press a button (choice index per stage) */
   async function clickThrough(choose, shots) {
     const transcript = [];
-    for (let step = 0; step < 60; step++) {
+    for (let step = 0; step < 140; step++) {
       await wait(250); await pg.evaluate(() => Meeting.flush());
       await wait(150);
       const btns = await pg.evaluate(() => [...document.querySelectorAll('#mt-actions .mt-btn')].map(b => ({ t: b.querySelector('b').textContent, dis: b.disabled })));

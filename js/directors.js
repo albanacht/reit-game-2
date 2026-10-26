@@ -660,7 +660,10 @@ window.Directors = (() => {
     return pick;
   }
 
-  return { boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
+  /* round 32: start counting buys from day one (buys in Year 1 Q1 were missed: the
+     first snapshot of what you own was taken after them, so Chen said you bought nothing) */
+  function startTracking() { const b = B(); b.owned = (GameState.portfolio || []).map(p => p.id); b.lastBuyQ = 0; b.buys = []; }
+  return { startTracking, boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
            addActivist, personal, hint, has, pnav, actWant, bond, bondOf,
            rep, repChange, REP_LINE, REP0, addDirector, removeDirector, logBoard, chair, CHAIR_RED };
 })();

@@ -39,8 +39,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   console.log('      ' + s.m.slice(0, 260));
 
   const h = await pg.evaluate(() => { const G = GameState; G.balance.cash = 5; Story.debug('offer', { due: 'story_harlow_offer' });
-    const c = World.systemDecision(); return { labels: c ? c.choices.map(x => x.label) : [], body: c ? c.body.replace(/<[^>]+>/g, ' ') : '' }; });
-  ok(h.labels.some(l => /Half bonds, half preferred/.test(l)), 'Bob’s offer can be split: ' + h.labels.join(' | '));
+    const c = World.systemDecision(); return { room: Financials.prefRoom(), labels: c ? c.choices.map(x => x.label) : [], body: c ? c.body.replace(/<[^>]+>/g, ' ') : '' }; });
+  ok(h.labels.some(l => /Half bonds, half preferred/.test(l) || (h.room < 1 && /Borrow it/.test(l))), 'Bob’s offer can be split (or all bonds once preferreds hit the cap, room $' + h.room + 'M): ' + h.labels.join(' | '));
   ok(/split it: half bonds/.test(h.body), 'and someone at the table suggests it');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 4).join(' / ') : ''));
   await b.close();

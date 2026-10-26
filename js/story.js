@@ -1011,6 +1011,19 @@ window.Story = (() => {
         'Boss, ' + t.label + ' falls due ' + (left === 0 ? 'at the end of this quarter' : 'in ' + left + ' quarter' + (left > 1 ? 's' : '')) + '. Cash plus the credit line is ' + money(spend) + '. Bonds are not rolled for us: if we cannot pay on the day, we default and it is over.<br><br>' +
         'Ways out: <b>issue a new bond</b> to refinance it (borrowing to repay a bond due within two quarters does not count against the covenant), <b>sell a building</b>, or <b>sell new shares</b>.', 'assets/faces/jenkins.jpg');
     });
+    // round 32: the economy, in Jenkins's words, when it turns
+    const ph = window.Arc && Arc.phase ? Arc.phase() : null;
+    s.phaseSaid = s.phaseSaid || {};
+    if (ph && !s.phaseSaid[ph] && window.Inbox && GameState.meta.year >= 2) {
+      const NOTE = {
+        warning: ['Storm clouds', 'Boss, the mood is changing. Banks are asking more questions, bond buyers want more interest, and the papers have started using the word "slowdown". Nothing has broken yet.<br><br>If it comes: <b>cash</b> keeps you alive, <b>long fixed-rate bonds</b> beat the credit line, and a <b>dividend you can afford</b> beats a generous one. I would not borrow short this year.'],
+        crisis: ['Things are going dim', 'Boss, this is it. The economy has turned: tenants will struggle, buildings are worth less, lenders want more, and some will not lend at all.<br><br>What matters now: <b>do not run out of cash</b>, keep debt under the covenant, refinance anything falling due <b>early</b>, and do not cut the dividend unless you must (Williams). The rivals are in the same storm. Some of them will have to sell, cheaply.'],
+        recovery: ['The worst is over', 'Boss, the numbers are turning up. Buildings are still cheap and the rivals are licking their wounds. This is when good companies buy.'],
+        aftershock: ['Not again', 'Boss, a second shock. Smaller than the first, but the same rules: cash first, covenants second, everything else third.'],
+      }[ph];
+      s.phaseSaid[ph] = true;
+      if (NOTE) Inbox.message('Jenkins', 'Chief of Staff', NOTE[0], NOTE[1], 'assets/faces/jenkins.jpg');
+    }
     // round 31: two short notes at the moment they matter
     const listed = (G.propertyMarket || []).filter(p => p.listedByOwner).length;
     if (!s.nudgedDR && window.Inbox && now >= 6 && (listed <= 2 || now >= 7)) {

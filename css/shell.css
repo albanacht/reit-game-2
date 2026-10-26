@@ -666,3 +666,13 @@ body { background: #eef2f7; }
 @media (prefers-reduced-motion: reduce) { .en-img img { animation: none !important; } }
 #ending-overlay .en-nav { flex-wrap: wrap; row-gap: 8px; } #ending-overlay .en-nav button { white-space: nowrap; }
 #stories-body .dr-row.dr-warn { border-left-color: #c2410c; }
+#views .input-row-lg input { min-width: 56px; flex: 1 1 56px; } #views .input-row-lg .input-suffix { white-space: nowrap; flex: none; }
+
+/* round 32: meeting guests waiting their turn; why a choice is locked */
+.mt-p.guest.waiting { opacity: .55; }
+.mt-p.guest.on { opacity: 1; }
+.mt-btn .mt-why { display: block; margin-top: 6px; color: #b45309; font-weight: 700; font-size: 12px; }
+#gameover-overlay .pm { max-width: 820px; margin: 14px auto 0; background: rgba(60,20,20,.55); border: 1px solid rgba(239,68,68,.45); border-radius: 8px; padding: 12px 16px; color: #f3e4e4; font-size: 14px; text-align: left; }
+#gameover-overlay .pm-h { font-weight: 800; letter-spacing: .5px; text-transform: uppercase; font-size: 12px; color: #fca5a5; margin-bottom: 6px; }
+#gameover-overlay .pm-r { margin: 4px 0; line-height: 1.45; }
+#gameover-overlay .pm-f { margin-top: 8px; font-size: 12px; color: #d1b3b3; }

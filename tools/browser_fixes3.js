@@ -106,7 +106,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await pg.evaluate(() => { GameState.board.politicalCapital = 2; });
   ok(await playToMeeting(), 'Year 2 meeting opens');
   await wait(400);
-  ok(await pg.evaluate(() => document.querySelectorAll('#mt-portraits .mt-p').length === 6), 'meeting: 6 portraits');
+  ok(await pg.evaluate(() => document.querySelectorAll('#mt-portraits .mt-p:not(.guest)').length === 6), 'meeting: 6 directors at the table');
   for (let step = 0; step < 90; step++) {
     await wait(200); await pg.evaluate(() => Meeting.flush()); await wait(100);
     const st = await pg.evaluate(() => [...document.querySelectorAll('#mt-actions .mt-btn')].map(b => b.querySelector('b').textContent));

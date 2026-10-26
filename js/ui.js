@@ -838,7 +838,7 @@ window.UI = (function() {
         var info = el("action-preferred-info"), list = Financials.prefList ? Financials.prefList() : [];
         if (info) info.innerHTML = list.map(function(s) {
           return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin:3px 0">' +
-            '<span>' + fmtM(s.amount) + ' at ' + (s.rate * 100).toFixed(2) + '%' + (s.why ? ' <span style="color:#7a8794">(' + s.why + ')</span>' : '') + '<br><span style="color:#7a8794;font-size:11px">sold ' + s.issuedLabel + ' · ' + (s.callable ? 'callable now' : 'callable from ' + s.callLabel) + '</span></span>' +
+            '<span>' + fmtM(s.amount) + ' at ' + (s.rate * 100).toFixed(2) + '%' + (s.why ? ' <span style="color:#7a8794">(' + (Financials.prefPurpose ? Financials.prefPurpose(s.why) : s.why) + ')</span>' : '') + '<br><span style="color:#7a8794;font-size:11px">sold ' + s.issuedLabel + ' · ' + (s.callable ? 'callable now' : 'callable from ' + s.callLabel) + '</span></span>' +
             '<button class="btn btn-secondary btn-sm" onclick="UI.redeemPref(\'' + s.id + '\')"' + (s.callable ? '' : ' disabled title="Preferred shares cannot be bought back in their first 5 years"') + '>Redeem at par</button></div>';
         }).join("") + '<div style="color:#7a8794;font-size:11px;margin-top:4px">Total ' + fmtM(pref.outstanding) + ': ' + fmtM(pref.outstanding * pref.dividendRate / 4) + ' a quarter before the common dividend. New preferred shares are only sold for the big decisions, with the board\u2019s approval.</div>';
         var rb = el("btn-redeem-preferred"); if (rb) rb.style.display = "none";
@@ -2032,6 +2032,10 @@ window.UI = (function() {
     var btn = el("btn-new-game");
     if (btn) btn.textContent = won ? "Play Again" : "Try Again";
     if (typeof Scores !== "undefined") Scores.renderGameOver();   // round 28
+    // round 32: what went wrong, when the run ended early
+    var pmBox = el("postmortem");
+    if (pmBox) { var _kk = (typeof Ending !== "undefined") ? Ending.kind() : ""; var pm = (/fired|receivers|prey/.test(_kk) && Ending.postmortem) ? Ending.postmortem() : [];
+      pmBox.innerHTML = pm.length ? '<div class="pm"><div class="pm-h">What went wrong</div>' + pm.map(function (t) { return '<div class="pm-r">\u2022 ' + t + '</div>'; }).join('') + '<div class="pm-f">Next time: watch the Board tab\u2019s scorecard during the year. Every line there is what a director will judge you on.</div></div>' : ''; }
     o.classList.remove("hidden");
   }
 
@@ -2142,6 +2146,7 @@ window.UI = (function() {
     Financials.init();
     if (typeof Revolver !== "undefined") Revolver.init();   // the revolving credit facility (round 3)
     if (typeof Rivals !== "undefined") Rivals.init();       // three rival REITs with real books (round 5)
+    if (typeof Directors !== "undefined" && Directors.startTracking) Directors.startTracking();   // round 32
     Charts.init();
 
     var overlayIds = ["gameover-overlay", "start-overlay", "annual-report-overlay", "help-overlay"];

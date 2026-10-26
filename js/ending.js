@@ -221,6 +221,32 @@ window.Ending = (() => {
     card('jenkins', 'jenkins_next', 'Jenkins is chief of staff to your successor.', 'Who calls him "boss".');
   }
 
+  /* -- round 32: what went wrong (the game over screen, when the run ended early) --------
+     Built from your own history: the few numbers that sank you, worst first. */
+  function postmortem() {
+    const G = GameState, H = G.history || [], out = [], pc = n => Math.round(n * 100) + '%';
+    if (H.length < 2) return out;
+    const first = H[0], last = H[H.length - 1];
+    const peak = H.reduce((m, h) => Math.max(m, h.debtToAssets || 0), 0);
+    if (peak >= 0.55) out.push([3, 'Debt reached ' + pc(peak) + ' of assets. Okafor\u2019s line is 55%; your bonds stop at 60%.']);
+    const R = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC'], r0 = R.indexOf(first.creditRating || 'BBB'), r1 = R.indexOf(G.credit.rating);
+    if (r1 > r0) out.push([2 + r1 - r0, 'Your credit rating fell from ' + R[r0] + ' to ' + R[r1] + ': every new loan cost more (lenders charge ' + ({ A: '1.2', BBB: '1.8', BB: '3', B: '4.5', CCC: '7' }[R[r1]] || '?') + ' points over the base rate at ' + R[r1] + ').']);
+    const bl = (G.portfolio || []).filter(p => !p.underConstruction), val = bl.reduce((t, p) => t + p.currentValue, 0), noi = bl.reduce((t, p) => t + p.annualNOI * p.occupancy, 0);
+    const debt = (G.debtTranches || []).reduce((t, d) => t + d.amount, 0), cost = debt > 0 ? (G.debtTranches || []).reduce((t, d) => t + d.amount * d.rate, 0) / debt : 0;
+    if (val > 0 && cost > 0 && cost > noi / val * 100 - 0.5) out.push([3, 'Your buildings earn ' + (noi / val * 100).toFixed(1) + '% on their value; your debt costs ' + cost.toFixed(1) + '%. Borrowing to buy lost money.']);
+    const pr = window.Financials && Financials.payoutRatio ? Financials.payoutRatio() : null;
+    if (pr != null && pr > 1) out.push([2, pr >= 9 ? 'You paid a dividend with no cash profit behind it.' : 'You paid out ' + pc(pr) + ' of your cash profit as dividends: the difference came out of the company.']);
+    const a0 = H.slice(0, 4).reduce((t, h) => t + (h.affoPerShare || 0), 0), a1 = H.slice(-4).reduce((t, h) => t + (h.affoPerShare || 0), 0);
+    if (H.length >= 8 && a1 < a0 * 0.85) out.push([2, 'Cash profit per share fell from $' + a0.toFixed(2) + ' to $' + a1.toFixed(2) + ' a year.']);
+    const f = facts();
+    if (f.rivalsA != null && f.tsrA < f.rivalsA - 0.01) out.push([1, 'Shareholders made ' + pctA(f.tsrA) + ' a year; the rivals made ' + pctA(f.rivalsA) + '. Petrova judges you on that gap.']);
+    const rev = G.board._lastReview || [], missed = rev.filter(r => r.achieved === false && !r.skipped).length, broken = (G.board._lastPromises || []).filter(p => !p.kept).length;
+    if (missed || broken) out.push([2, (missed ? missed + ' of last year\u2019s demands missed' : '') + (missed && broken ? ', and ' : '') + (broken ? broken + ' promise' + (broken > 1 ? 's' : '') + ' broken (a broken promise costs more than no promise)' : '') + '.']);
+    const against = (G.board.directors || []).filter(d => d.attitude < 3 && d.id !== 'voss').map(d => nm(d.id) + ': ' + (window.Directors ? Directors.card(d.id).cause : ''));
+    if (against.length) out.push([1, 'Unhappy at the end: ' + against.join('; ') + '.']);
+    return out.sort((a, b) => b[0] - a[0]).slice(0, 5).map(x => x[1]);
+  }
+
   /* -- the screen -------------------------------------------------------------------- */
   function img(c) {
     if (c.faces) {
@@ -298,5 +324,5 @@ window.Ending = (() => {
     render();
   }
 
-  return { show, kind, facts, mainCard, cards, RICH, DIVINE_W, gallery, galleryHTML, ALL };
+  return { show, kind, facts, mainCard, cards, RICH, DIVINE_W, gallery, galleryHTML, ALL, postmortem };
 })();

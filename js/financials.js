@@ -937,11 +937,21 @@ window.Financials = (() => {
     syncPref(); GameState.balance.cash = fmt(GameState.balance.cash + amt);
     return { success: true, message: "Issued $" + amt + "M of " + (annualRate * 100).toFixed(2) + "% preferred shares." };
   }
+  /* round 32: what a series was sold for, in words (old saves stored the card title) */
+  function prefPurpose(why) {
+    var w = String(why || "");
+    if (/distribution centre/i.test(w)) return "to buy the Harlow Distribution Centre";
+    if (/Harlow/i.test(w) && /loan/i.test(w)) return "to lend to Harlow Grocers";
+    if (/Port Logistics/i.test(w)) return "to buy Port Logistics";
+    if (/Morrow/i.test(w)) return "to bid for Morrow Plaza";
+    if (/Celestial|Fifth Street|tower/i.test(w)) return "for Celestial Heights";
+    return w ? "for: " + w : "";
+  }
   /* The board's conversation when preferred shares come up on a big decision. */
   function prefBoardOK() {
     if (typeof Directors === "undefined") return true;
     var ch = Directors.chair(), d = (GameState.board.directors || []).find(function(x) { return x.id === ch; });
-    return !d || d.attitude >= 3;
+    return !d || d.attitude >= 1.75;   // round 32: only a Furious chair refuses (was: Unhappy too, which locked every way to pay)
   }
   function prefDebate(rate) {
     if (typeof Directors === "undefined") return [];
@@ -990,7 +1000,7 @@ window.Financials = (() => {
      and the rating feels both halves. */
   function splitPlan(amount) {
     var shortBy = fmt(Math.max(0, amount - Math.max(0, GameState.balance.cash - 5)));
-    var pref = Math.floor(Math.min(shortBy / 2, prefRoom() - 0.05) * 10) / 10; if (pref < 0.1) pref = 0;
+    var pref = prefBoardOK() ? Math.floor(Math.min(shortBy / 2, prefRoom() - 0.05) * 10) / 10 : 0; if (pref < 0.1) pref = 0;
     var bond = fmt(shortBy - pref);
     var room = Math.max(0, debtRoom().secured), over = fmt(Math.max(0, bond - room));
     var rate = fmt(getCurrentBorrowingRateForTerm(5) + (over > 0 ? 0.5 : 0)), fee = fmt(over * 0.01);
@@ -1000,11 +1010,11 @@ window.Financials = (() => {
     var P = splitPlan(amount), why = (opts && opts.why) || "";
     if (P.shortBy < 0.1) return { label: "Half bonds, half preferred shares", detail: "Not needed: you have the cash.", check: function () { return false; }, checkMsg: "You have the cash for this", apply: function () { return ""; } };
     return {
-      label: "Half bonds, half preferred shares: $" + P.shortBy + "M",
-      detail: "$" + P.bond + "M of 5-year deal bonds at " + P.rate.toFixed(2) + "% + $" + P.pref + "M of preferred shares at " + (P.prefRate * 100).toFixed(2) + "%" +
+      label: (P.pref > 0 ? "Half bonds, half preferred shares: $" : "Borrow it: 5-year deal bonds, $") + P.shortBy + "M",
+      detail: "$" + P.bond + "M of 5-year deal bonds at " + P.rate.toFixed(2) + "%" + (P.pref > 0 ? " + $" + P.pref + "M of preferred shares at " + (P.prefRate * 100).toFixed(2) + "%" : (prefBoardOK() ? (prefRoom() < 1 ? " (preferred shares are at their 20% cap, so it is all debt)" : "") : " (the chair is too angry to approve preferred shares, so it is all debt)")) +
               (P.over > 0 ? ". $" + P.over + "M of it is above your bond covenant: the bondholders waive it for this deal (consent fee $" + P.fee + "M, +0.5% on the deal bond)" : "") +
               ". Okafor " + (P.over > 0 ? "−2" : "−1") + ". Then: " + (choice.detail || ""),
-      check: function () { return prefBoardOK(); }, checkMsg: "The Chairman will not approve it while the board is this unhappy",
+      check: function () { return true; }, checkMsg: "",   // round 32: bonds are management's call; without the chair's blessing the preferred half becomes bonds too
       apply: function () {
         var P2 = splitPlan(amount), msgs = [];
         if (P2.pref >= 0.1) { var r = issuePreferredFor(P2.pref, why); msgs.push(r.message); if (!r.success) { P2.bond = fmt(P2.bond + P2.pref); P2.pref = 0; } }   // if the preferred half fails, the bond takes it
@@ -1472,6 +1482,7 @@ window.Financials = (() => {
     debtRoom,
     issuePreferredFor,
     prefChoice,
+    prefPurpose,
     splitChoice,
     splitPlan,
     prefRoom,

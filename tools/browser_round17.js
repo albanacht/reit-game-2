@@ -53,14 +53,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const want = Math.round((G.market.baseInterestRate + G.credit.spread + (Arc.spreadAdd ? Arc.spreadAdd() : 0) + 2.5) * 100) / 10000;
     const r = Financials.issuePreferredFor(10, 'test'); const s = Financials.prefList()[0];
     const early = Financials.redeemSeries(s.id); G.meta.totalQuarters += 20; G.balance.cash = 50; const late = Financials.redeemSeries(s.id);
-    const ch = G.board.directors.find(d => d.id === Directors.chair()); const a0 = ch.attitude; ch.attitude = 2; const blocked = !Financials.prefBoardOK(); ch.attitude = a0;
+    const ch = G.board.directors.find(d => d.id === Directors.chair()); const a0 = ch.attitude; ch.attitude = 1.5; const blocked = !Financials.prefBoardOK(); ch.attitude = a0;
     G.meta.totalQuarters -= 20;
     ch.attitude = 6; Story.H().stage = 'offer'; const card = World.DECISIONS.find(x => x.id === 'story_harlow_offer').build();
     return { life: !!life, rate: s.rate, want, early: early.success, earlyMsg: early.message, late: late.success, blocked, debate: /Not another dollar of debt/.test(card.body) && /board approves it/.test(card.body), body: String(card.body).slice(-300) }; });
   ok(!pf.life, 'the CFO\u2019s standing preferred offer is retired');
   ok(Math.abs(pf.rate - pf.want) < 0.0001, 'coupon = base rate + our spread + 2.5%: ' + (pf.rate * 100).toFixed(2) + '%');
   ok(!pf.early && pf.late, 'not callable in the first 5 years (' + pf.earlyMsg + '); callable after');
-  ok(pf.blocked, 'an unhappy chairman will not approve preferred shares');
+  ok(pf.blocked, 'a furious chairman (round 32: only furious) will not approve preferred shares');
   if (!pf.debate) console.log(pf.body);
   ok(pf.debate, 'Bob\u2019s offer card carries the board\u2019s exchange: Okafor says no to debt, Hassan suggests preferred shares, the chair approves');
   // demands say how

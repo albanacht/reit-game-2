@@ -71,7 +71,8 @@ window.Levi = (() => {
   function agenda(year, items) {
     const l = L(); items = items || [];
     // arrival: Petrova knows a man
-    if (l.stage === 'wait' && year >= 5 && year <= 8 && (has('petrova') || has('chen'))) {
+    // round 32: early (meetings of Years 2 to 4), so his crisis forecast arrives before the crisis (Years 5 to 7), not after
+    if (l.stage === 'wait' && year >= 2 && year <= 4 && (year >= 3 || items.length < 2) && (has('petrova') || has('chen'))) {
       l.stage = 'offered';
       const who = lead('petrova', 'chen');
       items.push({ guest: LEVI, lines: [

@@ -60,3 +60,5 @@ Note: /tmp is wiped between sessions. Reinstall with `cd /tmp/t && npm i jsdom` 
 | `browser_round25.js` | Real Chrome, round 25: Petrova's share advice by band and only on change, interest rates among the price reasons, the ending gallery (unlock badge, title screen, Dealroom). |
 | `browser_round27.js` | Real Chrome, round 27: bonds capped at 7 years, preferred shares only for the cash shortfall (20% cap), the half bonds / half preferred split with a covenant waiver, offered on Bob's card. |
 | `browser_round28.js` | Real Chrome, round 28: lease ups in AFFO and building spend on the income statement; the 2.0 leaderboard with JSONBin stubbed (post, rank, once per run, title screen); the game over title. |
+| `browser_round32.js` | Real Chrome, round 32 playtest fixes: Chen counts Q1 buys, preferred labels say what they paid for, Furious-only preferred refusal and "Borrow it" fallback, meeting pauses (Continue), Jenkins crisis note, Levi in Years 2–4, buyback box width, "What went wrong" on game over. |
+| `browser_round32b.js` | Real Chrome, round 32: a meeting guest (Levi) is seated from the first line. |
