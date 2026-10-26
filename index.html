@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REIT SIM 2.0 — Riverton</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/v2.css">
+  <link rel="stylesheet" href="css/shell.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="start-overlay" class="hidden">
+    <div class="start-inner">
+      <div class="start-card">
+        <div class="start-logo">REIT SIM <span class="start-tag">2.0</span></div>
+        <!-- the whole game in one sentence (player feedback: "explainable to a layman in five minutes") -->
+        <p class="start-loop">Borrow cheap. Buy buildings that earn more than the loan costs. Pay your shareholders a rising dividend. Don't run out of cash.</p>
+        <p class="start-subtitle">15 years. One board that votes on you every year.</p>
+
+        <div class="start-setup">
+          <div class="setup-pair">
+            <div class="setup-row">
+              <label>Your name</label>
+              <input type="text" id="input-player-name" placeholder="John Smith" maxlength="30">
+            </div>
+            <div class="setup-row">
+              <label>Company name</label>
+              <div class="reit-name-row">
+                <input type="text" id="input-reit-name" placeholder="Albanacht Capital" maxlength="30">
+                <span class="reit-suffix">REIT</span>
+              </div>
+            </div>
+          </div>
+          <label class="tutorial-toggle">
+            <input type="checkbox" id="input-tutorial" checked>
+            <span>Tutorial: Jenkins walks you through Year 1</span>
+          </label>
+        </div>
+
+        <button id="btn-new-game-go" class="btn btn-primary btn-lg">Start Game</button>
+        <div id="new-game-warning" class="continue-label hidden">Starting a new game replaces your saved one.</div>
+        <!-- 2.0 save.js: shown only when this browser holds a game in progress. Round 24: below New game, clearly labelled -->
+        <div id="continue-box" class="continue-box hidden">
+          <div class="continue-or"><span>or pick up where you left off</span></div>
+          <button id="btn-continue" class="btn btn-secondary btn-lg hidden">Continue your last game</button>
+          <div id="continue-label" class="continue-label"></div>
+        </div>
+        <!-- round 25: the endings you have found, across games -->
+        <div id="endings-gallery"></div>
+
+        <div class="start-more">
+          <details>
+            <summary>How to play</summary>
+            <ul>
+              <li>One turn is one quarter. Make your moves, then press <strong>Advance quarter</strong>.</li>
+              <li>Buy and sell buildings on the <strong>Map</strong>. Every deal shows its effect first.</li>
+              <li>Borrow, sell shares and set the dividend on <strong>Finance</strong>.</li>
+              <li>Year 1 is a trial. From Year 2 the board votes on you.</li>
+              <li>Hover any <span class="has-tip" data-tip="Like this one. Plain English for every financial term.">underlined term</span> for a plain English explanation.</li>
+            </ul>
+          </details>
+          <details>
+            <summary>What is a REIT?</summary>
+            <ul>
+              <li>A company that owns buildings and collects rent: offices, shops, flats, warehouses.</li>
+              <li>By law it pays most of its profit out as dividends, so it grows with borrowed money and new shares.</li>
+              <li>The game: grow without borrowing so much that one bad year breaks you.</li>
+            </ul>
+          </details>
+          <div id="leaderboard-container" hidden></div>
+          <div id="lb2-title"></div>
+        </div>
+      </div>
+      <div class="start-foot">© 2026 Alexander Voronin · <span class="start-version">2.0 dev build · Built with Claude AI</span></div>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover-overlay" class="hidden">
+    <div class="gameover-title" id="gameover-title">YOU'RE FIRED</div>
+    <div id="gameover-video-slot"></div>
+    <div class="gameover-subtitle" id="gameover-quarters"></div>
+    <div class="gameover-letter" id="gameover-reason"></div>
+    <div class="gameover-stats">
+      <div class="go-stat"><div class="go-stat-label">FFO/Share</div><div class="go-stat-value" id="gameover-ffo">—</div></div>
+      <div class="go-stat"><div class="go-stat-label">Occupancy</div><div class="go-stat-value" id="gameover-occ">—</div></div>
+      <div class="go-stat"><div class="go-stat-label">Debt/Assets</div><div class="go-stat-value" id="gameover-d2a">—</div></div>
+      <div class="go-stat"><div class="go-stat-label">Portfolio</div><div class="go-stat-value" id="gameover-props">—</div></div>
+    </div>
+    <div id="lb2-gameover"></div>
+    <button id="btn-new-game" class="btn btn-primary btn-lg">Try Again</button>
+    <button class="btn btn-secondary btn-lg" onclick="Telemetry.openFeedback()">Rate the game</button>
+  </div>
+
+  <!-- ANNUAL REPORT OVERLAY -->
+  <div id="annual-report-overlay" class="hidden">
+    <div id="annual-report-content" class="annual-report-box"></div>
+  </div>
+
+  <!-- HELP OVERLAY (F1) -->
+  <div id="help-overlay" class="hidden">
+    <div class="help-box">
+      <div class="help-header">
+        <span class="help-title">Help & Reference <span class="help-hint">(F1 / Esc to close)</span></span>
+        <button id="btn-help-close" class="btn btn-secondary btn-sm">✕ Close</button>
+      </div>
+      <div class="help-tab-bar">
+        <button class="help-tab-btn active" onclick="UI.switchHelpTab('help-mechanics', this)">Mechanics</button>
+        <button class="help-tab-btn" onclick="UI.switchHelpTab('help-ratios', this)">Ratios</button>
+        <button class="help-tab-btn" onclick="UI.switchHelpTab('help-glossary', this)">Glossary</button>
+        <button class="help-tab-btn" onclick="UI.switchHelpTab('help-cfa', this)">CFA Connection</button>
+      </div>
+
+      <div class="help-body">
+
+        <div id="help-mechanics" class="help-tab-content active">
+          <h3>The Goal</h3>
+          <p>Survive <strong>15 years</strong> without the board firing you.</p>
+          <h3>How It Works</h3>
+          <p style="font-size:15px;line-height:1.8;">Issue debt → buy properties that yield more than the debt costs → survive negative events with what's left.</p>
+          <h3>Each Quarter</h3>
+          <p>Press <strong>Advance Quarter</strong>. <strong>Retained Cash</strong> is what's left after all expenses — keep it positive and you're growing.</p>
+          <h3>The Tabs</h3>
+          <ul>
+            <li><strong>💰 Capital Actions</strong> — borrow money, issue shares, set your dividend</li>
+            <li><strong>Property Market</strong> — buy buildings (higher cap rate = more income, but riskier)</li>
+            <li><strong>Portfolio</strong> — the properties you own</li>
+            <li><strong>Debt</strong> — your loans; retire them early here</li>
+            <li><strong>Staff</strong> — hire a CFO and others to unlock abilities</li>
+          </ul>
+          <h3>The Board</h3>
+          <p>Five directors vote on you each year. <strong>Chairman Williams</strong> wants a rising dividend above all. Keep enough of them happy to survive the vote. Good results earn <strong>political capital</strong> you can spend in board fights or tough events.</p>
+        </div>
+
+        <div id="help-ratios" class="help-tab-content">
+          <div class="ratio-explain">
+            <div class="re-item">
+              <div class="re-name">FFO — Funds From Operations</div>
+              <div class="re-formula">Net Income + Depreciation + Unusual Items</div>
+              <div class="re-desc">The primary earnings measure for REITs. Adds back depreciation because real estate doesn't actually lose value like equipment does. Healthy range: coverage of dividend by 1.2x+.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">AFFO — Adjusted FFO</div>
+              <div class="re-formula">FFO − Normalized Capex Reserve</div>
+              <div class="re-desc">More conservative than FFO — subtracts estimated maintenance capital. The closest thing to true free cash flow for a REIT. Payout ratio (dividends/AFFO) above 100% is a danger signal.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">Dividend Coverage</div>
+              <div class="re-formula">FFO ÷ Dividends Paid</div>
+              <div class="re-desc">Must stay above 1.0x. Below 1.0x means you're paying dividends from capital, not earnings. The board watches this closely. Target: above 1.2x.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">Debt / Assets</div>
+              <div class="re-formula">Total Debt ÷ Total Assets</div>
+              <div class="re-desc">Your leverage ratio. Board limit is 60%. Above 60% starts triggering pressure. Above 65% is a crisis. Industrial REITs typically run 30-40%; aggressive REITs push 55%+.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">Interest Coverage</div>
+              <div class="re-formula">NOI ÷ Quarterly Interest Expense</div>
+              <div class="re-desc">How many times your NOI covers interest payments. Below 1.5x is weak, below 1.2x triggers board pressure, below 1.0x means you can't pay your lenders from operations.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">Implied Cap Rate</div>
+              <div class="re-formula">Annualized NOI ÷ Portfolio Value × 100</div>
+              <div class="re-desc">The yield your portfolio generates. Higher cap rate = cheaper assets, more cash flow per dollar. Lower cap rate = expensive assets in prime locations. Market cap rates drive your property valuations.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">NAV per Share</div>
+              <div class="re-formula">Total Equity ÷ Shares Outstanding</div>
+              <div class="re-desc">Net Asset Value — what each share is theoretically worth based on assets minus debt. Compare to share price: trading below NAV = discount, above NAV = premium.</div>
+            </div>
+            <div class="re-item">
+              <div class="re-name">P/FFO</div>
+              <div class="re-formula">Share Price ÷ Annualized FFO per Share</div>
+              <div class="re-desc">The REIT equivalent of P/E ratio. Typical range: 12-22x. Low P/FFO may signal undervaluation or risk. High P/FFO may signal growth expectations or overvaluation.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="help-glossary" class="help-tab-content">
+          <div class="glossary">
+            <div class="gl-item"><span class="gl-term">NOI</span><span class="gl-def">Net Operating Income — rental revenue minus operating expenses. Does not include interest, G&A, or depreciation.</span></div>
+            <div class="gl-item"><span class="gl-term">GPR</span><span class="gl-def">Gross Potential Rent — what you'd collect if every property was 100% occupied.</span></div>
+            <div class="gl-item"><span class="gl-term">Cap Rate</span><span class="gl-def">Capitalization Rate — NOI divided by property value. Rising cap rates compress values; falling cap rates inflate them.</span></div>
+            <div class="gl-item"><span class="gl-term">Tranche</span><span class="gl-def">One individual debt issuance with its own amount, interest rate, and maturity date. You can have up to 10 tranches.</span></div>
+            <div class="gl-item"><span class="gl-term">Maturity</span><span class="gl-def">When a debt tranche comes due and must be repaid or refinanced. Clustering maturities creates refinancing risk.</span></div>
+            <div class="gl-item"><span class="gl-term">Spread</span><span class="gl-def">The extra interest you pay above the base rate, based on your credit rating. BBB = +1.6%, CCC = +6.0%.</span></div>
+            <div class="gl-item"><span class="gl-term">LTV</span><span class="gl-def">Loan-to-Value — same as debt/assets in this game. Standard real estate leverage measure.</span></div>
+            <div class="gl-item"><span class="gl-term">Occupancy</span><span class="gl-def">Percentage of leasable space that is currently leased and paying rent. 100% is impossible to sustain; 90%+ is healthy.</span></div>
+            <div class="gl-item"><span class="gl-term">G&A</span><span class="gl-def">General & Administrative expense — head office costs. Grows with portfolio size.</span></div>
+            <div class="gl-item"><span class="gl-term">Depreciation</span><span class="gl-def">Non-cash accounting charge that reduces net income but not cash flow. This is why net income is misleading for REITs.</span></div>
+            <div class="gl-item"><span class="gl-term">FFO</span><span class="gl-def">Funds From Operations — adds depreciation back to net income to show true cash earnings.</span></div>
+            <div class="gl-item"><span class="gl-term">AFFO</span><span class="gl-def">Adjusted FFO — subtracts normalized maintenance capex from FFO for a more conservative cash flow view.</span></div>
+          </div>
+        </div>
+
+        <div id="help-cfa" class="help-tab-content">
+          <h3>Why REITs Use FFO, Not Net Income</h3>
+          <p>Depreciation is a massive non-cash charge. A building might depreciate $5M on paper this quarter while actually appreciating in value. Net income subtracts this, making it look terrible. FFO adds it back to show actual cash generation. This is directly tested in CFA Level 1 and 2.</p>
+
+          <h3>Cap Rate Mathematics</h3>
+          <p><strong>Property Value = NOI ÷ Cap Rate</strong>. If your property generates $5M NOI and the market cap rate is 5%, it's worth $100M. If the Fed hikes rates and cap rates rise to 6%, that same property is now worth only $83M — a $17M loss with no change in your tenants or income. This is the core valuation risk in REIT investing.</p>
+
+          <h3>The Dividend Commitment</h3>
+          <p>REITs must distribute 90% of taxable income as dividends by law. This means they cannot retain earnings to fund growth — they must constantly access capital markets (debt or equity) to acquire properties. This is why leverage and capital markets access are existential for REITs, not optional tools.</p>
+
+          <h3>The Credit Spread Cycle</h3>
+          <p>More debt → higher debt/assets → lower credit rating → wider spread → higher interest cost → lower coverage ratio → lower credit rating → wider spread... This is the leverage spiral that destroys REITs in downturns. Maintaining investment grade (BBB or above) is critical because many institutional investors cannot hold sub-investment grade debt.</p>
+
+          <h3>NAV Premium vs Discount</h3>
+          <p>If your share price is above NAV per share, you trade at a premium — issuing equity raises cash above asset value, which is accretive. If you trade at a discount to NAV, issuing equity destroys value. This dynamic drives REIT capital allocation decisions and is a CFA Level 2 topic.</p>
+
+          <h3>Dividend Signaling</h3>
+          <p>In this game, cutting the dividend immediately drops your share price significantly. This mirrors real markets — a dividend cut signals management distress and loss of confidence in cash flows. The share price reaction is often larger than the mathematical impact of the cut itself, because it changes investor expectations.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <!-- ============================================================
+       2.0 SHELL — top bar + views. Layout modelled on the first 2.0
+       prototype (dark bar, core numbers only, light working surface).
+       v1's code writes into elements BY ID; every ID it uses still exists
+       below, just in a new place. The old header survives hidden only so
+       those IDs resolve.
+       ============================================================ -->
+  <header id="topbar">
+    <div class="tb-brand">
+      <div class="tb-co" id="tb-co">MERIDIAN REIT</div>
+      <div class="tb-sub" id="tb-sub">Year 1 · Q1 · Riverton</div>
+    </div>
+    <!-- NAVIGATION: text tabs in the dark bar. Nothing else in the game looks like this. -->
+    <nav class="tb-nav" aria-label="Screens">
+      <button class="tb-tab on" data-view="map">Map</button>
+      <button class="tb-tab" data-view="properties">Properties</button>
+      <button class="tb-tab" data-view="finance">Finance</button>
+      <button class="tb-tab" data-view="board">Board</button>
+      <button class="tb-tab" data-view="stories">Dealroom</button>
+      <button class="tb-tab" data-view="staff">Staff</button>
+    </nav>
+    <div class="tb-hud" id="tb-hud"></div>
+    <div class="tb-act">
+      <button id="btn-menu" class="tb-help tb-menu" title="Menu: title screen, new game">&#9776;</button>
+      <button id="btn-help" class="tb-help" title="Help and glossary (F1)">?</button>
+      <!-- ACTION: the one solid button in the bar -->
+      <div class="tb-date" id="tb-date" title="Year and quarter. The run lasts 15 years.">Y1 · Q1</div>
+      <button id="btn-run-year" class="tb-run" title="Advance quarter by quarter to the end of the year. Stops early when something needs you.">&#9656;&#9656; Year end</button>
+      <button id="btn-advance-quarter" class="tb-advance">Advance quarter &#9656;</button>
+    </div>
+  </header>
+
+  <div id="legacy-header" hidden>
+<div id="header">
+    <div class="header-top">
+      <span class="header-company" id="hdr-company">REIT Simulator</span>
+      <div class="header-stats">
+        <div class="hdr-stat"><span class="hdr-stat-label">Period</span><span class="hdr-stat-value" id="hdr-period">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Share Price</span><span class="hdr-stat-value text-blue" id="hdr-price">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Market Cap</span><span class="hdr-stat-value" id="hdr-marketcap">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Rating</span><span class="hdr-stat-value text-yellow" id="hdr-rating">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Cycle</span><span class="hdr-stat-value" id="hdr-cycle">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Base Rate</span><span class="hdr-stat-value" id="hdr-rate">—</span></div>
+        <div class="hdr-stat"><span class="hdr-stat-label">Borrow At</span><span class="hdr-stat-value text-red" id="hdr-borrow">—</span></div>
+        
+      </div>
+    </div>
+    <div class="board-pressure-wrap" style="display:none">
+      <span id="board-pressure-label">Board: NEUTRAL</span>
+      <div class="pressure-track"><div id="board-pressure-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+  </div>
+
+  <main id="views">
+
+    <section class="view" id="view-map">
+      <div class="home">
+        <div class="home-map">
+          <div id="tab-map" class="v2-pane">
+          <div class="mapwrap">
+            <div id="map">
+              <!-- VIEW CONTROL, not navigation: it sits on the map it changes,
+                   grouped with the legend it rewrites, and looks nothing like
+                   the tabs. (Next to the tabs, players clicked it by mistake.) -->
+              <div class="map-ctl" role="group" aria-label="Colour markers by">
+                <div class="map-ctl-t">Colour markers by</div>
+                <div class="seg">
+                  <button class="on" data-m="owner">Owner</button><button data-m="cap">Cap rate</button><button data-m="occ">Occupancy</button><button data-m="val">Value</button>
+                </div>
+                <div class="map-legend" id="legend"></div>
+              </div>
+              <img src="assets/city_map.jpg" alt="Riverton" id="mapimg">
+              <div id="markers"></div>
+              <div id="card"></div>
+            </div>
+          </div>
+          <p class="hint">Shape is sector, size is tier, gold dot marks tier 1. Grey markers are
+            privately held. A <b>$</b> badge marks those actively listed. Amber squares are
+            development lots.</p>
+        </div>
+        </div>
+        <aside class="home-rail">
+          <!-- INBOX: the one place news reaches you (js/inbox.js) -->
+          <div id="inbox" class="panel inbox">
+            <div class="panel-header"><span class="panel-title">Inbox</span><span class="ib-count" id="inbox-count"></span></div>
+            <div id="inbox-list" class="ib-list"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-properties">
+      <div id="tab-properties" class="v2-pane">
+          <div class="v2wrap">
+            <h2 class="sec" id="s-mine">Your portfolio <span class="cnt" id="n1"></span></h2>
+            <div class="kpis" id="kpis"></div>
+            <div id="tenantsPanel"></div>
+            <div class="grpbar">Group by:
+              <button class="toggle on" data-g="none">none</button> ·
+              <button class="toggle"    data-g="t">sector</button> ·
+              <button class="toggle"    data-g="ti">tier</button>
+              <span id="filterNote"></span>
+            </div>
+            <table id="tMine"></table>
+            <h2 class="sec" id="s-market">On the market <span class="cnt" id="n2"></span></h2>
+            <table id="tMarket"></table>
+            <h2 class="sec" id="s-rest">Rest of the city <span class="cnt" id="n3"></span>
+              <button class="toggle" id="restToggle">show</button></h2>
+            <table id="tRest" class="collapsed"></table>
+          </div>
+        </div>
+    </section>
+
+    <section class="view hidden" id="view-finance">
+      <!-- Row 1: the money moves, side by side -->
+      <div class="panel fin-moves"><div class="panel-header"><span class="panel-title">Capital actions</span></div>
+        <div class="actions-grid">
+          <div class="action-group action-group-debt">
+              <div class="action-group-title">Borrow <span class="ag-sub">to buy property</span></div>
+              <div class="action-meta" id="action-borrow-rate">Current rate: —</div>
+              <div class="action-meta" id="action-borrow-capacity" style="color:var(--accent);">Capacity: —</div>
+              <div class="input-row input-row-lg" style="margin-bottom:6px;">
+                <span class="input-prefix">$</span>
+                <input type="number" id="input-debt-amount" placeholder="e.g. 50" min="1" step="5">
+                <span class="input-suffix">million</span>
+              </div>
+              <div class="input-row">
+                <select id="input-debt-years" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:13px;">
+                  <option value="1">1 year</option>
+                  <option value="2">2 years</option>
+                  <option value="3">3 years</option>
+                  <option value="5" selected>5 years</option>
+                  <option value="7">7 years</option>
+                </select>
+                <button class="btn btn-primary" id="btn-issue-debt">Issue Debt</button>
+              </div>
+            </div>
+          <div class="action-group">
+              <div class="action-group-title">Dividend <span class="ag-sub">the board watches this</span></div>
+              <div class="dividend-current" id="action-div-current">Current: —</div>
+              <div class="input-row input-row-lg" style="margin-bottom:6px;">
+                <span class="input-prefix">$</span>
+                <input type="number" id="input-dividend" placeholder="e.g. 0.12" min="0" step="0.01">
+                <span class="input-suffix">/share</span>
+                <button class="btn btn-primary btn-sm" id="btn-set-dividend">Set</button>
+              </div>
+              <div class="dividend-quick-row">
+                <span class="dividend-quick-label">Quick raise:</span>
+                <button class="btn btn-quick" id="btn-div-10">+10%</button>
+                <button class="btn btn-quick" id="btn-div-20">+20%</button>
+                <button class="btn btn-quick" id="btn-div-50">+50%</button>
+              </div>
+            </div>
+          <div class="action-group">
+              <div class="action-group-title">Issue shares <span class="ag-sub">raises cash, dilutes</span></div>
+              <div class="action-meta" id="action-shares-out">Shares outstanding: —</div>
+              <div class="input-row input-row-lg"><input type="number" id="input-equity-shares" placeholder="e.g. 2" min="0.1" step="0.5"><span class="input-suffix">M shares</span><button class="btn btn-primary btn-sm" id="btn-issue-equity">Issue</button></div>
+              <div class="action-meta text-muted" style="margin-top:5px;">Issued at 5% discount. Dilutive.</div>
+            </div>
+          <div class="action-group">
+              <div class="action-group-title">Buy back shares <span class="ag-sub">spends cash</span></div>
+              <div class="action-meta" id="action-cash-avail">Cash available: —</div>
+              <div class="input-row input-row-lg"><input type="number" id="input-buyback-shares" placeholder="e.g. 1" min="0.1" step="0.5"><span class="input-suffix">M shares</span><button class="btn btn-primary btn-sm" id="btn-buyback">Buy Back</button></div>
+            </div>
+          <div class="action-group" id="preferred-redeem-group" style="display:none;">
+              <div class="action-group-title">Preferred Stock</div>
+              <div class="action-meta" id="action-preferred-info">—</div>
+              <div class="input-row"><button class="btn btn-secondary btn-sm" id="btn-redeem-preferred">Redeem Preferred at Par</button></div>
+              <div class="action-meta" style="margin-top:6px;">Redeeming buys back the preferred shares at par value and ends the preferred dividend.</div>
+            </div>
+        </div>
+      </div>
+      <!-- Row 2: income statement | balance sheet + ratios | debt + market -->
+      <div class="fin-grid">
+        <div class="fin-col">
+          <div class="panel">
+        <div class="panel-header"><span class="panel-title">Income Statement</span><span class="text-muted" style="font-size:11px">Quarterly $M</span></div>
+        <div class="panel-body">
+          <table class="pnl-table">
+            <tr><td>Gross Potential Rent</td><td id="pnl-gpr">—</td></tr>
+            <tr><td class="pnl-indent">Vacancy Loss</td><td id="pnl-vacancy" class="text-red">—</td></tr>
+            <tr><td class="pnl-indent">Operating Expenses</td><td id="pnl-opex" class="text-muted">—</td></tr>
+            <tr class="pnl-divider pnl-subtotal"><td>Net Operating Income</td><td id="pnl-noi">—</td></tr>
+            <tr><td class="pnl-indent">G&amp;A Expense</td><td id="pnl-ga" class="text-muted">—</td></tr>
+            <tr><td class="pnl-indent">Interest Expense</td><td id="pnl-interest" class="text-red">—</td></tr>
+            <tr><td class="pnl-indent">Depreciation</td><td id="pnl-depr" class="text-muted">—</td></tr>
+            <tr id="pnl-loanint-row" style="display:none"><td class="pnl-indent">Interest from loans</td><td id="pnl-loanint" class="text-green">—</td></tr>
+            <tr><td class="pnl-indent">Unusual Items</td><td id="pnl-unusual">—</td></tr>
+            <tr class="pnl-divider pnl-subtotal"><td>Net Income (GAAP)</td><td id="pnl-netincome">—</td></tr>
+            <tr class="pnl-divider"><td><strong>FFO</strong></td><td id="pnl-ffo" class="text-green"><strong>—</strong></td></tr>
+            <tr id="pnl-leasing-row" style="display:none"><td class="pnl-indent">Leasing costs (lease ups)</td><td id="pnl-leasing" class="text-red">—</td></tr>
+            <tr><td><strong>AFFO</strong></td><td id="pnl-affo"><strong>—</strong></td></tr>
+            <tr class="pnl-divider"><td class="pnl-indent">Preferred Dividends</td><td id="pnl-prefdiv" class="text-muted">—</td></tr>
+            <tr><td class="pnl-indent">Dividends Paid</td><td id="pnl-divpaid" class="text-muted">—</td></tr>
+            <tr class="pnl-total"><td>Retained Cash</td><td id="pnl-retained">—</td></tr>
+            <tr id="pnl-projects-row" style="display:none"><td class="pnl-indent" title="Renovations, repositioning and building sites: the money goes into the buildings' value, so it is not a cost in profit. It still leaves your cash.">Spent on buildings (not a cost)</td><td id="pnl-projects" class="text-muted">—</td></tr>
+          </table>
+        </div>
+      </div>
+          <!-- round 24: market conditions moved here from column 3, so the columns end level -->
+          <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Market conditions</span>
+        </div>
+        <div class="panel-body">
+          <div class="market-panel">
+            <div class="market-conditions" id="market-conditions-list">
+              <p class="text-muted" style="font-size:11px">Loading market data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="fin-col">
+          <div class="panel">
+        <div class="panel-header"><span class="panel-title">Balance Sheet</span></div>
+        <div class="panel-body">
+          <div class="bs-grid">
+            <div class="bs-item bs-cash-item"><span class="bs-label">Cash</span><span class="bs-value" id="bs-cash">—</span></div>
+            <div class="bs-item"><span class="bs-label">Total Assets</span><span class="bs-value" id="bs-assets">—</span></div>
+            <div class="bs-item" id="bs-loans-row" style="display:none"><span class="bs-label">In tenants (loans, stakes)</span><span class="bs-value" id="bs-loans">—</span></div>
+            <div class="bs-item"><span class="bs-label">Total Debt</span><span class="bs-value text-red" id="bs-debt">—</span></div>
+            <div class="bs-item"><span class="bs-label">Preferred Equity</span><span class="bs-value" id="bs-preferred">—</span></div>
+            <div class="bs-item"><span class="bs-label">Common Equity</span><span class="bs-value text-green" id="bs-equity">—</span></div>
+            <div class="bs-item"><span class="bs-label">Shares Out</span><span class="bs-value" id="bs-shares">—</span></div>
+            <div class="bs-item"><span class="bs-label">Div/Share (Q)</span><span class="bs-value" id="bs-divps">—</span></div>
+          </div>
+        </div>
+      </div>
+          <div class="panel">
+        <div class="panel-header"><span class="panel-title">Key Ratios</span></div>
+        <div class="panel-body">
+          <div class="ratios-grid">
+            <div class="ratio-row"><span class="ratio-label">FFO/Share</span><span class="ratio-value" id="ratio-ffo-ps">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">AFFO/Share</span><span class="ratio-value" id="ratio-affo-ps">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Div Coverage</span><span class="ratio-value" id="ratio-div-cov">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Payout Ratio</span><span class="ratio-value" id="ratio-payout">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Debt/Assets</span><span class="ratio-value" id="ratio-d2a">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Debt/EBITDA</span><span class="ratio-value" id="ratio-d2e">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Int. Coverage</span><span class="ratio-value" id="ratio-int-cov">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Occupancy</span><span class="ratio-value" id="ratio-occ">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">NOI Margin</span><span class="ratio-value" id="ratio-noi-margin">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Cap Rate</span><span class="ratio-value" id="ratio-cap-rate">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">NAV/Share</span><span class="ratio-value" id="ratio-nav">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">P/FFO</span><span class="ratio-value" id="ratio-pffo">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">P/AFFO</span><span class="ratio-value" id="ratio-paffo">—</span></div>
+            <div class="ratio-row"><span class="ratio-label">Div Yield</span><span class="ratio-value" id="ratio-div-yield">—</span></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="fin-col">
+          <div class="panel" id="rcf-panel"><div class="panel-header"><span class="panel-title">Credit line</span><span class="sml-note">revolving facility</span></div>
+            <div class="panel-body" id="rcf-body"></div>
+          </div>
+          <div class="panel"><div class="panel-header"><span class="panel-title">Debt</span></div>
+            <div class="panel-body">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span class="sml-note">Call a loan to repay it early.</span>
+            <span id="debt-tranche-count" class="text-muted">0/10 tranches</span>
+          </div>
+          <div class="scroll-list" id="debt-tranches-list"><p class="text-muted">No debt outstanding.</p></div>
+              <div class="action-meta text-yellow" id="action-debt-cooldown"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Row 3: charts -->
+      <div class="charts-grid">
+        <div class="chart-wrap chart-two"><div class="chart-h"><b>Share price and NAV per share</b><span>Below the dashed line, the market values your shares under what your buildings are worth. Markers: buybacks, new shares, directors buying.</span></div><canvas id="chart-share-price"></canvas></div>
+        <div class="chart-wrap"><div class="chart-h"><b>Debt as % of assets</b><span>Lenders get nervous above 50%. 60% is the hard limit in your bonds.</span></div><canvas id="chart-leverage"></canvas></div>
+        <div class="chart-wrap"><div class="chart-h"><b>Earnings vs dividend, per share</b><span>FFO (cash earned) should stay above the dividend you pay. If the lines cross, you are paying out more than you earn.</span></div><canvas id="chart-ffo-trend"></canvas></div>
+        <div class="chart-wrap"><div class="chart-h"><b>Rent profit vs interest</b><span>NOI is rent minus building costs. It must comfortably beat the interest bill.</span></div><canvas id="chart-noi"></canvas></div>
+        <div class="chart-wrap"><div class="chart-h"><b>What you own, by value</b><span>Share of your portfolio in each property type. Too much in one type is a risk.</span></div><canvas id="chart-portfolio"></canvas></div>
+        <div class="chart-wrap chart-wide"><div class="chart-h"><b>When your debt falls due</b><span>Each bar is a bond you must repay or refinance. Red = due within a year.</span></div><canvas id="chart-debt-maturity"></canvas></div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-board">
+      <!-- round 4: the board's brains (js/directors.js), rendered by js/board_tab.js -->
+      <div class="bd-top" id="bd-top"></div>
+      <div class="bd-cards" id="bd-cards"></div>
+      <div class="panel bd-league-panel"><div class="panel-header"><span class="panel-title">The league</span><span class="sml-note" id="bd-league-label">total return</span></div>
+        <div class="panel-body" id="bd-league"></div></div>
+      <div class="board-grid">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">What the board is judging</span><span class="sml-note" id="bd-sc-label">this year so far</span></div>
+          <div class="panel-body" id="bd-scorecard"></div>
+        </div>
+        <div class="panel" id="goals-panel">
+        <div class="panel-header">
+          <span class="panel-title">Board goals</span>
+          <span class="text-muted" style="font-size:11px" id="goals-year-label">Year 1</span>
+        </div>
+        <div class="panel-body" id="goals-list">
+          <p class="text-muted" style="font-size:12px">Goals set after Year 1.</p>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-stories">
+      <!-- round 20: every story you have met, where it stands, what comes next (js/journal.js) -->
+      <div class="panel"><div class="panel-header"><span class="panel-title">Dealroom</span><span class="sml-note">your deals, your cases, your stories, your influence</span></div>
+        <div class="panel-body" id="stories-body"></div></div>
+    </section>
+
+    <section class="view hidden" id="view-staff">
+      <div class="panel"><div class="panel-body">
+          <div style="margin-bottom:12px;">
+            <span class="panel-title">Your Team</span>
+            <p class="text-muted" style="font-size:11px;margin-top:4px;">Each hire unlocks a function. Salaries are paid inside G&amp;A every quarter. Skill is revealed after 2-4 quarters. Firing a hire removes their unlock.</p>
+          </div>
+          <div class="scroll-list" id="staff-roster" style="margin-bottom:16px;"></div>
+          <div id="talent-market-header">
+            <div class="panel-title" style="margin-bottom:8px;">Talent Market</div>
+            <p class="text-muted" style="font-size:11px;margin-bottom:8px;">Available candidates this year. Higher salary often — but not always — signals higher skill.</p>
+          </div>
+          <div class="scroll-list" id="talent-market"></div>
+        </div></div>
+    </section>
+
+    <!-- v1's Portfolio and Property Market lists: replaced by the Properties
+         tab. Kept in the DOM, never shown, because ui.js still renders them. -->
+    <div id="legacy-lists" hidden>
+      <!-- v1 quarter report: still rendered (it feeds the inbox), never shown -->
+      <div id="earnings-report" class="panel panel-feed"></div>
+      <div id="tab-portfolio" class="legacy-pane">
+          <div class="scroll-list" id="portfolio-list"><p class="text-muted">Start a game to see your portfolio.</p></div>
+        </div>
+      <div id="tab-market" class="legacy-pane">
+          <div class="scroll-list" id="market-list"><p class="text-muted">Start a game to see the market.</p></div>
+        </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- BOARD MEETING OVERLAY -->
+<div id="board-meeting-overlay" class="hidden">
+  <div class="bm-container">
+    <div class="bm-room" style="background-image:url('assets/board/boardroom2.png')">
+      <div class="bm-room-title">BOARD OF DIRECTORS — <span id="bm-year-label"></span></div>
+      <div id="bm-directors-row" class="bm-directors-row"></div>
+    </div>
+    <div class="bm-dialogue">
+      <div class="bm-speaker-info">
+        <span id="bm-speaker-name" class="bm-speaker-name"></span>
+        <span id="bm-speaker-title" class="bm-speaker-title"></span>
+        <span id="bm-mandate-counter" class="bm-mandate-counter"></span>
+      </div>
+      <div class="bm-speech-box">
+        <p id="bm-speech-text" class="bm-speech-text"></p>
+      </div>
+      <div id="bm-response-buttons" class="bm-response-buttons"></div>
+      <div class="bm-footer">
+        <span id="bm-capital-display" class="bm-capital"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="hidden">
+  <div class="modal-box">
+    <div id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- SCRIPTS -->
+<script src="js/properties_master.js"></script>
+<script src="js/tenants_master.js"></script>
+<script src="js/state.js"></script>
+<script src="js/situation.js"></script>
+<script src="js/arc.js"></script>
+<script src="js/world.js"></script>
+<script src="js/story.js"></script>
+<script src="js/sales.js"></script>
+<script src="js/pay.js"></script>
+<script src="js/tenants.js"></script>
+<script src="js/properties.js"></script>
+<script src="js/market.js"></script>
+<script src="js/revolver.js"></script>
+<script src="js/rivals.js"></script>
+<script src="js/war.js"></script>
+<script src="js/tower.js"></script>
+<script src="js/gary.js"></script>
+<script src="js/port.js"></script>
+<script src="js/levi.js"></script>
+<script src="js/listing.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/deals.js"></script>
+<script src="js/pr.js"></script>
+<script src="js/ending.js"></script>
+<script src="js/scores.js"></script>
+<script src="js/events.js"></script>
+<script src="js/board.js"></script>
+<script src="js/directors.js"></script>
+<script src="js/meeting.js"></script>
+<script src="js/staff.js"></script>
+<script src="js/decisions.js"></script>
+<script src="js/financials.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/news.js"></script>
+<script src="js/inbox.js"></script>
+<script src="js/deal.js"></script>
+<script src="js/glossary.js"></script>
+<script src="js/telemetry.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/save.js"></script>
+<!-- 2.0 view modules: read GameState, render the Map and Properties tabs -->
+<script src="js/shell.js"></script>
+<script src="js/board_tab.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/map.js"></script>
+<script src="js/properties_tab.js"></script>
+<script>
+  /* 2.0 navigation. v1's switchTab() is kept as a thin alias because ui.js
+     still calls it once (after an acquisition offer). */
+  function showView(name) {
+    document.querySelectorAll("#views > .view").forEach(v => v.classList.add("hidden"));
+    var v = document.getElementById("view-" + name);
+    if (v) v.classList.remove("hidden");
+    document.querySelectorAll(".tb-tab").forEach(b => b.classList.toggle("on", b.dataset.view === name));
+    if (name === "map"        && window.MAP   && MAP.render)   MAP.render();
+    if (name === "properties" && window.PROPS && PROPS.render) PROPS.render();
+    if (name === "stories" && window.Journal) Journal.render();
+    // charts measure their canvas, which is 0px wide while its view is hidden
+    if (name === "finance" && window.Charts && Charts.renderAll) Charts.renderAll();
+    window.scrollTo(0, 0);
+  }
+  function switchTab(tabId) {
+    showView(tabId === "tab-market" || tabId === "tab-portfolio" ? "properties" : tabId.replace("tab-", ""));
+  }
+  document.querySelectorAll(".tb-tab").forEach(b => b.onclick = () => showView(b.dataset.view));
+
+  // Boot the 2.0 view layer only once every module above has loaded.
+  if (window.REIT && REIT.init) REIT.init();
+</script>
+</body>
+</html>

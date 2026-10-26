@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Property master — check</title>
+<style>
+ body{margin:0;background:#0b1622;color:#eaf2f9;font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif;padding:24px 28px;}
+ h1{font-size:17px;letter-spacing:.03em;margin:0 0 4px;}
+ .sub{color:#8fb0c9;font-size:12px;margin-bottom:18px;}
+ .box{background:#0e2233;border:1px solid #24435c;border-radius:10px;padding:14px 16px;margin-bottom:14px;}
+ .ok{border-color:#1f9d55;} .bad{border-color:#d33b3b;}
+ .ok h2{color:#37d67a;} .bad h2{color:#ff6b61;}
+ h2{font-size:13px;margin:0 0 8px;letter-spacing:.04em;text-transform:uppercase;}
+ table{border-collapse:collapse;width:100%;font-size:12px;}
+ th,td{text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid #1a3448;}
+ th{color:#8fb0c9;font-weight:600;}
+ td.num{text-align:right;font-variant-numeric:tabular-nums;}
+ pre{margin:0;white-space:pre-wrap;font:12px ui-monospace,Consolas,monospace;color:#ff9b93;}
+ .pill{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:700;}
+</style></head>
+<body>
+<h1>PROPERTY MASTER — INTEGRITY CHECK</h1>
+<div class="sub">Double-click this file any time you edit js/properties_master.js. It reports problems before they reach the game.</div>
+<div id="out"></div>
+
+<script src="js/properties_master.js"></script>
+<script>
+const M = window.PROPERTIES_MASTER;
+const out = document.getElementById('out');
+const esc = s => String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+function box(title, ok, html){
+  out.insertAdjacentHTML('beforeend',
+    `<div class="box ${ok?'ok':'bad'}"><h2>${title}</h2>${html}</div>`);
+}
+
+/* 1. the built-in validator */
+const errs = M.validate();
+box(errs.length ? `${errs.length} problem(s) found` : 'All structural checks passed',
+    !errs.length,
+    errs.length ? `<pre>${esc(errs.join('\n'))}</pre>`
+                : `<div style="color:#8fb0c9">40 properties · 6 development lots · owner, sector and tier counts all match the design doc.</div>`);
+
+/* 2. photo keys must exist in the manifest */
+fetch('assets/photos/manifest.json').then(r=>r.json()).then(man=>{
+  const keys = new Set(Object.values(man).flat());
+  const missing = [...M.P, ...M.LOTS].filter(o => !keys.has(o.ph)).map(o => `${o.id} -> ${o.ph}`);
+  box(missing.length ? 'Missing photos' : 'Every photo key resolves', !missing.length,
+    missing.length ? `<pre>${esc(missing.join('\n'))}</pre>`
+                   : `<div style="color:#8fb0c9">All ${M.P.length + M.LOTS.length} photo keys found in the manifest.</div>`);
+}).catch(()=>{
+  box('Photo check skipped', true,
+    `<div style="color:#8fb0c9">Could not read the manifest. Chrome blocks local fetch on file:// &mdash; open this through a local server if you want the photo check, or ignore it.</div>`);
+});
+
+/* 3. portfolio roll-ups, so the numbers are eyeballable */
+const rows = ['you','green','apex','van'].map(o=>{
+  const s = M.summarise(M.owned(o));
+  return `<tr><td><span class="pill" style="background:${M.OWNERS[o].color}22;color:${M.OWNERS[o].color}">${M.OWNERS[o].short}</span></td>
+    <td class="num">${s.count}</td><td class="num">$${s.value}M</td><td class="num">$${s.noi}M</td>
+    <td class="num">${s.cap}%</td><td class="num">${s.occ}%</td></tr>`;
+}).join('');
+const priv = M.summarise(M.P.filter(p=>p.o==='none'));
+box('Opening balance of power', true,
+ `<table><tr><th>Owner</th><th class="num">Assets</th><th class="num">Value</th><th class="num">NOI</th><th class="num">Cap</th><th class="num">Occ</th></tr>
+  ${rows}
+  <tr><td style="color:#8393a3">Private</td><td class="num">${priv.count}</td><td class="num">$${priv.value}M</td>
+      <td class="num">$${priv.noi}M</td><td class="num">${priv.cap}%</td><td class="num">${priv.occ}%</td></tr>
+  </table>`);
+
+/* 4. the whole list, sorted by cap rate, to sanity-check the spread */
+const all = [...M.P].sort((a,b)=>a.cap-b.cap).map(p=>
+ `<tr><td>${esc(p.n)}</td><td style="color:#8fb0c9">${p.t} · ${p.ti}</td>
+  <td><span style="color:${M.OWNERS[p.o].color}">${M.OWNERS[p.o].short}</span>${p.listed?' <span class="pill" style="background:#1f9d5533;color:#37d67a">FOR SALE</span>':''}</td>
+  <td class="num">$${p.v}M</td><td class="num">${p.cap.toFixed(1)}%</td><td class="num">$${p.noi}M</td><td class="num">${p.occ}%</td></tr>`).join('');
+box('All 40 properties, cheapest cap rate first', true,
+ `<table><tr><th>Name</th><th>Type</th><th>Owner</th><th class="num">Value</th><th class="num">Cap</th><th class="num">NOI</th><th class="num">Occ</th></tr>${all}</table>`);
+</script>
+</body></html>

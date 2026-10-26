@@ -1,0 +1,90 @@
+{
+ "industrial_suburban": [
+  "industrial_suburban_a",
+  "industrial_suburban_b",
+  "industrial_suburban_c",
+  "industrial_suburban_d"
+ ],
+ "industrial_tier1": [
+  "industrial_tier1_a",
+  "industrial_tier1_b"
+ ],
+ "industrial_tier2": [
+  "industrial_tier2_a",
+  "industrial_tier2_b",
+  "industrial_tier2_c",
+  "industrial_tier2_d"
+ ],
+ "land_downtown": [
+  "land_downtown_a"
+ ],
+ "land_general": [
+  "land_general_a",
+  "land_general_b",
+  "land_general_c"
+ ],
+ "land_industrial": [
+  "land_industrial_a"
+ ],
+ "land_midtown": [
+  "land_midtown_a"
+ ],
+ "land_suburban": [
+  "land_suburban_a"
+ ],
+ "multifamily_suburban": [
+  "multifamily_suburban_a",
+  "multifamily_suburban_b",
+  "multifamily_suburban_c",
+  "multifamily_suburban_d"
+ ],
+ "multifamily_tier1": [
+  "multifamily_tier1_a",
+  "multifamily_tier1_b"
+ ],
+ "multifamily_tier2": [
+  "multifamily_tier2_a",
+  "multifamily_tier2_b",
+  "multifamily_tier2_c",
+  "multifamily_tier2_d"
+ ],
+ "office_suburban": [
+  "office_suburban_a",
+  "office_suburban_b",
+  "office_suburban_c",
+  "office_suburban_d"
+ ],
+ "office_tier1": [
+  "office_tier1_a",
+  "office_tier1_b"
+ ],
+ "office_tier2": [
+  "office_tier2_a",
+  "office_tier2_b",
+  "office_tier2_c",
+  "office_tier2_d"
+ ],
+ "retail_suburban": [
+  "retail_suburban_a",
+  "retail_suburban_b",
+  "retail_suburban_c",
+  "retail_suburban_d",
+  "retail_suburban_e"
+ ],
+ "retail_tier1": [
+  "retail_tier1_a",
+  "retail_tier1_b"
+ ],
+ "retail_tier2": [
+  "retail_tier2_a",
+  "retail_tier2_b",
+  "retail_tier2_c",
+  "retail_tier2_d"
+ ],
+ "special": [
+  "supertower"
+ ],
+ "story": [
+  "industrial_harlow_dc"
+ ]
+}

@@ -1,0 +1,504 @@
+// ============================================================
+// staff.js — Executive hiring system
+// 5 roles, hidden skill revealed after 2-4 quarters,
+// each unlocks a unique function. Unlock lost if fired.
+// REIT Simulator Game
+// ============================================================
+
+window.Staff = (function() {
+
+  function fmt(n, d) { d = d === undefined ? 2 : d; return Math.round(n * Math.pow(10,d)) / Math.pow(10,d); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+  function randInt(a, b) { return Math.floor(randBetween(a, b + 1)); }
+
+  // ----------------------------------------------------------
+  // ROLE DEFINITIONS
+  // ----------------------------------------------------------
+  // Each role: id, title, salary range (per quarter $M), the
+  // function it unlocks, and how its hidden skill scales effect.
+  // ----------------------------------------------------------
+  var ROLES = {
+    acquisitions: {
+      id:        "acquisitions",
+      title:     "Acquisitions Lead",
+      blurb:     "Buys cheaper: sellers ask 2 to 6% less, and you hear their number. Half the fees. Finds buyers for what you sell.",
+      salaryMin: 0.4,
+      salaryMax: 0.9,
+      unlocks:   "Cheaper offers + the seller's price + lower fees + buyers for your listings",
+      candidateNames: ["Marcus Webb", "Diana Cho", "Rafael Ortiz", "Susan Bell"],
+      hints: [
+        "Strong track record in industrial markets.",
+        "Known for aggressive deal sourcing.",
+        "Built a reputation on off-market transactions.",
+        "Former investment banker turned dealmaker."
+      ],
+    },
+    asset: {
+      id:        "asset",
+      title:     "Asset Manager",
+      blurb:     "Unlocks lease-up, renovation and repositioning. Lifts occupancy.",
+      salaryMin: 0.3,
+      salaryMax: 0.7,
+      unlocks:   "Lease-up, renovation, repositioning + occupancy uplift",
+      candidateNames: ["Priya Nair", "Tom Fletcher", "Elena Vasquez", "James Okoro"],
+      hints: [
+        "Specialist in turning around underperforming assets.",
+        "Hands-on operational background.",
+        "Known for tenant retention expertise.",
+        "Came up through property management."
+      ],
+    },
+    cfo: {
+      id:        "cfo",
+      title:     "Chief Financial Officer",
+      blurb:     "Unlocks unsecured notes and the bond covenant amendment; can find a private placement in a squeeze.",
+      salaryMin: 0.3,
+      salaryMax: 0.6,
+      unlocks:   "Unsecured notes + covenant amendment + private placement",
+      candidateNames: ["Margaret Liu", "David Stern", "Aisha Rahman", "Peter Novak"],
+      hints: [
+        "Former treasury head at a large REIT.",
+        "Reputation for creative financing.",
+        "Strong relationships with credit agencies.",
+        "Conservative but effective capital manager."
+      ],
+    },
+    ir: {
+      id:        "ir",
+      title:     "Head of Investor Relations",
+      blurb:     "A slight lift to the share price. When bad news hits, wins back 30% of the drop. Brings PR campaigns more often and cheaper.",
+      salaryMin: 0.2,
+      salaryMax: 0.5,
+      unlocks:   "Softer bad news + a small price lift + better campaigns",
+      candidateNames: ["Charlotte Reed", "Sam Patel", "Nina Falk", "George Adler"],
+      hints: [
+        "Ex-equity analyst with deep market contacts.",
+        "Polished communicator, trusted by institutions.",
+        "Known for managing difficult announcements.",
+        "Background in financial PR."
+      ],
+    },
+    operations: {
+      id:        "operations",
+      title:     "Head of Operations",
+      blurb:     "Preventive maintenance cuts capex and trims G&A. Worth more as you scale.",
+      salaryMin: 0.2,
+      salaryMax: 0.5,
+      unlocks:   "Lower capex reserve + lower G&A (preventive maintenance)",
+      candidateNames: ["Laura Simmons", "Hassan Ali", "Greg Thornton", "Mei Lin"],
+      hints: [
+        "Relentless cost controller.",
+        "Engineering background, detail-obsessed.",
+        "Known for streamlining operations.",
+        "Built efficient teams at scale."
+      ],
+    },
+  };
+
+  // ----------------------------------------------------------
+  // TIERS — what the player sees (stars) maps to a hidden skill band.
+  // Bands OVERLAP so a lucky cheap hire can match an unlucky premium one.
+  // ----------------------------------------------------------
+  var STAFF_COST = 0.5;   // round 29
+  var TIERS = {
+    1: { stars: "★",   skillMin: 2, skillMax: 6, costMult: 0.70, traitChance: 0.40, negBias: 0.60 },
+    2: { stars: "★★",  skillMin: 4, skillMax: 8, costMult: 1.00, traitChance: 0.50, negBias: 0.35 },
+    3: { stars: "★★★", skillMin: 7, skillMax: 10, costMult: 1.35, traitChance: 0.60, negBias: 0.15 },
+  };
+
+  // ----------------------------------------------------------
+  // TRAITS — revealed after 2-4 quarters. Skill stays hidden forever
+  // (player only feels it through results). Cost traits bake in at
+  // generation. Board-drift traits apply once per year at year-end.
+  // ----------------------------------------------------------
+  var TRAITS = {
+    // ---- generic positive (any role) ----
+    frugal:     { id:"frugal",     label:"Frugal",         positive:true,  generic:true,  desc:"Function cost 15% below tier norm." },
+    connected:  { id:"connected",  label:"Connected",      positive:true,  generic:true,  desc:"+0.5/year to one board member (not the Chairman)." },
+    efficient:  { id:"efficient",  label:"Efficient",      positive:true,  generic:true,  desc:"Trims a little extra G&A each quarter." },
+    // ---- generic negative ----
+    expensive:  { id:"expensive",  label:"Expensive Taste",positive:false, generic:true,  desc:"Function cost 15% above tier norm." },
+    abrasive:   { id:"abrasive",   label:"Abrasive",       positive:false, generic:true,  desc:"-0.5/year to one board member (not the Chairman)." },
+    highmaint:  { id:"highmaint",  label:"High Maintenance",positive:false,generic:true,  desc:"Small fixed G&A overhead each quarter." },
+    complacent: { id:"complacent", label:"Complacent",     positive:false, generic:true,  desc:"Delivers below their tier — underperforms." },
+    // ---- role-specific positive ----
+    rainmaker:  { id:"rainmaker",  label:"Rainmaker",      positive:true,  role:"acquisitions", desc:"One off-market deal a year, and 1% more off every price." },
+    steady:     { id:"steady",     label:"Steady",         positive:true,  role:"operations",   desc:"Preventive maintenance: 6% more off capex and overheads." },
+    disciplined:{ id:"disciplined",label:"Disciplined",    positive:true,  role:"cfo",          desc:"New bonds cost 0.25% less." },
+    silvertongue:{id:"silvertongue",label:"Silver Tongue", positive:true,  role:"ir",           desc:"Wins back half of a bad-news drop, not 30%." },
+  };
+
+  function traitsForRole(roleId, positive) {
+    return Object.keys(TRAITS).filter(function(k) {
+      var t = TRAITS[k];
+      if (t.positive !== positive) return false;
+      if (t.generic) return true;
+      return t.role === roleId;
+    });
+  }
+
+  // ----------------------------------------------------------
+  // PORTRAIT → NAME POOLS — names match each portrait's appearance
+  // (gender, and ethnicity where the face clearly suggests it) so we
+  // never get a bearded man called "Diana". port13 = A. Crow easter egg.
+  // ----------------------------------------------------------
+  // 2.0: photoreal staff faces (assets/staff/s01..s30.jpg, Sept 2026).
+  // v1's cartoon port*.png set is archived in _masters/staff_v1.
+  var STAFF_FACES = 30;
+  var PORTRAIT_NAMES = {
+    "s01.jpg": ["Priya Nair", "Anjali Mehta", "Sunita Rao", "Kavya Shah", "Neha Kapoor"],          // South Asian woman, charcoal blazer
+    "s02.jpg": ["Tom Fletcher", "David Stern", "Peter Novak", "Greg Thornton", "Marcus Webb"],     // tired man, loosened tie
+    "s03.jpg": ["Sam Parker", "George Adler", "Daniel Frost", "Kevin Ross", "Eric Lund"],         // young analyst
+    "s04.jpg": ["Richard Vance", "Charles Mercer", "William Hale", "Robert Knox", "Edward Grant"],// stern man, 60s
+    "s05.jpg": ["Jake Mullins", "Danny Pike", "Ross Calder", "Nate Brooks", "Leo Hart"],          // relaxed man, open collar
+    "s06.jpg": ["Elena Vasquez", "Patricia Wynn", "Helen Ashford", "Rosa Marin", "Catherine Moss"],// elegant woman, 60s
+    "s07.jpg": ["Sebastian Cole", "Victor Lane", "Adrian Voss", "Julian Reyes", "Chris Morgan"],  // ambitious man, fade cut
+    "s08.jpg": ["Maya Santos", "Clarissa Tan", "Dewi Hartono", "Grace Lim", "Nina Reyes"],        // Southeast Asian woman, black blazer
+    "s09.jpg": ["Riya Patel", "Aisha Khan", "Nisha Kapoor", "Meera Shah", "Zara Ahmed"],          // young South Asian woman, grey blazer
+    "s10.jpg": ["Alexander Crow"],                                                          // the game's author (easter egg)
+    "s11.jpg": ["Owen Brett", "Felix Roe", "Caleb Storm", "Greg Mason", "Ethan Cole"],            // bearded man, blazer and t-shirt
+    "s12.jpg": ["Nadia Khoury", "Miriam Katz", "Sofia Rossi", "Layla Haddad", "Rachel Adler"],    // curly-haired woman, glasses
+    "s13.jpg": ["James Okoro", "Marcus Adebayo", "Daniel Mensah", "Andre Coleman", "Theo Banks"], // Black man, navy suit
+    "s14.jpg": ["Hank Brewer", "Bill Tucker", "Duane Foss", "Earl Maddox", "Roy Stubbs"],        // weathered man, moustache
+    "s15.jpg": ["Norman Pratt", "Clive Easton", "Gordon Sykes", "Ray Dobbs", "Alan Pierce"],      // bald man, grey suit
+    "s16.jpg": ["Anjali Rao", "Meera Shah", "Sunita Das", "Kamala Iyer", "Leela Menon"],          // South Asian woman, 50s
+    "s17.jpg": ["Diego Ramos", "Luis Ortega", "Mateo Cruz", "Carlos Vega", "Rafael Soto"],         // Latino man, navy suit
+    "s18.jpg": ["Grace Adeyemi", "Tanya Brooks", "Ruth Mensah", "Ama Owusu", "Joy Adebola"],       // Black woman, 40s
+    "s19.jpg": ["Howard Klein", "Martin Shaw", "Peter Doyle", "Walter Brand", "Gerald Combe"],     // bald man, white beard
+    "s20.jpg": ["Fiona Walsh", "Kate Morrison", "Emma Clarke", "Siobhan Kelly", "Molly Reid"],     // red hair, glasses
+    "s21.jpg": ["Karim Haddad", "Omar Nasser", "Tariq Mansour", "Rami Farouk", "Ziad Karam"],     // Middle Eastern man, beard
+    "s22.jpg": ["Judith Marsh", "Anne Keller", "Carol Webb", "Diane Foster", "Susan Hale"],       // woman, 60s, auburn hair
+    "s23.jpg": ["Kevin Zhou", "Ryan Park", "Daniel Kim", "Jason Liu", "Andrew Wong"],             // young East Asian man
+    "s24.jpg": ["Lucia Moreno", "Ana Torres", "Isabel Vega", "Carmen Diaz", "Paula Rios"],        // Latina woman, 40s
+    "s25.jpg": ["Victor Asante", "Paul Nwosu", "Samuel Reid", "Joseph Boateng", "Emmanuel Osei"], // Black man, grey beard
+    "s26.jpg": ["Shreya Joshi", "Ananya Gupta", "Kiran Desai", "Divya Menon", "Pooja Iyer"],      // young South Asian woman, ponytail
+    "s27.jpg": ["Adam Novak", "Luca Bianchi", "Tom Keller", "Nick Varga", "Jonah Weiss"],         // man, 30s, short beard
+    "s28.jpg": ["Selam Tadesse", "Hanna Bekele", "Ruth Alemu", "Miriam Haile", "Sara Getachew"],  // East African woman, pearls
+    "s29.jpg": ["Jacob Levin", "Sam Rosen", "Ethan Brody", "Max Feld", "Daniel Stein"],           // curly hair, glasses
+    "s30.jpg": ["Layla Amin", "Noor Aziz", "Mariam Saleh", "Dina Sabbagh", "Rania Hadid"],        // Middle Eastern woman, 30s
+  };
+  /* Alexander Crow, the easter egg, returns when he has a face:
+     set CROW_FACE to his file name (e.g. "crow.jpg") and add it to assets/staff. */
+  var CROW_FACE = "s10.jpg";   // round 30: s10 is Alexander himself, so his face is always Alexander Crow
+
+  function rollTrait(roleId, tier) {
+    var cfg = TIERS[tier];
+    if (Math.random() > cfg.traitChance) return null;  // no trait
+    var wantNegative = Math.random() < cfg.negBias;
+    var pool = traitsForRole(roleId, !wantNegative);
+    if (pool.length === 0) pool = traitsForRole(roleId, wantNegative); // fallback
+    if (pool.length === 0) return null;
+    return TRAITS[pick(pool)].id;
+  }
+  function generateCandidate(roleId, usedPortraits) {
+    var role = ROLES[roleId];
+    if (!role) return null;
+    usedPortraits = usedPortraits || [];
+
+    // Pick a tier (roughly even, slight lean to mid)
+    var r = Math.random();
+    var tier = r < 0.38 ? 1 : r < 0.72 ? 2 : 3;
+    var cfg  = TIERS[tier];
+
+    // Hidden skill within the tier's band
+    var skill = randInt(cfg.skillMin, cfg.skillMax);
+
+    // Base cost from role range, scaled by tier multiplier, with light noise
+    var midCost = role.salaryMin + (role.salaryMax - role.salaryMin) * 0.5;
+    // round 29: half what it was. A full team of five cost about $8M a year, 40% of a young REIT's rent profit;
+    // real small REITs spend about 1% of assets on all overheads together.
+    var cost = midCost * cfg.costMult * randBetween(0.92, 1.08) * STAFF_COST;
+
+    // Roll a trait (may be null)
+    var traitId = rollTrait(roleId, tier);
+
+    // Cost-modifying traits bake in NOW (fixed for employment)
+    if (traitId === "frugal")    cost *= 0.85;
+    if (traitId === "expensive") cost *= 1.15;
+    cost = fmt(Math.max(0.1, cost), 2);
+
+    // Portrait — pick one not already used this refresh AND not already on
+    // staff (so you can't end up with two of the same person, e.g. two Crows).
+    var employedPortraits = (GameState.staff || []).map(function(s) { return s.portrait; });
+    var portrait;
+    var attempts = 0;
+    do {
+      portrait = (CROW_FACE && Math.random() < 1 / (STAFF_FACES + 1)) ? CROW_FACE
+               : "s" + ("0" + randInt(1, STAFF_FACES)).slice(-2) + ".jpg";
+      attempts++;
+    } while (
+      (usedPortraits.indexOf(portrait) !== -1 || employedPortraits.indexOf(portrait) !== -1 ||
+       (typeof Rivals !== "undefined" && GameState.rivals && Rivals.staffPortraits().indexOf(portrait) !== -1))   // they work for a rival
+      && attempts < 40
+    );
+    usedPortraits.push(portrait);
+
+    var name, hint;
+    if (CROW_FACE && portrait === CROW_FACE) {
+      name = "Alexander Crow";
+      hint = "Unusually confident. Won't say where he's from.";
+    } else {
+      // Name matches the portrait's appearance, not the role
+      var namePool = PORTRAIT_NAMES[portrait] || role.candidateNames;
+      name = pick(namePool);
+      hint = pick(role.hints);
+    }
+
+    // Board target for connected/abrasive — picked once, never Williams
+    var boardTarget = null;
+    if (traitId === "connected" || traitId === "abrasive") {
+      boardTarget = pick(["chen", "okafor", "petrova", "hassan"]);
+    }
+
+    return {
+      roleId:           roleId,
+      title:            role.title,
+      name:             name,
+      portrait:         portrait,
+      tier:             tier,
+      stars:            cfg.stars,
+      salary:           cost,           // $M per quarter ("Function Cost")
+      skill:            skill,          // HIDDEN, never shown as a number
+      skillRevealed:    false,
+      traitId:          traitId,
+      traitRevealed:    false,
+      boardTarget:      boardTarget,
+      hint:             hint,
+      hiredQuarter:     null,
+      quartersEmployed: 0,
+    };
+  }
+
+  // ----------------------------------------------------------
+  // GENERATE THE TALENT MARKET — refreshed each year
+  // 3 candidates per unfilled role, so hiring is a real choice
+  // ----------------------------------------------------------
+  function refreshTalentMarket() {
+    var market = [];
+    var usedPortraits = [];
+    Object.keys(ROLES).forEach(function(roleId) {
+      if (!isRoleFilled(roleId)) {
+        for (var i = 0; i < 3; i++) {
+          market.push(generateCandidate(roleId, usedPortraits));
+        }
+      }
+    });
+    GameState._talentMarket = market;
+    return market;
+  }
+
+  // ----------------------------------------------------------
+  // QUERIES
+  // ----------------------------------------------------------
+  function isRoleFilled(roleId) {
+    // round 17: older code asks for 'financial'; the role is 'cfo'. Either name finds the CFO.
+    var ids = (roleId === "financial" || roleId === "cfo") ? ["cfo", "financial"] : [roleId];
+    return GameState.staff.some(function(s) { return ids.indexOf(s.roleId) > -1; });
+  }
+
+  function getStaff(roleId) {
+    var ids = (roleId === "financial" || roleId === "cfo") ? ["cfo", "financial"] : [roleId];
+    return GameState.staff.find(function(s) { return ids.indexOf(s.roleId) > -1; });
+  }
+
+  function hasRole(roleId) {
+    return isRoleFilled(roleId);
+  }
+
+  // Skill multiplier 0.0-1.0 for scaling effects. Complacent shaves it down,
+  // so an overpaid premium hire quietly underdelivers (felt, never shown as a number).
+  function skillFactor(roleId) {
+    var s = getStaff(roleId);
+    if (!s) return 0;
+    var eff = s.skill;
+    if (s.traitId === "complacent") eff = Math.max(1, eff - 3);
+    return eff / 10;
+  }
+
+  function hasTrait(roleId, traitId) {
+    var s = getStaff(roleId);
+    return s && s.traitId === traitId;
+  }
+
+  // ----------------------------------------------------------
+  // HIRE
+  // ----------------------------------------------------------
+  function hire(candidate) {
+    if (isRoleFilled(candidate.roleId)) {
+      return { success: false, message: "You already have a " + candidate.title + ". Fire them first." };
+    }
+    candidate.hiredQuarter     = GameState.meta.totalQuarters;
+    candidate.quartersEmployed = 0;
+    candidate.skillRevealed    = false;
+    GameState.staff.push(candidate);
+
+    // Remove from talent market
+    if (GameState._talentMarket) {
+      GameState._talentMarket = GameState._talentMarket.filter(function(c) {
+        return c.roleId !== candidate.roleId;
+      });
+    }
+
+    if (typeof News !== "undefined" && News.staffHired) {
+      News.staffHired(candidate.name, candidate.title);
+    }
+
+    // A Head of IR pleases Petrova (the share-price / shareholder-value
+    // director) — a polished investor story reassures the market.
+    if (candidate.roleId === "ir" && typeof Board !== "undefined" && Board.getDirectorState) {
+      var pe = Board.getDirectorState("petrova");
+      if (pe) pe.attitude = Math.min(10, fmt(pe.attitude + 0.75, 2));
+    }
+
+    return { success: true, message: candidate.name + " hired as " + candidate.title + " at $" + candidate.salary + "M/quarter." };
+  }
+
+  // ----------------------------------------------------------
+  // FIRE — lose unlock, pay one quarter severance
+  // ----------------------------------------------------------
+  function fire(roleId) {
+    var s = getStaff(roleId);
+    if (!s) return { success: false, message: "No one in that role." };
+
+    var severance = fmt(s.salary, 2);  // one quarter severance
+    GameState.balance.cash = fmt(GameState.balance.cash - severance);
+    GameState.staff = GameState.staff.filter(function(x) { return x.roleId !== roleId; });
+
+    if (typeof News !== "undefined" && News.staffFired) {
+      News.staffFired(s.name, s.title);
+    }
+
+    return { success: true, message: s.name + " dismissed. Severance $" + severance + "M paid. " + ROLES[roleId].title + " functions are now locked." };
+  }
+
+  // ----------------------------------------------------------
+  // QUARTERLY PROCESSING
+  // - Tick employment counter
+  // - Reveal TRAIT after 2-4 quarters (skill number never shown)
+  // - Asset Manager occupancy uplift
+  // - High Maintenance / Efficient G&A adjustments
+  // - Return total salary for G&A inclusion
+  // ----------------------------------------------------------
+  function processQuarter() {
+    var totalSalary = 0;
+    var gaAdjust = 0;   // extra G&A from traits (+/-)
+
+    GameState.staff.forEach(function(s) {
+      s.quartersEmployed += 1;
+      totalSalary += s.salary;
+
+      // Reveal trait after 2-4 quarters (deterministic per hire)
+      if (!s.traitRevealed) {
+        if (!s._revealAt) s._revealAt = randInt(2, 4);
+        if (s.quartersEmployed >= s._revealAt) {
+          s.traitRevealed = true;
+          s.skillRevealed = true; // keep both flags in sync
+        }
+      }
+
+      // Asset Manager passive: occupancy uplift scaled by effective skill
+      if (s.roleId === "asset") {
+        var uplift = 0.003 + skillFactor("asset") * 0.007; // 0.3%-1.0%/qtr
+        GameState.portfolio.forEach(function(p) {
+          if (!p.underConstruction && !(typeof Tenants !== "undefined" && Tenants.isLocked(p))) {   // single-tenant: 100% or 0%
+            p.occupancy = Math.min(0.98, fmt(p.occupancy + uplift, 3));
+          }
+        });
+      }
+
+      // Trait-based G&A tweaks
+      if (s.traitId === "highmaint") gaAdjust += 0.05;            // fixed overhead
+      if (s.traitId === "efficient") gaAdjust -= 0.04;            // trims G&A
+    });
+
+    GameState._staffSalaryThisQuarter = fmt(totalSalary, 2);
+    GameState._staffGAAdjust = fmt(gaAdjust, 2);
+    return fmt(totalSalary, 2);
+  }
+
+  // Called once per year at year-end: applies Connected/Abrasive board drift
+  function processYearEnd() {
+    GameState.staff.forEach(function(s) {
+      if (!s.boardTarget) return;
+      var dir = (typeof Board !== "undefined" && Board.getDirectorState) ? Board.getDirectorState(s.boardTarget) : null;
+      if (!dir) return;
+      // round 22: moods are recalculated every quarter (directors.js), so a direct nudge vanished; a memory lasts
+      if (typeof Directors !== "undefined" && Directors.remember) {
+        if (s.traitId === "connected") Directors.remember(s.boardTarget, 1, s.name + " (your " + s.title + ") keeps in touch");
+        if (s.traitId === "abrasive")  Directors.remember(s.boardTarget, -1, s.name + " (your " + s.title + ") rubbed him the wrong way");
+        return;
+      }
+      if (s.traitId === "connected") dir.attitude = Math.min(10, fmt(dir.attitude + 0.5, 2));
+      if (s.traitId === "abrasive")  dir.attitude = Math.max(0,  fmt(dir.attitude - 0.5, 2));
+    });
+  }
+
+  // Total quarterly salary (for G&A display / calculation)
+  function totalSalary() {
+    var base = GameState.staff.reduce(function(sum, s) { return sum + s.salary; }, 0);
+    return fmt(base + (GameState._staffGAAdjust || 0), 2);
+  }
+
+  // ----------------------------------------------------------
+  // TRAIT DISPLAY — what the player sees in the trait column.
+  // Before reveal: "Assessing…". After: the trait name (or "—" if none).
+  // The skill NUMBER is never shown.
+  // ----------------------------------------------------------
+  function traitLabel(s) {
+    if (!s.traitRevealed) {
+      return "Assessing… (" + s.quartersEmployed + "q)";
+    }
+    if (!s.traitId) return "No notable trait";
+    return TRAITS[s.traitId] ? TRAITS[s.traitId].label : "—";
+  }
+
+  function traitColor(s) {
+    if (!s.traitRevealed) return "text-muted";
+    if (!s.traitId) return "text-muted";
+    var t = TRAITS[s.traitId];
+    if (!t) return "text-muted";
+    return t.positive ? "text-green" : "text-red";
+  }
+
+  function traitDesc(s) {
+    if (!s.traitRevealed || !s.traitId) return "";
+    return TRAITS[s.traitId] ? TRAITS[s.traitId].desc : "";
+  }
+
+  // ----------------------------------------------------------
+  // INIT / RESET
+  // ----------------------------------------------------------
+  function init() {
+    GameState.staff = [];
+    GameState._talentMarket = [];
+    GameState._staffSalaryThisQuarter = 0;
+    refreshTalentMarket();
+  }
+
+  // ----------------------------------------------------------
+  // PUBLIC API
+  // ----------------------------------------------------------
+  return {
+    ROLES:              ROLES,
+    init:               init,
+    refreshTalentMarket:refreshTalentMarket,
+    generateCandidate:  generateCandidate,
+    isRoleFilled:       isRoleFilled,
+    getStaff:           getStaff,
+    hasRole:            hasRole,
+    hasTrait:           hasTrait,
+    skillFactor:        skillFactor,
+    hire:               hire,
+    fire:               fire,
+    processQuarter:     processQuarter,
+    processYearEnd:     processYearEnd,
+    totalSalary:        totalSalary,
+    traitLabel:         traitLabel,
+    traitColor:         traitColor,
+    traitDesc:          traitDesc,
+    TRAITS:             TRAITS,
+    TIERS:              TIERS,
+  };
+
+})();
