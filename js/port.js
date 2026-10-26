@@ -5,7 +5,7 @@
    15 years, 7.4% in a 6.5% market. Eleanor Whitcombe will never sell it to
    us. Unless she has to.
 
-   Act 1  a meeting, Years 4 to 8: Chen proposes the scheme, Tex backs him.
+   Act 1  a meeting, Years 9 to 11 (round 33: was 4 to 9): Chen proposes the scheme, Tex backs him.
           Atlas runs ammonia refrigeration; the mayor's fire marshal
           "re-inspects" and finds violations; Nora gets a tip; Atlas
           threatens to leave; Eleanor's lenders get nervous; she sells fast.
@@ -76,8 +76,8 @@ window.Port = (() => {
     const p = P(); items = items || [];
     // Act 1: Chen's item. Never at a meeting that already has a big cheque on it.
     const busy = items.some(it => ['story_harlow_offer', 'story_harlow_loan'].indexOf(it.card) > -1 || /Morrow Plaza|Celestial Heights\. /.test(JSON.stringify(it.lines || [])));
-    const ready = (GameState.balance.totalAssets || 0) >= offerPrice() * 3 || year >= 8;
-    if (p.stage === 'wait' && year >= 4 && year <= 9 && ready && !busy && wexOwns() && has('chen')) {
+    const ready = (GameState.balance.totalAssets || 0) >= offerPrice() * 3 || year >= 10;
+    if (p.stage === 'wait' && year >= 9 && year <= 11 && ready && !busy && wexOwns() && has('chen')) {
       p.stage = 'pitched'; p.year = year;
       const b = bldg(), o1 = odds('mayor'), o2 = odds('tex'), t = GameState.tenants && GameState.tenants[TID];
       const lines = [['chen', NAME + ' is pure gold. Atlas Cold Chain on a fifteen year lease, rent up 3% a year, ' + (b.annualNOI / b.currentValue * 100).toFixed(1) + '% in a 6.5% market. And it is sitting with that witch Eleanor, who will never sell it to us. Unless she has to.'],

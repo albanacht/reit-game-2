@@ -106,10 +106,21 @@ window.Journal = (() => {
     const now = x.stage === 'in' ? 'You are in the ' + IndexFund.INDEX + '.' : x.stage === 'candidate' ? 'Analysts call you a candidate.' : 'Not in the ' + IndexFund.INDEX + (x.dropped ? ' (dropped once)' : '') + '.';
     return { title: 'The ' + IndexFund.INDEX, face: FACE('dahl'), status: 'Active', now: now + ' ' + n + ' of 3 tests met.', next: 'Reviews at the end of Q2 and Q4. ' + T.map(t => (t.ok ? '✓ ' : '✗ ') + t.k + ' (' + t.v + ')').join(' · '), log: x.log || [] };
   }
+  /* round 33: the mayor's floors (mayor.js) */
+  function mayor() {
+    if (!window.Mayor) return null;
+    const m = Mayor.M();
+    if (m.stage === 'wait' || m.stage === 'none') return null;
+    if (m.stage === 'offer') return { title: 'The mayor\u2019s floors', face: FACE('mayor'), status: 'Active', now: 'Frank Kowalczyk wants four floors for City Hall.', next: 'Decide in your inbox.', log: m.log || [] };
+    const C = { clean: 'The city rents four floors at its budget rate.', sweet: 'The city pays 20% over market. $0.5M went to Frank\u2019s campaign.', skim: 'His cousin did the fit-out. You gave four well-paid speeches.', refuse: 'You turned Frank down.' }[m.choice] || '';
+    if (!m.invDone) return { title: 'The mayor\u2019s floors', face: FACE('mayor'), status: 'Active', now: C, next: m.choice === 'clean' ? 'Nothing to worry about.' : 'An inquiry into City Hall\u2019s leases is coming, within a year or so.', log: m.log || [] };
+    const R = m.choice === 'refuse' ? 'The inquiry made you "the only landlord who said no".' : m.choice === 'clean' ? 'The inquiry found nothing.' : m.exposed ? 'The inquiry found it.' + (m.fine ? ' You paid a ' + money(m.fine) + ' fine.' : ' The rent was cut to market.') : 'The inquiry never found it.';
+    return { title: 'The mayor\u2019s floors', face: FACE('mayor'), status: 'Ended', now: C + ' ' + R, next: '', log: m.log || [] };
+  }
   function levi() {
     if (!window.Levi) return null;
     const l = Levi.L();
-    if (l.stage === 'wait' || l.stage === 'offered') return null;
+    if (l.stage === 'wait' || l.stage === 'offered' || l.stage === 'letter') return null;
     if (l.stage !== 'hired') return { title: 'Dr. Levi Cohen', face: FACE('levi'), status: 'Ended', now: l.stage === 'quit' ? 'Levi resigned to write a paper about you.' : 'You passed on Levi. He works for Wexmoor.', next: '', log: l.log || [] };
     const m = l.ch && !l.ch.done ? Levi.metric(l.ch.id) : null;
     return { title: 'Dr. Levi Cohen', face: FACE('levi'), status: 'Active', now: 'Strategy advisor. ' + l.hits + ' challenge' + (l.hits === 1 ? '' : 's') + ' met, ' + l.misses + ' missed (three misses and he leaves).',
@@ -125,7 +136,7 @@ window.Journal = (() => {
     const next = y.stage === 'offer' ? 'Decide in your inbox.' : y.stage === 'done' && !y.exposed ? 'For two years Nora Whitlock could still find it.' : '';
     return { title: 'The old yard', face: FACE('gary'), status: y.stage === 'offer' || (y.stage === 'done' && !y.exposed) ? 'Active' : 'Ended', now, next, log: [] };
   }
-  function entries() { return [harlow(), war(), tower(), gary(), yard(), port(), index(), levi()].filter(Boolean); }
+  function entries() { return [harlow(), war(), tower(), gary(), yard(), port(), mayor(), index(), levi()].filter(Boolean); }
 
   /* -- round 22: the Dealroom. Deals, cases (agents.js), stories, influence. -- */
   function agentBtn(id) {

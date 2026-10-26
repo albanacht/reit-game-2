@@ -12,7 +12,8 @@
    Pass the next one: announced (+5%), in from the next quarter: index funds
    own about 15% of us, the price bracket is 3% higher for good, new shares
    cost 1 point less, and Kessler finds it harder to buy a stake.
-   Fall below 75% of the size test, post a loss year, or let Kessler reach
+   Not before Year 6; the letter waits for a $140M market cap (round 33).
+   Fall below 75% of the size test (60% in a crisis or aftershock), post a loss year, or let Kessler reach
    15%: dropped at the next review (−5%, forced selling).
 
    The price of being in: Henrik Dahl, Granite's head of stewardship, visits
@@ -35,6 +36,10 @@ window.IndexFund = (() => {
   const DAHL = { name: 'Henrik Dahl', face: FACE('dahl'), role: 'Head of Stewardship, Granite Funds' };
   const ANALYST = 'Marcus Oyelaran', ANROLE = 'Index strategist, Halverson Bank';
   const SIZE = 175, PREMIUM = 1.03;
+  /* round 33: the letter waits until we are close ($140M) and Year 6; in a market crisis the index
+     keeps us unless we fall below 60% of the size test (75% otherwise), a buffer like real indexes use */
+  const START_YEAR = 6, TELL_AT = 140;
+  const dropLine = () => (window.Arc && Arc.phase && (Arc.phase() === 'crisis' || Arc.phase() === 'aftershock')) ? 0.60 : 0.75;
 
   function X() {
     const s = Story.S();
@@ -82,9 +87,9 @@ window.IndexFund = (() => {
     if (G.meta.totalQuarters < 1) return;
     x.ni.push(fmt((G.pnl.netIncome || 0) - (x.writes || 0))); x.writes = 0;
     while (x.ni.length > 8) x.ni.shift();
-    if (G.meta.year < 4) return;
-    // the first time we are close: the checklist
-    if (!x.told && tests().filter(t => t.ok).length >= 2) {
+    if (G.meta.year < START_YEAR) return;          // round 33: from Year 6 (was 4: the letter arrived as the crisis did)
+    // the first time we are close: the checklist (round 33: only once the size test is within reach)
+    if (!x.told && mcap() >= TELL_AT) {
       x.told = true;
       const ir = window.Staff && Staff.getStaff && Staff.getStaff('ir');
       say(ir ? ir.name : 'Director Petrova', ir ? 'Head of Investor Relations' : 'Director', 'We could join the ' + INDEX,
@@ -109,7 +114,7 @@ window.IndexFund = (() => {
         out.push({ good: false, text: 'We failed the index review after all. Traders sell: price −2%.' });
       }
     } else if (x.stage === 'in' && tq() > x.inQ) {
-      const why = mcap() < SIZE * 0.75 ? 'too small (market cap ' + money(mcap()) + ')' : (last4() != null && last4() < 0) ? 'a loss over the last four quarters' : kessler() >= 15 ? 'Rennick holds ' + kessler().toFixed(1) + '% of us' : null;
+      const why = mcap() < SIZE * dropLine() ? 'too small (market cap ' + money(mcap()) + ')' : (last4() != null && last4() < 0) ? 'a loss over the last four quarters' : kessler() >= 15 ? 'Rennick holds ' + kessler().toFixed(1) + '% of us' : null;
       if (why) {
         x.stage = 'out'; x.dropped = (x.dropped || 0) + 1; x.coolUntil = tq() + 4; price(0.95); note('Dropped from the index.');
         out.push({ good: false, text: 'Dropped from the ' + INDEX + ': ' + why + '. Index funds must sell: price −5%.', w: 10 });

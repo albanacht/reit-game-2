@@ -32,12 +32,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ok(a.min >= 2.6 && a.max <= 3.8 && a.status === 'active', 'Atlas through 12 quarters of recession: rent cover ' + a.min + ' to ' + a.max + 'x, never in trouble');
   // Act 1: Chen proposes, Tex backs
   const act1 = await pg.evaluate(() => { Directors.addDirector('tex', 6, 'Tex Brennan joined'); GameState.board.politicalCapital = 6; GameState.balance.totalAssets = 400; __setQ(5, 1);
-    const it = Port.agenda(4, []); const x = it[0]; return { n: it.length, who: x ? x.lines.map(l => l[0]).join(',') : '', labels: x ? x.choices.map(c => c.label + ' :: ' + (c.detail || '').slice(0, 90)).join('\n      ') : '' }; });
+    const it = Port.agenda(10, []); const x = it[0]; return { n: it.length, who: x ? x.lines.map(l => l[0]).join(',') : '', labels: x ? x.choices.map(c => c.label + ' :: ' + (c.detail || '').slice(0, 90)).join('\n      ') : '' }; });
   ok(act1.n === 1 && /^chen,chen,tex,okafor,petrova$/.test(act1.who), 'the meeting item: Chen proposes, Tex backs him, Okafor and Petrova object');
   console.log('      ' + act1.labels);
   // she sells
-  const s1 = await pg.evaluate(() => { const it = Port.agenda(4, [])[0] || null; return it; });
-  const sells = await pg.evaluate(() => { Port.debug({ stage: 'wait' }); const it = Port.agenda(4, [])[0]; const m = __pick(it, /through the mayor/); const pc = GameState.board.politicalCapital;
+  const s1 = await pg.evaluate(() => { const it = Port.agenda(10, [])[0] || null; return it; });
+  const sells = await pg.evaluate(() => { Port.debug({ stage: 'wait' }); const it = Port.agenda(10, [])[0]; const m = __pick(it, /through the mayor/); const pc = GameState.board.politicalCapital;
     Port.debug({ resultQ: 0 }); Math.random = () => 0.3; __pq(); Math.random = __rnd; const due = Story.S().due; GameState.balance.cash = 200;
     const c = due === 'port_offer' ? __card('port_offer', /^Buy it/) : null; return { m, pc, due, c: c && c.msg, mine: GameState.portfolio.some(p => p.id === 'ind_02'), stage: Port.P().stage }; });
   ok(sells.pc === 4 && sells.due === 'port_offer' && sells.mine, 'through the mayor (2 capital): she sells at 15% off and we buy it: ' + sells.c);
@@ -58,7 +58,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const e = await pg.evaluate(() => Ending.cards().filter(c => /Eleanor/.test(c.label)).map(c => c.lines.join(' ')).join(''));
   ok(/Eleanor/.test(e), 'ending card: ' + e);
   // a real meeting with Chen's item
-  await pg.evaluate(() => { __back(); War.debug({ stage: 'done' }); Story.H().stage = 'done'; Story.S().port = null; GameState.board.politicalCapital = 6; __setQ(4, 4); GameState.board._storyYear = 0; GameState.balance.cash = 300; GameState._pendingDecision = null; Story.S().due = null; });
+  await pg.evaluate(() => { __back(); War.debug({ stage: 'done' }); Story.H().stage = 'done'; Story.S().port = null; GameState.board.politicalCapital = 6; __setQ(10, 4); GameState.board._storyYear = 0; (GameState.debtTranches || []).forEach(t => { t.maturityYear += 10; }); GameState.balance.cash = 300; GameState._pendingDecision = null; Story.S().due = null; });
   const meetingUp = () => pg.evaluate(() => { const m = document.getElementById('meeting'); return !!m && !m.classList.contains('hidden'); });
   for (let i = 0; i < 3 && !(await meetingUp()); i++) {
     await pg.evaluate(() => { for (let k = 0; k < 3 && GameState._pendingDecision; k++) { UI.openPendingDecision(); const c = document.querySelector('#modal-body .decision-choice:not(.decision-choice-disabled):not(.decision-hold)'); if (c) c.click(); else GameState._pendingDecision = null; } UI.closeModal(); });
@@ -76,7 +76,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await pg.evaluate(i => document.querySelectorAll('#mt-actions .mt-btn')[i].click(), i);
     if (last) break;
   }
-  ok(seen && shot, 'in the room at the Year 4 meeting: Chen’s item and its choices');
+  ok(seen && shot, 'in the room at the Year 10 meeting (round 33): Chen’s item and its choices');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 4).join(' / ') : ''));
   await b.close();
 })();

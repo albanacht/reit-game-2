@@ -21,18 +21,18 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     window.__iq = (ni) => { GameState.pnl.netIncome = ni; const out = []; IndexFund.processQuarter(out); return out.map(o => o.text).join(' / '); };
     window.__pick = (it, re) => { const c = it.choices.find(x => re.test(x.label) && !x.disabled) || it.choices.find(x => !x.disabled); return c.go(); };
   });
-  // the checklist arrives when 2 of 3 tests pass
-  const t0 = await pg.evaluate(() => { __setQ(5, 1); GameState.company.sharePrice = 20; GameState.company.sharesOutstanding = 10; for (let i = 0; i < 4; i++) __iq(3); return { told: IndexFund.X().told, tests: IndexFund.tests().map(t => (t.ok ? 'ok ' : 'no ') + t.k + ' = ' + t.v) }; });
+  // the checklist arrives at a $140M market cap, from Year 6 (round 33); the test runs in Years 7-8
+  const t0 = await pg.evaluate(() => { __setQ(7, 1); GameState.company.sharePrice = 20; GameState.company.sharesOutstanding = 10; for (let i = 0; i < 4; i++) __iq(3); return { told: IndexFund.X().told, tests: IndexFund.tests().map(t => (t.ok ? 'ok ' : 'no ') + t.k + ' = ' + t.v) }; });
   ok(t0.told, 'the checklist letter: ' + t0.tests.join(' | '));
-  const c1 = await pg.evaluate(() => { const p0 = GameState.company.sharePrice; __setQ(5, 2); const o = __iq(3); return { st: IndexFund.X().stage, o, up: GameState.company.sharePrice / p0 }; });
+  const c1 = await pg.evaluate(() => { const p0 = GameState.company.sharePrice; __setQ(7, 2); const o = __iq(3); return { st: IndexFund.X().stage, o, up: GameState.company.sharePrice / p0 }; });
   ok(c1.st === 'candidate' && c1.up > 1.02, 'Q2 review: a candidate (+3%): ' + c1.o);
-  await pg.evaluate(() => { __setQ(5, 3); __iq(3); });
-  const c2 = await pg.evaluate(() => { const p0 = GameState.company.sharePrice; __setQ(5, 4); const o = __iq(3); return { st: IndexFund.X().stage, o, up: GameState.company.sharePrice / p0, prem: IndexFund.premium() }; });
+  await pg.evaluate(() => { __setQ(7, 3); __iq(3); });
+  const c2 = await pg.evaluate(() => { const p0 = GameState.company.sharePrice; __setQ(7, 4); const o = __iq(3); return { st: IndexFund.X().stage, o, up: GameState.company.sharePrice / p0, prem: IndexFund.premium() }; });
   ok(c2.st === 'in' && c2.up > 1.04 && c2.prem === 1.03, 'Q4 review: in the index (+5%, bracket x1.03): ' + c2.o);
   // the stewardship visit, with a pill and Tex
   const v = await pg.evaluate(() => {
     War.debug({ pillUntil: 999 }); Directors.addDirector('tex', 6, 'test');
-    const items = IndexFund.agenda(5, []);
+    const items = IndexFund.agenda(7, []);
     const out = { n: items.length, lines: items.map(i => JSON.stringify(i.lines).slice(0, 90)) };
     const pill = items.find(i => /poison pills/.test(JSON.stringify(i.lines))), tex = items.find(i => /Brennan/.test(JSON.stringify(i.lines)));
     out.pill = pill ? __pick(pill, /Keep it/) : null; out.tex = tex ? __pick(tex, /Keep Tex/) : null;
@@ -41,7 +41,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ok(v.n === 4 && v.pill && v.tex, 'Henrik Dahl’s visit: intro, the pill, Tex, say on pay (' + v.n + ' items)');
   ok(v.targets.length === 2, 'kept both: Granite votes against ' + v.targets.join(' and '));
-  const r6 = await pg.evaluate(() => { const r0 = Directors.rep('tex'); const items = IndexFund.agenda(6, []); items.filter(i => i.effect).forEach(i => i.effect()); return { r0, r1: Directors.rep('tex'), n: items.length }; });
+  const r6 = await pg.evaluate(() => { const r0 = Directors.rep('tex'); const items = IndexFund.agenda(8, []); items.filter(i => i.effect).forEach(i => i.effect()); return { r0, r1: Directors.rep('tex'), n: items.length }; });
   ok(r6.r1 === r6.r0 - 10, 'next year Granite votes against Tex: reputation ' + r6.r0 + ' → ' + r6.r1);
   // say on pay: lost, cut
   const sop = await pg.evaluate(() => {
@@ -55,10 +55,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   });
   ok(/fails/.test(sop.msg) && sop.cut === 0.75, 'say on pay lost (41%): ' + sop.r + ' (cut ' + sop.cut + ')');
   // dropped: too small
-  const d = await pg.evaluate(() => { __setQ(6, 2); GameState.company.sharePrice = 10; const o = __iq(3); return { st: IndexFund.X().stage, o, prem: IndexFund.premium() }; });
+  const d = await pg.evaluate(() => { __setQ(8, 2); GameState.company.sharePrice = 10; const o = __iq(3); return { st: IndexFund.X().stage, o, prem: IndexFund.premium() }; });
   ok(d.st === 'out' && d.prem === 1, 'dropped at the next review: ' + d.o);
   // a real meeting with Dahl: back in, a fresh visit
-  await pg.evaluate(() => { IndexFund.debug({ stage: 'in', inQ: 1, visited: null, targets: [], sopForce: null }); Pay.L().lastMeeting = 0; GameState.company.sharePrice = 20; __setQ(6, 4); GameState.board._storyYear = 0; War.debug({ pillUntil: null }); });
+  await pg.evaluate(() => { IndexFund.debug({ stage: 'in', inQ: 1, visited: null, targets: [], sopForce: null }); Pay.L().lastMeeting = 0; GameState.company.sharePrice = 20; __setQ(8, 4); GameState.board._storyYear = 0; (GameState.debtTranches || []).forEach(t => { t.maturityYear += 10; }); War.debug({ pillUntil: null }); });
   const meetingUp = () => pg.evaluate(() => { const m = document.getElementById('meeting'); return !!m && !m.classList.contains('hidden'); });
   for (let i = 0; i < 3 && !(await meetingUp()); i++) {
     await pg.evaluate(() => { for (let k = 0; k < 3 && GameState._pendingDecision; k++) { UI.openPendingDecision(); const c = document.querySelector('#modal-body .decision-choice:not(.decision-choice-disabled):not(.decision-hold)'); if (c) c.click(); else GameState._pendingDecision = null; } UI.closeModal(); });

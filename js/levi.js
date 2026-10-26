@@ -2,7 +2,7 @@
    levi.js — DR. LEVI COHEN, STRATEGY ADVISOR (round 20). window.Levi
 
    PhD in financial econometrics, CFA charterholder, four papers nobody has
-   read. Petrova brings him in at a meeting between Years 5 and 8.
+   read. Petrova writes about him in Year 2 Q3 (round 33; a meeting in Years 3-4 is the fallback).
 
    - He is staff, not a director: no vote, $0.6M a year, on the Staff screen.
    - Every other meeting he sets a challenge in glorious gibberish ("the
@@ -71,8 +71,9 @@ window.Levi = (() => {
   function agenda(year, items) {
     const l = L(); items = items || [];
     // arrival: Petrova knows a man
-    // round 32: early (meetings of Years 2 to 4), so his crisis forecast arrives before the crisis (Years 5 to 7), not after
-    if (l.stage === 'wait' && year >= 2 && year <= 4 && (year >= 3 || items.length < 2) && (has('petrova') || has('chen'))) {
+    // round 33: he normally arrives by letter in Year 2 Q3 (processQuarter). The meeting is only a fallback,
+    // for a game where the letter never got its slot (meetings about Years 3 and 4).
+    if (l.stage === 'wait' && year >= 3 && year <= 4 && (has('petrova') || has('chen'))) {
       l.stage = 'offered';
       const who = lead('petrova', 'chen');
       items.push({ guest: LEVI, lines: [
@@ -118,7 +119,11 @@ window.Levi = (() => {
   // EVERY QUARTER: the forecasts
   // ============================================================================
   function processQuarter(out) {
-    const l = L();
+    const l = L(), s = Story.S();
+    // round 33: Petrova's letter, Year 2 Q3 (or the first quarter after it with a free slot)
+    if (l.stage === 'wait' && !GameState.meta.gameOver && tq() >= 7 && GameState.meta.year <= 4 && (has('petrova') || has('chen')) && (!s.due || (Story.lowDue && Story.lowDue()))) {
+      l.stage = 'letter'; s.due = 'levi_offer'; return;
+    }
     if (!hired() || !window.Arc || !Arc.phase || GameState.meta.gameOver) return;
     const now = tq(), ph = Arc.phase(), in2 = Arc.phase(now + 2), in1 = Arc.phase(now + 1);
     const once = (key, title, body) => { if (l.warned[key]) return; l.warned[key] = true; say(title, body); note(title); };
@@ -129,6 +134,25 @@ window.Levi = (() => {
     if (ph === 'crisis' && in1 === 'recovery') once('bottom', 'The bottom, statistically',
       'The cointegration between our cap rates and the base rate has broken back toward its mean. <b>The worst is about to pass.</b> Weak owners will have to sell in the next few quarters. This is when people get rich. Usually other people. It could be us.');
   }
+
+  /* round 33: the arrival letter (Year 2 Q3). Same deal as the meeting version. */
+  const CARD = { id: 'levi_offer', system: true, story: true, holdQ: 2,
+    build() {
+      const l = L(); if (l.stage !== 'letter') return null;
+      const who = lead('petrova', 'chen'), W = who === 'petrova' ? 'Petrova' : 'Chen';
+      return { title: 'Our models are a spreadsheet from 2009', from: Directors.name(who), face: 'assets/faces/' + who + '.jpg',
+        body: '"Our forecasting is a spreadsheet somebody’s nephew built in 2009. I know a man. Dr. Levi Cohen: PhD in financial econometrics, CFA charterholder, four published papers nobody has read. He sees downturns coming. He is also… a lot."' +
+              '<div class="dv"><img src="' + LEVI.face + '" alt=""><div><b>Levi:</b> "Five papers, actually. The fifth is under review. It has been under review for three years."</div></div>' +
+              '<div class="dv-nums">Strategy advisor, not a director: no vote, $0.6M a year. He warns you about two quarters before a crisis, calls the bottom, and sets the board a number to hit every other year (Williams likes it when you hit it).</div>',
+        choices: [
+          { label: 'Hire Dr. Levi Cohen ($0.6M a year)', detail: W + ' +1, Okafor −0.5. He sets his first challenge at the next board meeting.',
+            apply() { l.stage = 'hired'; l.year = GameState.meta.year - 1; surcharge(SAL_Q); remember(who, 1, 'you hired Levi'); remember('okafor', -0.5, 'another salary'); note('Hired (letter).');
+                      return 'Levi starts on Monday. He has asked for a second monitor and "access to the residuals".'; } },
+          { label: 'Pass', detail: W + ' −0.5. He goes to work for Eleanor at Wexmoor instead.',
+            apply() { l.stage = 'passed'; remember(who, -0.5, 'you passed on Levi'); note('Passed (letter).'); return 'Levi took a job at Wexmoor the following week.'; } },
+        ] };
+    } };
+  if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === CARD.id)) World.DECISIONS.push(CARD);
 
   /* The Staff screen card. */
   function staffHTML() {

@@ -1,7 +1,7 @@
 /* ============================================================================
    war.js — STORY 3: THE RENNICK WAR (round 13; STORY_RENNICK_DRAFT.md v4).
 
-   Act 0  Year 3 meeting: Jack Morrow retires and sells Morrow Plaza. Chen
+   Act 0  Year 5 meeting: Jack Morrow retires and sells Morrow Plaza. Chen
           wants it, Okafor objects. An auction against Kessler in the room.
           Win and the war starts; pass and Rennick grows (no war).
    War    Kessler attacks between meetings (a leak, then a short report by a
@@ -90,9 +90,9 @@ window.War = (() => {
   function agenda(year, items) {
     const w = W(); items = items || [];
     if (!alive()) return items;
-    // Act 0: Jack's building, the Year 3 meeting
+    // Act 0: Jack's building, the Year 5 meeting (round 33: was Year 3; Kessler now strikes in the crisis)
     const harlowBig = items.some(it => it.card === 'story_harlow_offer' || it.card === 'story_harlow_loan');     // never two big cheques at one meeting
-    if ((w.stage === 'wait' || w.stage === 'bid') && year >= 3 && !harlowBig && mpz() && !(GameState.portfolio || []).some(p => p.id === MPZ)) {
+    if ((w.stage === 'wait' || w.stage === 'bid') && year >= 5 && !harlowBig && mpz() && !(GameState.portfolio || []).some(p => p.id === MPZ)) {
       w.stage = 'bid'; w.jack = fmt(mpz().currentValue); w.max = fmt(w.jack * (1.06 + rnd() * 0.06)); w.bid = w.jack;
       items.push({ guest: JACK, lines: [
         [lead('chen', 'petrova'), 'Jack Morrow is retiring and selling Morrow Plaza: office, about ' + money(w.jack) + ', a 9% yield on rent locked in for years. Kessler is already circling. We should have it.'],

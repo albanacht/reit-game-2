@@ -1065,6 +1065,7 @@ window.Story = (() => {
     try { if (window.Gary) Gary.processQuarter(out); } catch (e) { if (window.console) console.warn('gary', e); }
     try { if (window.Port) Port.processQuarter(out); } catch (e) { if (window.console) console.warn('port', e); }
     try { if (window.Levi) Levi.processQuarter(out); } catch (e) { if (window.console) console.warn('levi', e); }
+    try { if (window.Mayor) Mayor.processQuarter(out); } catch (e) { if (window.console) console.warn('mayor', e); }   // round 33
     try { if (window.IndexFund) IndexFund.processQuarter(out); } catch (e) { if (window.console) console.warn('index', e); }
     try { if (window.Sales) Sales.processQuarter(); } catch (e) { if (window.console) console.warn('sales', e); }
     try { if (window.Deals) Deals.processQuarter(out); } catch (e) { if (window.console) console.warn('deals', e); }   // round 22
@@ -1088,7 +1089,7 @@ window.Story = (() => {
   /* For tests and tuning: jump the Harlow story to a stage. */
   function debug(stage, extra) { const h = H(); Object.assign(h, { stage }, extra || {}); if (extra && extra.due) S().due = extra.due; return h; }
 
-  return { init, ensure, processQuarter, dueCard, otherAssets, protects, clockRows, S, H, maturityOdds, finalOdds, failOdds, debug,
+  return { lowDue, init, ensure, processQuarter, dueCard, otherAssets, protects, clockRows, S, H, maturityOdds, finalOdds, failOdds, debug,
            esgScore, esgPremium, esgNewThisYear, esgRefusedRecently, esgCancelledRecently, esgItems, esgCancel, onDirectorJoin, ESG_LINE,
            CEO, ceoWorth, texChecks, awardOdds, payAward, flagOdds, AWARD_CASH, AWARD_SHARES, macroLine, agenda };
 })();

@@ -316,8 +316,11 @@ window.Tower = (() => {
       const ev = window.Events && Events.EVENT_CATALOGUE && Events.EVENT_CATALOGUE.find(e => e.id === 'pandemic_shock');
       if (ev) { try { const r = ev.apply(); if (r) out.push({ good: false, text: r.headline + ': ' + r.impact, w: 10 }); } catch (e) {} }
     }
-    const occ = A ? (t.calder ? 0.55 : 0.40) : (t.calder ? 0.80 : 0.70);
-    const rentFull = fmt(P.rentFull * (t.calder ? 0.96 : 1) * shareOf());
+    // round 33: the city's floors (mayor.js), pre-let at the city's rent; government tenants move in pandemic or not
+    const city = t.city && !t.city.applied ? t.city : null;
+    const occ = Math.min(0.95, (A ? (t.calder ? 0.55 : 0.40) : (t.calder ? 0.80 : 0.70)) + (city ? city.share : 0));
+    const rentFull = fmt(P.rentFull * (t.calder ? 0.96 : 1) * shareOf() * (city ? 1 + city.share * (city.mult - 1) : 1));
+    if (city) city.applied = true;
     const value = fmt(rentFull * occ / (A ? 0.07 : 0.0625) * (t.loungeCut ? 0.96 : 1));
     Object.assign(p, { underConstruction: false, constructionType: null, constructionQuartersLeft: 0, occupancy: occ, annualNOI: rentFull, vb: null, quarterOwned: 0 });
     t.impair = fmt(Math.max(0, p.currentValue - value)); t.impairQ = tq();
@@ -338,9 +341,10 @@ window.Tower = (() => {
   function leaseUp(out) {
     const t = T(), p = tower();
     if (!p) { t.stage = 'sold'; return; }
-    const A = t.road === 'A', top = A ? 0.70 : t.success ? 0.93 : 0.78, step = A ? 0.015 : t.success ? 0.025 : 0.01;
+    const cs = t.city ? t.city.share : 0, ok = t.success || cs > 0;          // round 33: with the city in, the tower can fill
+    const A = t.road === 'A', top = Math.min(0.96, (A ? 0.70 : ok ? 0.93 : 0.78) + (ok && !A ? 0 : cs)), step = A ? 0.015 : ok ? 0.025 : 0.01;
     if (p.occupancy < top) p.occupancy = Math.min(top, fmt(p.occupancy + step));
-    if (!A && t.success && p.occupancy >= 0.90 && !t.trophy) {
+    if (!A && ok && p.occupancy >= 0.90 && !t.trophy) {
       t.trophy = true; t.stage = 'trophy'; t.ending = 'trophy'; p.storyLock = false;
       p.currentValue = fmt(noiAt(p.annualNOI, p.occupancy) / 0.0525); p.baseValue = p.currentValue; p.vb = null;
       remember('williams', 1.5, 'the tower is full'); remember('chen', 1, 'the tower is a trophy');

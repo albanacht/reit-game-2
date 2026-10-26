@@ -154,6 +154,19 @@ window.Ending = (() => {
               : ['eleanor_held', 'Eleanor still owns Port Logistics. Atlas renewed for twenty years.', 'Nice try, she says, whenever she sees you.'];
       out.push({ key: L[0], fallback: FACE('ceo_wex'), label: 'Eleanor Whitcombe', lines: [L[1], pp.mayor ? L[2] + ' Frank Kowalczyk was re-elected twice.' : L[2]] });
     }
+    // round 33: the mayor's floors (mayor.js)
+    if (window.Mayor && Mayor.ending()) {
+      const e = Mayor.ending(), m = Mayor.M(), B = ((G.portfolio || []).find(b => b.id === m.bld) || {}).name || 'our building';
+      const F = { clean: ['City Hall still rents four floors of ' + B + ', at the budget rate.', 'Frank cut the ribbon on his own office.'],
+                  sweet_quiet: ['The city still pays above market for four floors of ' + B + '.', 'Nobody has checked. Frank is in his third term.'],
+                  sweet_exposed: ['The council cut the city’s rent to market after the inquiry.', 'Frank resigned "to spend more time with his family".'],
+                  skim_quiet: ['Kowalczyk Interiors has a new office. You gave four very well-paid speeches that year.', 'Nobody remembers what they were about. Neither do you.'],
+                  skim_exposed: ['You paid ' + money(m.fine || 7.5) + ' to the state. Frank paid more.', 'You still get invited to give speeches. You decline.'],
+                  refused: ['The inquiry reached every landlord in Riverton but you.', 'Frank still calls you "the one who said no". It is not a compliment.'],
+                  refused_kessler: ['Rennick took the city’s floors. The inquiry took Rennick’s reputation.', 'Kessler still says it was a perfectly normal lease.'],
+                  clean_pending: null }[e] || (/_pending$/.test(e) ? ['The inquiry into City Hall’s leases was still open when you left.', 'Your successor gets the phone calls.'] : null);
+      if (F) out.push({ key: 'mayor_' + e, fallback: FACE('mayor'), label: 'Mayor Frank Kowalczyk', lines: F });
+    }
     // Levi
     if (window.Levi && Levi.ending() !== 'none') {
       const e = Levi.ending(), l = Levi.L();

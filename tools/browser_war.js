@@ -1,5 +1,5 @@
 /* browser_war.js — round 13, the Rennick war (STORY_RENNICK_DRAFT.md v4).
-   Part "win" (default): Morrow Plaza in the city, the Year 3 auction in the
+   Part "win" (default): Morrow Plaza in the city, the Year 5 auction (round 33) in the
    meeting, the leak card, the follow-up debate, a weapon from Rennick's
    profile, the audit card, the crisis (blocking his sales), the takeover.
    Part "lose": Kessler's stake, the pill, Voss joining, the hostile bid.
@@ -55,15 +55,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     ok(await pg.evaluate(() => { const p = GameState.cityRivals.find(x => x.id === 'off_mpz'); return !!p && p.owner === 'none' && /Jack Morrow/.test(p.ownerNote); }), 'Morrow Plaza is in the city, Jack’s, not for sale');
     // years 1 and 2: get through the meetings
     for (const y of [1, 2]) { ok(await toMeeting(), 'Year ' + y + ' meeting'); await through(find(/Not now|Stop|Decide later/)); }
-    // Year 3: the auction
+    // round 33: Jack sells at the Year 5 meeting. Jump the clock to Year 5 Q3 (playing Years 3-4 passively is not the point here)
+    await pg.evaluate(() => { GameState.meta.year = 5; GameState.meta.quarter = 3; GameState.meta.totalQuarters = 18; Story.S().due = null; GameState._pendingDecision = null; });
+    // Year 5: the auction (round 33: was Year 3)
     await pg.evaluate(() => { GameState.balance.cash = 140; GameState.board.politicalCapital = 6; });
-    ok(await toMeeting(), 'Year 3 meeting');
+    ok(await toMeeting(), 'Year 5 meeting');
     await pg.evaluate(() => { window.__r = Math.random; });
     let s3 = await through(find(/^(Bid|Match)/), st => /Morrow Plaza/.test(st.log) && /Bid:/.test(st.btns.map(x => x.t).join()) ? 'war_auction' : null);
-    if (await pg.evaluate(() => War.W().stage === 'wait')) {           // Bob's offer took the Year 3 meeting: Jack waits a year
-      ok(s3.some(x => /Bob Harlow is here/.test(x)) && !s3.some(x => /Jack Morrow is retiring/.test(x)), 'Harlow\u2019s offer at Year 3, so the auction waits for Year 4');
+    if (await pg.evaluate(() => War.W().stage === 'wait')) {           // a Harlow cheque took the Year 5 meeting: Jack waits a year
+      ok(!s3.some(x => /Jack Morrow is retiring/.test(x)), 'a Harlow cheque at Year 5, so the auction waits for Year 6');
       await pg.evaluate(() => { GameState.balance.cash = 140; GameState.board.politicalCapital = 6; });
-      ok(await toMeeting(), 'Year 4 meeting');
+      ok(await toMeeting(), 'Year 6 meeting');
       s3 = await through(find(/^(Bid|Match)/), st => /Morrow Plaza/.test(st.log) && /Bid:/.test(st.btns.map(x => x.t).join()) ? 'war_auction' : null);
     }
     ok(s3.some(x => /Jack Morrow is retiring/.test(x)), 'Chen raises Morrow Plaza, Jack is in the room');
@@ -80,7 +82,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     ok(c.id === 'war_leak' && c.clicked, 'the leak card: ' + c.t.slice(0, 90));
     // next meeting: hold fire or hit back
     await pg.evaluate(() => { GameState.board.politicalCapital = 6; });
-    ok(await toMeeting(), 'Year 4 meeting');
+    ok(await toMeeting(), 'the next meeting');
     const s4 = await through(find(/Hit back now|Not now/), st => /Stop the headlines/.test(st.log) ? 'war_debate' : null);
     ok(s4.some(x => /Stop the headlines/.test(x)), 'Petrova vs Chen in the room');
     ok(await pg.evaluate(() => War.W().freeShot), 'hit back: the next weapon is free');

@@ -17,18 +17,18 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await pg.goto(R); await wait(300); await pg.evaluate(() => localStorage.clear());
   await pg.evaluate(() => UI.newGame()); await wait(1500); await pg.evaluate(() => UI.closeModal());
   await pg.evaluate(() => { window.__pick = (it, re) => { const c = it.choices.find(x => re.test(x.label) && !x.disabled) || it.choices.find(x => !x.disabled); return c.go(); }; });
-  const a = await pg.evaluate(() => { const g0 = GameState._gaSurcharge || 0; const it = Levi.agenda(5, [])[0]; const lines = it.lines.map(l => l[0]).join(','); const m = __pick(it, /Hire/); return { lines, m, g: (GameState._gaSurcharge || 0) - g0, st: Levi.L().stage }; });
-  ok(a.st === 'hired' && Math.abs(a.g - 0.15) < 0.001, 'Year 5: Petrova brings Levi (' + a.lines + '); hired at $0.6M a year: ' + a.m);
-  const c = await pg.evaluate(() => { const it = Levi.agenda(6, [])[0]; return { text: it.lines.map(l => l[0] + ': ' + l[1]).join(' | '), note: it.note, ch: Levi.L().ch }; });
+  const a = await pg.evaluate(() => { const g0 = GameState._gaSurcharge || 0; const it = Levi.agenda(3, [])[0]; const lines = it.lines.map(l => l[0]).join(','); const m = __pick(it, /Hire/); return { lines, m, g: (GameState._gaSurcharge || 0) - g0, st: Levi.L().stage }; });
+  ok(a.st === 'hired' && Math.abs(a.g - 0.15) < 0.001, 'Year 3 (fallback; the letter is in round 33): Petrova brings Levi (' + a.lines + '); hired at $0.6M a year: ' + a.m);
+  const c = await pg.evaluate(() => { const it = Levi.agenda(4, [])[0]; return { text: it.lines.map(l => l[0] + ': ' + l[1]).join(' | '), note: it.note, ch: Levi.L().ch }; });
   ok(/z-test/.test(c.text) && /Levi is right/.test(c.text) && /Jenkins/.test(c.note), 'Year 6 challenge: ' + c.text.slice(0, 220));
   console.log('      ' + c.note);
-  ok(await pg.evaluate(() => Levi.agenda(6, []).length === 0 || true), 'one challenge per meeting');
+  ok(await pg.evaluate(() => Levi.agenda(4, []).length === 0 || true), 'one challenge per meeting');
   // the verdict a year later: missed
-  const v = await pg.evaluate(() => { const w0 = GameState.board.directors.find(d => d.id === 'williams').attitude; const it = Levi.agenda(7, [])[0]; const msg = it.effect(); return { text: it.lines.map(l => l[1]).join(' | '), msg, misses: Levi.L().misses }; });
+  const v = await pg.evaluate(() => { const w0 = GameState.board.directors.find(d => d.id === 'williams').attitude; const it = Levi.agenda(5, [])[0]; const msg = it.effect(); return { text: it.lines.map(l => l[1]).join(' | '), msg, misses: Levi.L().misses }; });
   ok(/target was/.test(v.text) && v.misses === 1, 'Year 7 verdict (missed): "' + v.text.slice(0, 120) + '" → ' + v.msg);
-  const none = await pg.evaluate(() => Levi.agenda(7, []).length);
+  const none = await pg.evaluate(() => Levi.agenda(5, []).length);
   // the next challenge two years after the last, and met
-  const met = await pg.evaluate(() => { const it = Levi.agenda(8, [])[0]; const ch = Levi.L().ch; const m = Levi.metric(ch.id); const orig = m.val; m.val = () => ch.target + 0.01; const it2 = Levi.agenda(9, [])[0]; const r = it2.effect(); m.val = orig; return { r, hits: Levi.L().hits }; });
+  const met = await pg.evaluate(() => { const it = Levi.agenda(6, [])[0]; const ch = Levi.L().ch; const m = Levi.metric(ch.id); const orig = m.val; m.val = () => ch.target + 0.01; const it2 = Levi.agenda(7, [])[0]; const r = it2.effect(); m.val = orig; return { r, hits: Levi.L().hits }; });
   ok(met.hits === 1 && /met/.test(met.r), 'Year 9 verdict (met): ' + met.r);
   // the crisis forecast
   const f = await pg.evaluate(() => { const ph = Arc.phase; const now = (GameState.meta.year - 1) * 4 + GameState.meta.quarter; Arc.phase = t => (t || now) >= now + 2 ? 'crisis' : 'cheap'; const out = []; Levi.processQuarter(out); Arc.phase = ph; UI.renderAll();

@@ -10,7 +10,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const ok = (c, m) => console.log((c ? 'PASS ' : 'FAIL ') + m);
   await pg.goto(R); await wait(300); await pg.evaluate(() => localStorage.clear());
   await pg.evaluate(() => UI.newGame()); await wait(1300);
-  await pg.evaluate(() => { const G = GameState; UI.closeModal(); G.meta.year = 3; G.meta.quarter = 1; G.board._storyYear = 0; G.board._meetingYear = 0; Levi.L().stage = 'wait'; Meeting.open(); });
+  await pg.evaluate(() => { const G = GameState; UI.closeModal(); G.meta.year = 4; G.meta.quarter = 1; G.board._storyYear = 0;   // round 33: the Year 3 meeting (Levi's fallback slot)
+    G.board._meetingYear = 0; Levi.L().stage = 'wait'; Meeting.open(); });
   await wait(300);
   const g = await pg.evaluate(() => [...document.querySelectorAll('#mt-portraits .mt-p.guest')].map(x => x.textContent.trim().replace(/\s+/g, ' ')));
   ok(g.some(x => /Levi|Cohen/.test(x)), 'guest seated from the first line: ' + g.join(', '));
