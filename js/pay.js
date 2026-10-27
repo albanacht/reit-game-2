@@ -105,12 +105,13 @@ window.Pay = (() => {
     const B = bonusFor(), pend = c.pending.slice(), extra = pend.reduce((a, p) => a + p.cash, 0);
     const avg = (b.directors || []).reduce((a, d) => a + d.attitude, 0) / Math.max(1, (b.directors || []).length);
     const approveExtra = extra > 0 && avg >= 4.5;
-    const total = fmt(B.amount + (approveExtra ? extra : 0));
+    const belt = GameState._belt && GameState._belt.noBonusYear === year;   // round 34: you suspended all bonuses (levi.js)
+    const total = belt ? 0 : fmt(B.amount + (approveExtra ? extra : 0));
     const why = 'Target ' + money(pkg().bonus) + ' × ' + B.hit + '% of the scorecard' + (B.beat ? ', +25% for beating the rivals' : '') + (B.probation ? ', halved: you are on probation' : '') +
                 (pend.length ? '. Special recognition: ' + pend.map(p => p.reason + ' (' + money(p.cash) + ')').join('; ') + (approveExtra ? '' : ' (not approved: the board is not content enough)') : '');
     c.pending = [];
-    items.push({ lines: [[chair, 'The pay committee. ' + (total > 0 ? 'Your bonus for the year is ' + money(total) + '.' : 'There is no bonus this year.')]],
-      note: why,
+    items.push({ lines: [[chair, 'The pay committee. ' + (belt ? 'No bonuses this year, as you decided when we tightened our belts. Yours included. The board noticed.' : total > 0 ? 'Your bonus for the year is ' + money(total) + '.' : 'There is no bonus this year.')]],
+      note: belt ? 'Suspended: no bonus, no share grant for you, no share grant for the directors this year.' : why,
       choices: total > 0 ? [
         { label: 'Take the bonus: ' + money(total), detail: 'Into your own account. The company books it as a one-off cost.', primary: true,
           go: () => { c.cash = fmt(c.cash + total); GameState._pendingUnusual = fmt((GameState._pendingUnusual || 0) - total); c.log.push({ y: year, bonus: total, extra: approveExtra ? extra : 0 }); return 'Paid: ' + money(total) + '.'; } },
@@ -132,9 +133,9 @@ window.Pay = (() => {
               return 'Contract: ' + P.label.toLowerCase() + ', for three years.'; } }; }) });
     }
     // 4. this year's share grant
-    items.push({ lines: [], effect: () => { const n = Math.round(pkg().ltip / price() * 1e6); c.grants.push({ y: year, n, vested: 0, tr: 0 }); return 'Granted: ' + n.toLocaleString() + ' shares (' + money(pkg().ltip) + '), vesting a third a year. They join the share count as they vest.'; } });
+    if (!belt) items.push({ lines: [], effect: () => { const n = Math.round(pkg().ltip / price() * 1e6); c.grants.push({ y: year, n, vested: 0, tr: 0 }); return 'Granted: ' + n.toLocaleString() + ' shares (' + money(pkg().ltip) + '), vesting a third a year. They join the share count as they vest.'; } });
     // round 24: the directors are paid as well (fees in overheads, plus shares once a year)
-    if (year >= 1 && window.Directors && Directors.boardGrant) items.push({ lines: [], effect: () => { const g = Directors.boardGrant(); return g ? 'Directors\u2019 pay: each of the ' + g.count + ' directors receives ' + g.n.toLocaleString() + ' new shares (' + money(Directors.BOARD_SHARES) + ' each; their cash fees are in your overheads). Shares outstanding: ' + GameState.company.sharesOutstanding.toFixed(2) + 'M.' : ''; } });
+    if (!belt && year >= 1 && window.Directors && Directors.boardGrant) items.push({ lines: [], effect: () => { const g = Directors.boardGrant(); return g ? 'Directors\u2019 pay: each of the ' + g.count + ' directors receives ' + g.n.toLocaleString() + ' new shares (' + money(Directors.BOARD_SHARES) + ' each; their cash fees are in your overheads). Shares outstanding: ' + GameState.company.sharesOutstanding.toFixed(2) + 'M.' : ''; } });
     return items;
   }
 

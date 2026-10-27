@@ -16,7 +16,8 @@ window.Financials = (() => {
   // ----------------------------------------------------------
   // CONSTANTS
   // ----------------------------------------------------------
-  const OPEX_RATIO        = 0.30;  // Operating expenses as % of GPR (trimmed to offset new G&A floor)
+  const OPEX_RATIO        = 0.28;  // Operating expenses as % of gross rent (round 34: was 0.30; Boss Alex: AFFO too thin)
+  const GROSS_UP          = 0.30;  // round 34: gross rent is still worked back at 30%, so the cut lowers costs, not rent
   const DEPRECIATION_RATE = 0.020; // Annual depreciation as % of asset value
   /* 2.0: G&A roughly halved (~2% -> ~1% of assets a year on the starting
      portfolio). v1 was a survival game tuned max-harsh; 2.0 is a fight
@@ -59,7 +60,7 @@ window.Financials = (() => {
 
       // Gross it up for display: if opex is OPEX_RATIO of gross rent, then
       // NOI (at full occ) = grossRent * (1 - OPEX_RATIO). So gross rent is:
-      const propGPR     = fmt(fullNOIq / (1 - OPEX_RATIO));
+      const propGPR     = fmt(fullNOIq / (1 - GROSS_UP));
       const propOpex    = fmt(propGPR * OPEX_RATIO);
       // Vacancy is the only real haircut applied to NOI (occupancy):
       const propVacancy = fmt(propGPR * (1 - prop.occupancy));
@@ -111,6 +112,9 @@ window.Financials = (() => {
     if (GameState._gaSurcharge) ga += GameState._gaSurcharge;
     if (typeof Gary !== "undefined" && Gary.feeQ) ga += Gary.feeQ();   // round 15: Lakeside's fee above the cheapest bid (gary.js)
     if (typeof Pay !== "undefined" && Pay.salaryQ) ga += Pay.salaryQ();   // round 12: your salary (pay.js)
+    // round 34: belt-tightening (levi.js): overheads -10% for a year
+    const B = GameState._belt, nowQ = (GameState.meta.year - 1) * 4 + GameState.meta.quarter;
+    if (B && nowQ <= B.until) ga *= 0.9;
 
     return fmt(ga);
   }

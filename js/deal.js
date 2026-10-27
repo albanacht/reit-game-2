@@ -55,7 +55,7 @@ window.Deal = (() => {
     /* Rent actually collected, as the P&L counts it: empty space still costs
        its share of running costs. Round 3: the preview used full rent, which
        overstated yields by about a point. */
-    const noiY = p.underConstruction ? 0 : p.annualNOI * (p.occupancy - 0.30) / 0.70;
+    const noiY = p.underConstruction ? 0 : p.annualNOI * (p.occupancy - 0.28) / 0.70;   // round 34: costs 28% of gross rent
     const yieldOn = noiY / price;
     const rate = Financials.getCurrentBorrowingRateForTerm ? Financials.getCurrentBorrowingRateForTerm(5) / 100 : 0.05;
     // cash profit per quarter this building adds (or removes): rent, less the overhead and upkeep the engine charges for it

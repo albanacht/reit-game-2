@@ -172,6 +172,9 @@ window.Deals = (() => {
     const now = tq();
     D().list.filter(d => d.stage === 'out' && d.q < now).forEach(d => d.kind === 'lot' ? resolveLot(d, out) : resolveOffer(d, out));
     devQuarter(out);
+    // round 34: if the inbox slot was busy when we won the lot (Levi's letter, say), ask about the plan once it is free
+    const waiting = D().devs.find(v => v.stage === 'land' && !v.asked);
+    if (waiting && (!S().due || (Story.lowDue && Story.lowDue()))) { S().due = 'dev_plan'; S().devId = waiting.id; waiting.asked = true; }
     listings(out);
     pitch();
     rivalBuilds(out);
@@ -305,7 +308,7 @@ window.Deals = (() => {
         '<tr><td>A standard building</td><td>' + money(P.build) + ' over ' + P.q + ' quarters, worth about ' + money(P.value) + ' when let</td></tr></table>' +
         '<div class="sml-note">Next: choose what to build (a card in your inbox, or the Dealroom). Land earns nothing until it is built.</div>', '');
     note(d.result);
-    if (!S().due) { S().due = 'dev_plan'; S().devId = dev.id; }
+    if (!S().due) { S().due = 'dev_plan'; S().devId = dev.id; dev.asked = true; }
   }
   /* The land becomes a building site on your books, worth what you paid. */
   function landToYou(l, price) {

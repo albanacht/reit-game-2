@@ -71,7 +71,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ok(/doorknob/.test(rv.blk), 'Rennick at war: "' + rv.blk + '"');
 
   // 6. land: the reserved tower lot, then win, plan, build, pre-let, open, lease up
-  const l = await pg.evaluate(() => { const G = GameState, out = {};
+  const l = await pg.evaluate(() => { const G = GameState, out = {}; Levi.debug({ stage: 'passed' });   // round 34: his letter would take the slot (the plan card then comes a quarter later)
     out.rsv = Deals.bid('lot_01', 50).message;
     __pin(0.99); out.bid = Deals.bid('lot_02', 9).message; out.seen = __q(/standard/i); __unpin();
     const dev = Deals.D().devs[0]; out.stage = dev && dev.stage; out.size = dev && dev.size;

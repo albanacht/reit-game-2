@@ -131,6 +131,9 @@ window.Levi = (() => {
       'My Markov regime-switching model, re-estimated with a Student-t copula, puts the probability of a <b>crisis within two quarters at ' + (68 + Math.floor(rnd() * 12)) + '%</b>. I would hold cash, refinance anything falling due, and not buy anything I couldn’t carry through a bad year.<br><br>I have also prepared a 40-page appendix. You will not read it.');
     if (in2 === 'aftershock' && ph !== 'aftershock') once('after', 'The tail is fatter than the market thinks',
       'The second moment of the recovery is mis-specified. Translation: <b>a second, smaller shock is likely within two quarters (' + (60 + Math.floor(rnd() * 15)) + '%)</b>. Keep some powder dry.');
+    // round 34: the belt-tightening question follows each warning, once
+    l.beltAsked = l.beltAsked || {};
+    ['crisis', 'after'].forEach(k => { if (l.warned[k] && !l.beltAsked[k] && !l.beltFor) { const s = Story.S(); if (!s.due || (Story.lowDue && Story.lowDue())) { l.beltAsked[k] = true; l.beltFor = k; s.due = 'levi_belt'; } } });
     if (ph === 'crisis' && in1 === 'recovery') once('bottom', 'The bottom, statistically',
       'The cointegration between our cap rates and the base rate has broken back toward its mean. <b>The worst is about to pass.</b> Weak owners will have to sell in the next few quarters. This is when people get rich. Usually other people. It could be us.');
   }
@@ -153,6 +156,29 @@ window.Levi = (() => {
         ] };
     } };
   if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === CARD.id)) World.DECISIONS.push(CARD);
+
+  /* round 34: after Levi's crisis (or aftershock) warning, a one-off choice: tighten belts for a year. */
+  const BELT = { id: 'levi_belt', system: true, story: true, holdQ: 1,
+    build() {
+      const l = L(); if (!l.beltFor) return null;
+      const after = l.beltFor === 'after', G = GameState, ga = G.pnl && G.pnl.gAndA ? G.pnl.gAndA * 4 : 0;
+      const bonus = window.Pay && Pay.bonusFor ? Pay.bonusFor().amount : 0;
+      return { title: after ? 'Brace for the second shock?' : 'Tighten our belts before it hits?', from: 'Jenkins, Chief of Staff', face: 'assets/faces/jenkins.jpg',
+        body: '"Boss, you read Levi’s note. If he is right, ' + (after ? 'a second shock is coming' : 'the next two years will be hard') + '. We could act first: cut overheads by a tenth for a year and suspend every bonus. Yours too. The board likes a CEO who goes first."' +
+              '<table class="dv-nums"><tr><td>Overheads now</td><td>about $' + ga.toFixed(1) + 'M a year</td></tr><tr><td>Saving</td><td>about $' + (ga * 0.1).toFixed(1) + 'M over the year</td></tr>' +
+              '<tr><td>Your cost</td><td>no bonus at the next pay committee (about $' + bonus.toFixed(1) + 'M at today’s scorecard) and no share grant this year</td></tr></table>' +
+              '<div class="dv-nums">It saves less than it signals: lenders, directors and shareholders see a company getting ready.</div>',
+        choices: [
+          { label: 'Tighten belts for a year', detail: 'Overheads −10% for 4 quarters. No bonuses or share grants this year, for anyone, you included. Okafor +1, Petrova +0.5, +1 political capital.',
+            apply() { const G = GameState, now = tq(); G._belt = { until: now + 3, noBonusYear: G.meta.year, why: l.beltFor }; l.beltFor = null; l.belt = (l.belt || 0) + 1;
+                      remember('okafor', 1, 'you tightened belts before the storm'); remember('petrova', 0.5, 'you suspended your own bonus');
+                      G.board.politicalCapital = Math.min(G.board.maxCapital || 8, (G.board.politicalCapital || 0) + 1); note('Belts tightened.');
+                      return 'Done. Overheads are down a tenth for a year and the bonus pool is closed. Jenkins has already cancelled the Christmas party’s ice sculpture.'; } },
+          { label: 'Carry on as normal', detail: 'Nothing changes. Levi sighs, statistically.',
+            apply() { l.beltFor = null; note('Carried on as normal.'); return 'Business as usual. Levi updated his model to include "management optimism".'; } },
+        ] };
+    } };
+  if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === BELT.id)) World.DECISIONS.push(BELT);
 
   /* The Staff screen card. */
   function staffHTML() {

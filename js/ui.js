@@ -827,7 +827,7 @@ window.UI = (function() {
       (equityUsedThisYear ? " ⚠ Equity used this year — available Year " + (GameState.meta.year + 1) : ""));
     setText("action-debt-cooldown", debtCooldown > 0 ?
       "⚠ Debt on cooldown — available in " + debtCooldown + " quarter(s)" : "");
-    setText("action-cash-avail",  "Cash available: " + fmtM(GameState.balance.cash));
+    setText("action-cash-avail",  GameState.balance.cash < 0 ? "Cash: \u2212$" + fmt(-GameState.balance.cash, 1) + "M (credit line in use)" : "Cash available: " + fmtM(GameState.balance.cash));   // round 34
     // Preferred stock redeem card — only when preferred is outstanding
     var prefGroup = el("preferred-redeem-group");
     if (prefGroup) {
@@ -1831,7 +1831,62 @@ window.UI = (function() {
        inbox for the whole turn. Advance is blocked until one is answered;
        pressing it opens the decision. */
     if (GameState._pendingDecision) { showDecisionEvent(GameState._pendingDecision); return; }
+    if (bondGate()) return;          // round 34: a bond we cannot repay stops the clock
     runQuarterAndReport();
+  }
+
+  /* -- round 34: THE BOND DUE STOP ------------------------------------------------
+     A bond falls due at the end of this quarter and cash plus the credit line will
+     not cover it: Advance opens this panel instead of walking into a default.
+     Refinance (a new 5-year bond; refinancing a bond about to fall due is allowed
+     above the covenant), sell new shares, ask the bondholders for one more year
+     (once per bond, and it costs), or declare default. Selling a building is up to
+     the player beforehand: Close, sell, come back. */
+  function bondsDue() { return (GameState.debtTranches || []).filter(function(t) { return GameState.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) <= 0; }); }
+  function spendableNow() { return (typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash; }
+  function bondShort() { var due = bondsDue().reduce(function(a, t) { return a + t.amount; }, 0); return { due: fmt(due, 1), have: fmt(spendableNow(), 1), short: due > 0 ? Math.round(Math.max(0, due - spendableNow()) * 10) / 10 : 0 }; }   // no bond due: no stop, whatever the cash
+  function bondGate() { var s = bondShort(); if (s.short <= 0) return false; showBondPanel(''); return true; }
+  function extendBonds() {
+    var G = GameState, list = bondsDue().filter(function(t) { return !t.extended; }), fee = 0;
+    list.forEach(function(t) {
+      t.extended = true; t.maturityYear += 1; t.rate = Math.round((t.rate + 2) * 100) / 100; fee += t.amount * 0.02;
+      t.label = t.rate + "% bonds, extended to Y" + t.maturityYear + "Q" + t.maturityQuarter;
+      t.quartersUntilMaturity = G.quartersUntilMaturity(t.maturityYear, t.maturityQuarter);
+    });
+    fee = Math.round(fee * 100) / 100;
+    G._pendingUnusual = Math.round(((G._pendingUnusual || 0) - fee) * 100) / 100;
+    G.company.sharePrice = Math.round(G.company.sharePrice * 0.95 * 100) / 100;
+    G._ratingHit = { until: (G.meta.year - 1) * 4 + G.meta.quarter + 4 };
+    if (typeof Directors !== "undefined") { Directors.remember('okafor', -2, 'we begged the bondholders for more time'); Directors.remember('petrova', -1, 'the bond extension'); }
+    if (typeof Inbox !== "undefined") Inbox.message('Jenkins', 'Chief of Staff', 'One more year from the bondholders', 'Boss, they agreed. One more year, at 2% more interest, and a ' + fmtM(fee) + ' fee. The rating agencies call it a "distressed exchange", and they will mark us down for a year. Next time the money has to be there.', 'assets/faces/jenkins.jpg');
+    return 'Extended by a year at +2% interest. Fee ' + fmtM(fee) + ', share price −5%, rating marked down for a year, Okafor −2.';
+  }
+  function showBondPanel(msg) {
+    var G = GameState, s = bondShort(), due = bondsDue();
+    var canExt = due.some(function(t) { return !t.extended; }), extList = due.filter(function(t) { return !t.extended; }).reduce(function(a, t) { return a + t.amount; }, 0);
+    var px = G.company.sharePrice || 1, nShares = Math.ceil(s.short / (px * 0.95) * 10) / 10;
+    var eqUsed = (G.company.equityIssuanceYear || 0) === G.meta.year, eqMax = Math.round(G.company.sharesOutstanding * 0.2 * 10) / 10;
+    var rate = Financials.getCurrentBorrowingRateForTerm ? Financials.getCurrentBorrowingRateForTerm(5) : null;
+    var rows = due.map(function(t) { return '<tr><td>' + t.label + '</td><td>' + fmtM(t.amount) + '</td></tr>'; }).join('') +
+      '<tr><td>Cash plus credit line</td><td>' + fmtM(s.have) + '</td></tr><tr><td><b>' + (s.short > 0 ? 'Short' : 'Covered') + '</b></td><td><b>' + (s.short > 0 ? fmtM(s.short) : '✓') + '</b></td></tr>';
+    var body = (msg ? '<div class="dv-nums" style="margin-bottom:8px"><b>' + msg + '</b></div>' : '') +
+      (s.short > 0 ? 'A bond falls due at the end of this quarter, and we cannot repay it yet. Raise the money, or the company defaults.' : due.length ? 'The money is there. The bond will be repaid at the end of the quarter.' : 'Nothing falls due this quarter any more.') +
+      '<table class="dv-nums">' + rows + '</table>' +
+      (s.short > 0 ? '<div class="dv-nums">Or close this, sell a building (Map or Properties), and press Advance again.</div>' : '');
+    var acts = [];
+    if (s.short <= 0) acts.push({ label: due.length ? 'Repay and continue' : 'Continue', style: 'btn-primary', onClick: function() { setTimeout(runQuarterAndReport, 0); } });
+    else {
+      acts.push({ label: 'Refinance: a new 5-year bond for ' + fmtM(Math.ceil(s.short)) + (rate ? ' at ' + rate.toFixed(2) + '%' : ''), style: 'btn-primary', onClick: function() {
+        var r = Financials.issueDebt(Math.ceil(s.short), 5, false); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
+      if (!eqUsed && nShares <= eqMax) acts.push({ label: 'Sell ' + nShares + 'M new shares (about ' + fmtM(nShares * px * 0.95) + ')', onClick: function() {
+        var r = Financials.issueEquity(nShares); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
+      if (canExt) acts.push({ label: 'Ask the bondholders for one more year (' + fmtM(extList * 0.02) + ' fee, +2% interest)', onClick: function() {
+        var m = extendBonds(); renderAll(); setTimeout(function() { showBondPanel(m); }, 0); } });
+      acts.push({ label: 'Declare default', style: 'btn-danger', onClick: function() { setTimeout(runQuarterAndReport, 0); } });
+      if (eqUsed || nShares > eqMax) body += '<div class="dv-nums">New shares: ' + (eqUsed ? 'already sold this year.' : 'more than 20% of our shares would be needed; the market will not take it.') + '</div>';
+      if (!canExt) body += '<div class="dv-nums">The bondholders already gave us one extension on this bond. They will not give another.</div>';
+    }
+    showModal(s.short > 0 ? 'A bond falls due: ' + fmtM(s.due) : due.length ? 'Bond covered: ' + fmtM(s.due) : 'The bond is extended', body, acts);
   }
 
   function runQuarterAndReport() {
@@ -2061,6 +2116,8 @@ window.UI = (function() {
     GameState._pendingDecision = null;   // decision waiting in the inbox
     GameState._p0              = null;   // TSR start price (shell.js HUD)
     GameState._endingShown     = false;  // ending.js
+    GameState._belt            = null;   // round 34: belt-tightening (levi.js)
+    GameState._ratingHit       = null;   // round 34: a bond extension marks the rating down for a year
     GameState.deals = null; GameState.agents = null; GameState.pr = null;   // round 22: deals.js, agents.js, pr.js
     GameState._spendQ = { leasing: 0, projects: 0 };
     GameState._scorePosted = false;

@@ -152,9 +152,9 @@ window.Inbox = (() => {
   /* -- "because" lines (round 2) ----------------------------------------------
      Why did retained cash change against last quarter, and why did the share
      price move? Every line names a cause the player can see and act on. */
-  const OPEX = 0.30;                        // financials.js OPEX_RATIO
+  const OPEX = 0.28, GROSS = 0.30;          // financials.js OPEX_RATIO, GROSS_UP (round 34)
   // a building's rent after costs this quarter, exactly as the P&L counts it
-  const contrib = p => p.underConstruction ? 0 : (p.annualNOI / 4) * (p.occupancy - OPEX) / (1 - OPEX);
+  const contrib = p => p.underConstruction ? 0 : (p.annualNOI / 4) * (p.occupancy - OPEX) / (1 - GROSS);
   const plain = t => String(t || '').replace(/<[^>]+>/g, '').replace(/^[^A-Za-z0-9$]+/, '').trim();
   const short = t => t.length > 74 ? t.slice(0, 71) + '\u2026' : t;
 

@@ -35,7 +35,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const loan = await pg.evaluate(() => { Story.H().stage = 'ask'; const c = World.DECISIONS.find(x => x.id === 'story_harlow_loan').build(); return c ? c.choices.map(x => x.label).join(' | ') : 'none'; });
   ok(/preferred/.test(loan), 'Bob’s loan: ' + loan);
   // Jack's auction, no cash: raise preferred and stay in
-  const morrow = await pg.evaluate(() => { GameState.preferred.outstanding = 0; GameState.preferred.issued = false; GameState.balance.cash = -25; GameState.revolver && (GameState.revolver.limit = 25); War.debug({ stage: 'wait' }); const items = War.agenda(3, []); const auc = items.find(i => i.choices && /^(Bid|Match)/.test(i.choices[0].label));
+  const morrow = await pg.evaluate(() => { GameState.preferred.outstanding = 0; GameState.preferred.issued = false; GameState.balance.cash = -25; GameState.revolver && (GameState.revolver.limit = 25); War.debug({ stage: 'wait' }); const items = War.agenda(5, []); const auc = items.find(i => i.choices && /^(Bid|Match)/.test(i.choices[0].label));
     const labels = auc ? auc.choices.map(c => c.label + (c.disabled ? ' [locked]' : '')) : []; const pc = auc && auc.choices.find(c => /preferred/.test(c.label) && !c.disabled); const m = pc ? pc.go() : null; const again = items[items.length - 1];
     return { labels, m, bidOk: again && again.choices && !again.choices[0].disabled }; });
   ok(morrow.labels.some(l => /preferred/.test(l)) && morrow.bidOk, 'Morrow Plaza without cash: ' + morrow.labels.join(' | ') + ' → then the bid opens');

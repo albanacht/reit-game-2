@@ -46,7 +46,7 @@ window.Rivals = (() => {
   // -- their buildings --------------------------------------------------------
   const bldg = k => (GameState.cityRivals || []).filter(p => p.owner === k);
   const value = k => bldg(k).reduce((t, p) => t + (p.currentValue || 0), 0);
-  const noiQ = k => bldg(k).reduce((t, p) => t + (p.underConstruction ? 0 : (p.annualNOI / 4) * (p.occupancy - 0.3) / 0.7), 0);
+  const noiQ = k => bldg(k).reduce((t, p) => t + (p.underConstruction ? 0 : (p.annualNOI / 4) * (p.occupancy - 0.28) / 0.7), 0);   // round 34: costs 28% of gross rent, as ours
   const assets = k => value(k) + Math.max(0, R(k).cash);
   const d2a = k => { const a = assets(k); return a > 0 ? (R(k).debt + Math.max(0, -R(k).cash)) / a : 1; };
 

@@ -165,7 +165,8 @@ window.Ending = (() => {
                   refused: ['The inquiry reached every landlord in Riverton but you.', 'Frank still calls you "the one who said no". It is not a compliment.'],
                   refused_kessler: ['Rennick took the city’s floors. The inquiry took Rennick’s reputation.', 'Kessler still says it was a perfectly normal lease.'],
                   clean_pending: null }[e] || (/_pending$/.test(e) ? ['The inquiry into City Hall’s leases was still open when you left.', 'Your successor gets the phone calls.'] : null);
-      if (F) out.push({ key: 'mayor_' + e, fallback: FACE('mayor'), label: 'Mayor Frank Kowalczyk', lines: F });
+      const PIC = { clean: 'clean', sweet_quiet: 'quiet', skim_quiet: 'quiet', sweet_exposed: 'exposed', skim_exposed: 'exposed', refused: 'refused', refused_kessler: 'refused' };   // 8 outcomes, 4 pictures
+      if (F) out.push({ key: 'mayor_' + (PIC[e] || e), fallback: FACE('mayor'), label: 'Mayor Frank Kowalczyk', lines: F });
     }
     // Levi
     if (window.Levi && Levi.ending() !== 'none') {
@@ -326,13 +327,12 @@ window.Ending = (() => {
         (i > 0 ? '<button class="en-back">Back</button>' : '') +
         (last && window.Telemetry ? '<button class="en-back en-fb">Rate the game</button>' : '') +
         '<button class="en-next">' + (last ? 'The scores' : 'Next') + '</button>' +
-        (!last ? '<button class="en-skip">Skip to the scores</button>' : '') + '</div></div></div>';
+        '</div></div></div>';   // round 34: no skip. The ending is the reward; it is 8 cards.
       o.classList.remove('hidden'); wireImg(o);
       const fin = () => { o.classList.add('hidden'); if (done) done(); };
       o.querySelector('.en-next').onclick = () => { if (last) fin(); else { i++; render(); } };
       const bk = o.querySelector('.en-back:not(.en-fb)'); if (bk) bk.onclick = () => { i--; render(); };
       const fb = o.querySelector('.en-fb'); if (fb) fb.onclick = () => Telemetry.openFeedback();
-      const sk = o.querySelector('.en-skip'); if (sk) sk.onclick = fin;
     };
     render();
   }

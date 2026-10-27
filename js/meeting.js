@@ -411,18 +411,22 @@ window.Meeting = (() => {
                              : '<b>Target ' + N.sign + ' ' + esc(N.target) + '</b> · ' + esc(N.nowLabel) + ': ' + esc(N.now) + (N.how ? '<div class="mt-sub">How: ' + esc(N.how) + '.</div>' : ''));
     pump(() => {
       const pc = b.politicalCapital || 0, binary = N.binary;
-      const odds = Math.round(Math.min(0.9, (d.negotiateSuccessRate || 0.5) * (0.6 + dir(id).attitude / 10)) * 100);
+      // round 34: asked to buy while debt is high or in a crisis, Okafor takes your side
+      const buyAsk = /acquisitions|accretive/.test(m.metric), d2a = G().ratios.debtToAssets || 0, crisisNow = Directors.crisis && Directors.crisis();
+      const backed = buyAsk && (d2a >= 0.50 || crisisNow) && Directors.has('okafor') && id !== 'okafor';
+      const odds = Math.round(Math.min(0.9, (d.negotiateSuccessRate || 0.5) * (0.6 + dir(id).attitude / 10) + (backed ? 0.2 : 0)) * 100);
       const ally = { williams: 'petrova', petrova: 'williams' }[id];
       const done = r => { m.response = r; b._demandsDone = i + 1; Directors.refresh(); S.q.length && (S.q[S.q.length - 1].mood = dir(id).attitude); pump(nextDemand); };
       actions([
         { label: 'Accept', detail: (binary ? '' : 'Target ' + N.sign + ' ' + N.target + '. ') + (m.promise ? 'Your promise. Met: +3.5 mood, +1 capital. Missed: −4 mood.' : 'Met: +2.5 mood, +1 capital. Missed: −3 mood.'), primary: true, go: () => { say('you', 'Agreed.'); say(id, 'Good.'); done('accept'); } },
         { label: 'Push back (1 capital)', detail: binary
-              ? 'Ask them to drop it. ' + odds + '% chance. If they say no: −0.5 mood and it stays.'
+              ? (isBinaryReal(m) ? 'Ask them to drop it. ' : 'Ask for no target this year. ') + odds + '% chance' + (backed ? ' (Okafor backs you: ' + (crisisNow ? 'we are in a crisis' : 'debt is ' + Math.round(d2a * 100) + '%') + ')' : '') + '. If they say no: −0.5 mood and it stays.'
               : 'Ask for ' + N.sign + ' ' + N.eased + ' instead of ' + N.target + '. ' + odds + '% chance. Eased and met: +1 mood, +1 capital; missed: −1.5. If they say no: −0.5 mood, target stays.',
           disabled: pc < 1, why: 'No political capital left', go: () => {
-            b.politicalCapital = pc - 1; say('you', binary ? 'I can’t promise that this year. Drop it.' : 'That target is too tight. ' + N.sign + ' ' + N.eased + ' is realistic.');
+            b.politicalCapital = pc - 1; say('you', binary ? (buyAsk ? 'Not this year. We cannot afford to buy right now.' : 'I can’t promise that this year. Drop it.') : 'That target is too tight. ' + N.sign + ' ' + N.eased + ' is realistic.');
+            if (backed) say('okafor', 'I agree with the CEO. Not with debt where it is.');
             if (Math.random() * 100 < odds) {
-              if (binary) { say(id, 'Fine. Off the list.'); done('reject'); return; }
+              if (binary) { say(id, buyAsk ? 'Fine. Not this year. Next year I expect us to be buying.' : 'Fine. Off the list.'); done('reject'); return; }
               say(id, 'All right. ' + N.sign + ' ' + N.eased + ' instead of ' + N.target + '. But I want it met.');
               m.text = m.text.replace(/\.$/, '') + ' (eased to ' + N.sign + ' ' + N.eased + ')'; done('negotiate');
             } else { Directors.remember(id, -0.5, 'you tried to bargain down his demand'); say(id, 'No. ' + (binary ? 'It stands.' : N.sign + ' ' + N.target + ' stands.')); done('accept'); } } },
@@ -434,6 +438,7 @@ window.Meeting = (() => {
       ], 'Demand ' + (i + 1) + ' of ' + list.length + ' · political capital: ' + pc + ' · mood runs 0 to 10, below 3.0 they vote against');
     });
   }
+  const isBinaryReal = m => m.target === 1 && !/ThisYear$|Pct$/.test(m.metric);
   function wrapDemands() {
     const list = G().board.activeMandates || [];
     say('note', '', '<b>Your demands for next year</b>' + list.map(m => '<div>• ' + esc(sn(m.directorId)) + ': ' + esc(m.text) +

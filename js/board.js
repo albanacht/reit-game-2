@@ -374,7 +374,8 @@ window.Board = (() => {
       case "okafor":
         var unsec = G.debtTranches.reduce(function(a, t) { return a + (t.unsecured ? t.amount : 0); }, 0);
         if (unsec > 0) return mk(id, "repay_unsec", "Repay all $" + Math.round(unsec) + "M of unsecured notes by next year. No exceptions.", "noUnsecured", 1, true);   // round 19
-        if (d2a > (cr ? 0.50 : 0.55)) return mk(id, "leverage", function(t) { return "Bring debt down to " + t + "% of assets or less by next year."; }, "debtToAssets", Math.max(cr ? 0.47 : 0.50, Math.round((d2a - 0.03) * 100) / 100), false);   // round 18: only above his line
+        // round 34: his line is 55%, crisis or not; above it he asks for one step a year: 55%, or 3 points down if that is further
+        if (d2a > 0.55) return mk(id, "leverage", function(t) { return d2a - 0.03 > 0.55 ? "Bring debt down to " + t + "% of assets by next year. One step at a time, but every year." : "Bring debt back under " + t + "% of assets by next year."; }, "debtToAssets", Math.max(0.55, Math.round((d2a - 0.03) * 100) / 100), false);
         if (cov < 2.5) return mk(id, "int_coverage", function(t) { return "Interest cover of at least " + t + "x by next year."; }, "interestCoverage", 2.5, true);
         return mk(id, "int_coverage", function(t) { return "Keep interest cover at " + t + "x or more."; }, "interestCoverage", 2.5, true);   // round 18: was "stay off the credit line"
       case "hassan": case "mansour":
@@ -572,7 +573,8 @@ window.Board = (() => {
     var now = metricNow()[m.metric];
     var growth = /Pct$|ThisYear$/.test(m.metric);
     return {
-      binary: isBinary(m),
+      // round 34: a target already at its minimum (buy 1 building) cannot be eased: push back means "not this year"
+      binary: isBinary(m) || fmtMetric(m, easedTarget(m)) === fmtMetric(m, m.target),
       target: fmtMetric(m, m.target),
       eased:  isBinary(m) ? null : fmtMetric(m, easedTarget(m)),
       now:    fmtMetric(m, now),

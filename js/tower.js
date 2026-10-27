@@ -64,7 +64,7 @@ window.Tower = (() => {
   }
   const shareOf = () => T().jv ? 1 - T().jv : 1;               // our share with a partner
   /* NOI at an occupancy, the way financials.js counts it (operating costs are 30% of full rent, let or not). */
-  const noiAt = (full, o) => fmt(full * Math.max(0, o - 0.30) / 0.70);
+  const noiAt = (full, o) => fmt(full * Math.max(0, o - 0.28) / 0.70);   // round 34: costs 28% of gross rent
 
   // ============================================================================
   // THE MEETING (Story.agenda calls this, after Harlow and the war)

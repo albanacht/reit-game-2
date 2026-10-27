@@ -59,7 +59,7 @@ window.Directors = (() => {
   }
   /* A new chair brings a red line of their own in place of Williams's dividend rule. */
   const CHAIR_RED = {
-    okafor:  { text: 'debt above 50% of assets', crossed: () => (GameState.ratios.debtToAssets || 0) > 0.50 },
+    okafor:  { text: 'debt above 55% of assets', crossed: () => (GameState.ratios.debtToAssets || 0) > 0.55 },
     petrova: { text: 'share price below 85% of NAV', crossed: () => pnav() < 0.85 },
     chen:    { text: 'cash profit per share falling', crossed: () => { const a1 = sumLast(4, 'affoPerShare'), a0 = H().length >= 8 ? sumLast(4, 'affoPerShare', 4) : null; return a1 != null && a0 > 0.1 && a1 < a0; } },
   };
@@ -163,8 +163,15 @@ window.Directors = (() => {
     }
     if (id === 'okafor') {
       // round 18: borrowing to buy good buildings is fine; he worries above 55% (50% in a crisis), with the bond covenant at 60%
-      const d2a = r.debtToAssets || 0, cov = r.interestCoverage || 9, lim = cr ? 0.50 : 0.55;
-      add(d2a < 0.40 ? 1.5 : d2a < lim - 0.05 ? 0.5 : d2a < lim ? -0.5 : d2a < 0.60 ? -1.5 : -2.5, 'debt at ' + Math.round(d2a * 100) + '% of assets' + (d2a >= lim - 0.05 ? ' (he wants it under ' + Math.round(lim * 100) + '%' + (cr ? ' in a crisis' : '') + ')' : ''));
+      // round 34: one line, 55%, crisis or not. Above it he wants a step a year (his demand: 3 points down), not a miracle.
+      const d2a = r.debtToAssets || 0, cov = r.interestCoverage || 9, T = okaforTarget(), D = Math.round(d2a * 100);
+      const was = ago(4, 'debtToAssets'), falling = was != null && was > d2a + 0.01;
+      if (d2a < 0.40) add(1.5, 'debt at ' + D + '% of assets');
+      else if (d2a < 0.50) add(0.5, 'debt at ' + D + '% of assets');
+      else if (d2a <= OK_LINE + 0.005) add(0, 'debt at ' + D + '% of assets, close to his 55% line');
+      else if (d2a <= T + 0.005) add(-0.5, 'debt at ' + D + '%, above his 55% line but on his plan (' + Math.round(T * 100) + '% this year)');
+      else if (falling) add(-1, 'debt at ' + D + '%, above his plan (' + Math.round(T * 100) + '%), but coming down');
+      else add(d2a >= 0.60 ? -2.5 : -1.5, 'debt at ' + D + '% of assets and not coming down (his line is 55%' + (T > OK_LINE ? ', ' + Math.round(T * 100) + '% this year' : '') + ')');
       add(cov > 3 ? 1 : cov >= 2 ? 0 : cov >= 1.5 ? -1 : -2, 'interest cover ' + cov.toFixed(1) + 'x');
       // round 19: unsecured notes. He wants them gone within a year.
       const uns = (G.debtTranches || []).filter(t => t.unsecured), U = uns.reduce((a, t) => a + t.amount, 0);
@@ -219,6 +226,13 @@ window.Directors = (() => {
       else if (ch >= 0.15) add(Math.min(1.5, ch * 5), 'own shares up ' + pct(ch) + ' on cost');
     }
     return out;
+  }
+  /* round 34: Okafor's line, and this year's step toward it: the leverage demand from the
+     last meeting if there is one, else 55%. */
+  const OK_LINE = 0.55;
+  function okaforTarget() {
+    const m = ((GameState.board && GameState.board.activeMandates) || []).find(x => x.directorId === 'okafor' && x.metric === 'debtToAssets');
+    return m && m.target > OK_LINE ? m.target : OK_LINE;
   }
   // real REITs grow dividends ~3-6% a year; the Chairman asks a little more, never 10%
   function williamsTarget() { return Math.min(0.07, 0.04 + (GameState.meta.year - 1) * 0.005); }
@@ -464,7 +478,7 @@ window.Directors = (() => {
     const d0 = ago(4, 'dividendPerShare') != null ? ago(4, 'dividendPerShare') : (G.board.startYearDividend || null),
           d1 = G.company.dividendPerShare, g = d0 > 0 && H().length ? d1 / d0 - 1 : null;
     const a1 = sumLast(4, 'affoPerShare'), a0 = H().length >= 8 ? sumLast(4, 'affoPerShare', 4) : null, ag = a1 != null && a0 > 0.1 ? a1 / a0 - 1 : null;
-    const d2a = r.debtToAssets || 0, lim = cr ? 0.50 : 0.55, cov = r.interestCoverage, occ = r.occupancyPortfolio;
+    const d2a = r.debtToAssets || 0, okT = okaforTarget(), cov = r.interestCoverage, occ = r.occupancyPortfolio;
     rows.push({ id: 'petrova', k: 'Total return, ' + (y ? y.label : 'this year'), v: y ? pct(y.you, 1) : '—', want: y ? (y.bench === 'rivals' ? 'rivals avg ' : 'sector ') + pct(y.sector, 1) : '', ok: y ? y.you >= y.sector - 0.005 : null });
     const y1 = (G.meta.totalQuarters || 0) <= 4;
     rows.push({ id: 'williams', k: 'Dividend growth, 12 months', v: g == null ? '—' : pct(g, 1), want: y1 ? 'from Year 2' : cr ? 'no cut (crisis)' : '≥ ' + pct(williamsTarget()), ok: g == null || y1 ? null : cr ? g >= 0 : g >= williamsTarget() });
@@ -476,7 +490,7 @@ window.Directors = (() => {
     if (sk > 0) ['chen', 'hassan'].forEach(id => rows.push({ id, k: 'Portfolio sold, net of buys, 2 years', v: Math.round(sk * 100) + '%', want: '\u2264 15%', ok: sk <= 0.15 }));
     rows.push({ id: 'chen', k: 'Cash profit per share growth', v: ag == null ? '—' : pct(ag, 1), want: '≥ +3%', ok: ag == null ? null : ag >= 0.03 });
     rows.push({ id: 'chen', k: 'Buildings bought, 12 months', v: String(buysIn(4)), want: '≥ 1', ok: G.meta.totalQuarters < 4 ? null : buysIn(4) >= 1 });
-    rows.push({ id: 'okafor', k: 'Debt / assets', v: Math.round(d2a * 100) + '%', want: '< ' + Math.round(lim * 100) + '%', ok: H().length ? d2a < lim : null });
+    rows.push({ id: 'okafor', k: 'Debt / assets', v: Math.round(d2a * 100) + '%', want: '\u2264 ' + Math.round(okT * 100) + '%' + (okT > OK_LINE ? ' this year' : ''), ok: H().length ? d2a <= okT + 0.005 : null });
     const U0 = (G.debtTranches || []).reduce((t, x) => t + (x.unsecured ? x.amount : 0), 0);
     if (U0 > 0) rows.push({ id: 'okafor', k: 'Unsecured notes', v: '$' + U0.toFixed(0) + 'M', want: 'none', ok: false });
     rows.push({ id: 'okafor', k: 'Interest cover', v: cov ? cov.toFixed(1) + 'x' : '—', want: '≥ 2.0x', ok: cov ? cov >= 2 : null });
@@ -663,7 +677,7 @@ window.Directors = (() => {
   /* round 32: start counting buys from day one (buys in Year 1 Q1 were missed: the
      first snapshot of what you own was taken after them, so Chen said you bought nothing) */
   function startTracking() { const b = B(); b.owned = (GameState.portfolio || []).map(p => p.id); b.lastBuyQ = 0; b.buys = []; }
-  return { startTracking, boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
+  return { okaforTarget, OK_LINE, startTracking, boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
            addActivist, personal, hint, has, pnav, actWant, bond, bondOf,
            rep, repChange, REP_LINE, REP0, addDirector, removeDirector, logBoard, chair, CHAIR_RED };
 })();

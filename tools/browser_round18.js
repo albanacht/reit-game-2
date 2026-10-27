@@ -29,7 +29,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ok(reno.ok && reno.cash < 0, 'renovation with no cash: paid from the credit line (' + reno.msg + '; cash now ' + reno.cash + ')');
   // Okafor: 52% is not a complaint "limit 45%"
   const ok52 = await pg.evaluate(() => { const G = GameState; G.ratios.debtToAssets = 0.52; G.ratios.interestCoverage = 3.2; const j = Directors.card('okafor'); const sc = Directors.scorecard().find(r => r.id === 'okafor' && /Debt/.test(r.k)); return { want: sc.want, ok: sc.ok, demand: Board.demandFor('okafor').text }; });
-  ok(ok52.want === '< 55%' && ok52.ok && !/debt down/.test(ok52.demand), 'Okafor at 52% debt: his line is ' + ok52.want + ' (met); demand: "' + ok52.demand + '"');
+  ok(ok52.want === '\u2264 55%' && ok52.ok && !/debt down/.test(ok52.demand), 'Okafor at 52% debt: his line is ' + ok52.want + ' (met); demand: "' + ok52.demand + '"');
   const ok58 = await pg.evaluate(() => { GameState.ratios.debtToAssets = 0.58; Directors.update && Directors.update(); return Board.demandFor('okafor').text; });
   ok(/55%/.test(ok58), 'at 58% he asks: "' + ok58 + '"');
   // Tex: his join is recorded, his award motion waits a year
