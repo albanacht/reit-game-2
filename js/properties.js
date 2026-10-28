@@ -249,20 +249,57 @@ window.Properties = (() => {
       if (prop.underConstruction) return; // tower under construction has no market value yet
       if (prop.baseValue === undefined) prop.baseValue = prop.currentValue;
       const curCap = capRates[prop.sector][prop.location];
-      if (!prop.vb) prop.vb = { v: prop.currentValue, noi: Math.max(0.01, prop.annualNOI || 0.01), g: occFactor(prop), cap: curCap, base: prop.baseValue || prop.currentValue };
+      // round 35b: moves with the building's FAIR value (stabilised rent / area cap rate, minus the refill), from a baseline
+      if (!prop.vb || prop.vb.f == null) prop.vb = { v: prop.currentValue, f: Math.max(0.1, fairValue(prop)), base: prop.baseValue || prop.currentValue };
       const vb = prop.vb;
-      const target = vb.v * (Math.max(0, prop.annualNOI) / vb.noi) * (occFactor(prop) / Math.max(0.05, vb.g)) *
-                     (vb.cap / curCap) * ((prop.baseValue || vb.base) / vb.base) * creditFactor(prop);
+      const target = vb.v * (fairValue(prop) / vb.f) * ((prop.baseValue || vb.base) / vb.base);
       prop.currentValue = Math.round((prop.currentValue + (target - prop.currentValue) * 0.5) * 10) / 10;
     });
 
     GameState.propertyMarket.forEach(prop => {
-      const capRate = capRates[prop.sector][prop.location] / 100;
-      const effectiveNOI = prop.annualNOI * prop.occupancy;
-      prop.currentValue = Math.round((effectiveNOI / capRate) * 10) / 10;
-      prop.askingPrice = Math.round(
-        (prop.askingPrice * 0.85 + prop.currentValue * 1.02 * 0.15) * 10
-      ) / 10;
+      if (!(prop.annualNOI > 0)) return;                      // land: priced by its auction
+      prop.currentValue = Math.round(fairValue(prop) * 10) / 10;   // round 35b: the market's price is the fair value
+      // sellers are slow to move (15% of the way a quarter), but nobody asks more than 15% over value and sells
+      if (prop.askingPrice) prop.askingPrice = Math.round(Math.max(prop.currentValue, Math.min(prop.currentValue * MAX_PREMIUM,
+        prop.askingPrice * 0.85 + prop.currentValue * 1.02 * 0.15)) * 10) / 10;
+    });
+  }
+
+  /* -- round 35b: FAIR VALUE, the way valuers do it ---------------------------------
+     annualNOI is rent after costs IF FULLY LET. Valuers do not value this quarter's
+     occupancy: they use STABILISED rent (normal occupancy, 95%) and subtract the cost
+     of getting there (three years of the missing rent: void, incentives, agents, risk).
+       fair value = annualNOI x max(occupancy, 95%) / area cap rate
+                    - max(0, 95% - occupancy) x annualNOI x 3
+     A single-tenant building is let or empty: let = full rent / cap rate; empty =
+     65% of that. A weak single tenant marks it down (creditFactor).
+     CAP RATE (the screens): stabilised rent / price. At fair value it is about the
+     area rate. YIELD TODAY: rent collected now / price (it moves with vacancies). */
+  const STAB = 0.95, REFILL_YEARS = 3, MAX_PREMIUM = 1.15;   // refill: three years of the missing rent (void, incentives, agents, the risk)
+  const areaCap = p => { const C = GameState.market && GameState.market.capRates; return C && C[p.sector] ? C[p.sector][p.location] : 8; };
+  const stabRent = p => {
+    if (typeof Tenants !== "undefined" && Tenants.isLocked(p)) return Math.max(0, p.annualNOI || 0);
+    return Math.max(0, p.annualNOI || 0) * Math.max(p.occupancy || 0, STAB);
+  };
+  function fairValue(p) {
+    const noi = Math.max(0, p.annualNOI || 0), cap = areaCap(p) / 100;
+    if (!(noi > 0) || !(cap > 0)) return p.currentValue || 0;
+    if (typeof Tenants !== "undefined" && Tenants.isLocked(p)) {
+      const pos = p.lease && p.lease.positions[0];
+      return (noi / cap) * (pos && !pos.vacant ? 1 : 0.65) * creditFactor(p);
+    }
+    const gap = Math.max(0, STAB - (p.occupancy || 0));
+    return Math.max(noi / cap * 0.25, stabRent(p) / cap - gap * noi * REFILL_YEARS) * creditFactor(p);
+  }
+  /* New game: every building starts at its fair value, and listings ask 0 to 5% over it
+     (the catalogue's prices were set on full-occupancy rent: listings started 14-28% over value). */
+  function rebaseValues() {
+    const G = GameState;
+    G.portfolio.concat(G.cityRivals || [], G.propertyMarket || []).forEach(p => {
+      if (p.underConstruction || !(p.annualNOI > 0)) return;
+      const prem = p.askingPrice && p.currentValue ? Math.min(1.05, Math.max(1.0, p.askingPrice / p.currentValue)) : 1;
+      p.currentValue = Math.round(fairValue(p) * 10) / 10; p.baseValue = p.currentValue; p.vb = null;
+      if (p.askingPrice) p.askingPrice = Math.round(p.currentValue * prem * 10) / 10;
     });
   }
 
@@ -351,7 +388,7 @@ window.Properties = (() => {
     GameState.balance.cash = Math.round((GameState.balance.cash - totalCost) * 10) / 10;
     GameState.portfolio.push(prop);
     // round 17: Chen's demand counts buildings that yield more than we pay to borrow, plus a point
-    if (typeof Market !== "undefined" && prop.purchasePrice > 0 && prop.annualNOI / prop.purchasePrice * 100 >= Market.getCurrentBorrowingRate() + 1)   // the yield the map shows: rent / price
+    if (typeof Market !== "undefined" && prop.purchasePrice > 0 && stabRent(prop) / prop.purchasePrice * 100 >= Market.getCurrentBorrowingRate() + 1)   // round 35b: the cap rate on what you paid (stabilised rent / price), not full-occupancy rent
       GameState.board.accretiveBuysThisYear = (GameState.board.accretiveBuysThisYear || 0) + 1;
     GameState.propertyMarket.splice(idx, 1);
 
@@ -843,7 +880,7 @@ window.Properties = (() => {
     handOver,
     ownerName,
     transactionFee,
-    recalculatePropertyValues,
+    recalculatePropertyValues, fairValue, stabRent, rebaseValues,
     applyAnnualDecay,
     quarterlyUpdate,
     refreshMarket,

@@ -44,6 +44,7 @@ window.REIT = (() => {
   /* -- colour ramps ------------------------------------------------------- */
   const lerp = (a, b, t) => Math.round(a + (b - a) * t);
   const cl01 = t => Math.max(0, Math.min(1, t));
+  /* round 35b: colours by cap rate again */
   const capColor = c => { const t = cl01((c - 6.5) / 4);   return `rgb(${lerp(40,240,t)},${lerp(150,60,t)},${lerp(205,55,t)})`; };
   const occColor = o => { const t = cl01((o - 74) / 24);   return `rgb(${lerp(214,45,t)},${lerp(70,165,t)},${lerp(60,90,t)})`; };
   const valColor = v => { const t = cl01((v - 15) / 110);  return `rgb(${lerp(150,20,t)},${lerp(190,70,t)},${lerp(225,140,t)})`; };
@@ -62,6 +63,16 @@ window.REIT = (() => {
     if (!p) return null;
     const value = p.currentValue || 0;
     const noi   = p.annualNOI || 0;
+    /* round 35: honest yields. annualNOI is rent after costs IF FULLY LET; what you collect today is
+       less (empty space still costs: financials.js, costs 28% of gross rent). The old "cap rate" was
+       full rent / a value priced on actual rent = area rate / occupancy: emptier looked better. */
+    const now   = p.underConstruction ? 0 : noi * Math.max(0, (p.occupancy || 0) - 0.28) / 0.70;
+    const CR    = GameState.market && GameState.market.capRates && GameState.market.capRates[p.sector];
+    const area  = CR ? CR[p.location] : null;
+    const isListed = owner === 'you' ? false : !!p.listedByOwner && p.askingPrice > 0;
+    // round 35b: CAP RATE = stabilised rent / price (properties.js); YIELD TODAY = rent collected now / price
+    const stab  = p.underConstruction ? 0 : (window.Properties && Properties.stabRent ? Properties.stabRent(p) : noi);
+    const price = isListed ? p.askingPrice : value;
     return {
       id:     p.id,
       n:      p.name,
@@ -70,7 +81,11 @@ window.REIT = (() => {
       o:      owner || 'none',
       v:      Math.round(value * 10) / 10,
       /* Live cap rate, not the baseline — what the asset actually yields now. */
-      cap:    value > 0 ? Math.round(noi / value * 1000) / 10 : 0,
+      cap:    price > 0 ? Math.round(stab / price * 1000) / 10 : 0,      // round 35b: cap rate on the price (asking, or value)
+      yNow:   price > 0 ? Math.round(now / price * 1000) / 10 : 0,       // round 35b: yield today on the same price
+      areaCap: area,
+      atAsk:  isListed,
+      noiNow: Math.round(now * 100) / 100,
       occ:    Math.round((p.occupancy || 0) * 100),
       noi:    Math.round(noi * 100) / 100,
       ph:     p.photo,
@@ -106,12 +121,14 @@ window.REIT = (() => {
   /* Portfolio roll-up, used by the KPI chips and group subtotals. */
   function summarise(list) {
     const v = list.reduce((a, p) => a + p.v, 0);
-    const noi = list.reduce((a, p) => a + p.noi, 0);
+    const noi = list.reduce((a, p) => a + p.noi, 0), noiNow = list.reduce((a, p) => a + (p.noiNow != null ? p.noiNow : p.noi), 0);
+    const stab = list.reduce((a, p) => a + (p.cap || 0) / 100 * p.v, 0);
     return {
       count: list.length,
       value: Math.round(v * 10) / 10,
       noi:   Math.round(noi * 100) / 100,
-      cap:   v ? Math.round(noi / v * 10000) / 100 : 0,
+      cap:   v ? Math.round(stab / v * 10000) / 100 : 0,     // round 35b: cap rate (stabilised rent / value)
+      yNow:  v ? Math.round(noiNow / v * 10000) / 100 : 0,   // round 35b: rent collected today / value
       occ:   v ? Math.round(list.reduce((a, p) => a + p.occ * p.v, 0) / v * 10) / 10 : 0
     };
   }

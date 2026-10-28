@@ -988,7 +988,8 @@ window.UI = (function() {
           GameState.board.acquisitionsThisYear = (GameState.board.acquisitionsThisYear || 0) + 1;
           renderAll();
         }
-      }}]);
+      }}].concat(typeof Deals !== "undefined" && Deals.openOffer ? [{ label: "Make an offer", style: "btn-secondary", onClick: function() {   // round 35: the map's buy window can negotiate too
+        setTimeout(function() { Deals.openOffer(propertyId); }, 0); } }] : []));
   }
 
   /* round 10: selling takes time (sales.js). List it and wait for offers,
@@ -2201,6 +2202,7 @@ window.UI = (function() {
     };
     Properties.init();
     if (typeof Story !== "undefined") Story.ensure();       // story buildings (Harlow's distribution centre)
+    if (Properties.rebaseValues) Properties.rebaseValues(); // round 35b: everything starts at fair value
     Board.init();
     Staff.init();
     if (typeof News !== "undefined") News.init();

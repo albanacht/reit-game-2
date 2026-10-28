@@ -76,7 +76,8 @@ window.Deal = (() => {
         row('Rent you collect', '+' + m(noiY) + ' / yr', 'up') +
         row('Cash profit per share', ps(addQ / sh) + ' / qtr' + (affoPS > 0 ? ' (' + (addQ / sh / affoPS * 100 >= 0 ? '+' : '') + (addQ / sh / affoPS * 100).toFixed(0) + '%)' : ''),
             addQ >= 0 ? 'up' : 'down', 'AFFO: rent minus overhead and upkeep this building adds') +
-        row('Yield on price', pc(yieldOn), '', 'What the building earns on what you pay (cap rate)') +
+        row('Cap rate on price', pc((window.Properties && Properties.stabRent ? Properties.stabRent(p) : p.annualNOI) / price), '', 'What it earns once normally let (95%), on what you pay') +
+        row('Yield today on price', pc(yieldOn), '', 'What you collect now, at ' + Math.round((p.occupancy || 0) * 100) + '% let, on what you pay') +
         row('If you borrowed for it', pc(rate) + ' interest', '', 'Your 5-year borrowing rate today') +
         row('Spread', (spread >= 0 ? '+' : '') + pc(spread), spread >= 0 ? 'up' : 'down',
             spread >= 0 ? 'Earns more than borrowing costs: debt-funded, it pays for itself' : 'Earns LESS than borrowing costs: debt-funded, it loses money') +

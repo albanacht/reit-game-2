@@ -24,7 +24,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     p.occupancy = 0.97; for (let i = 0; i < 6; i++) Properties.recalculatePropertyValues(); const v3 = p.currentValue;
     return { name: p.name, v0, v1, v2, v3 };
   });
-  ok(Math.abs(v.v1 - v.v0) / v.v0 < 0.03 && v.v2 < v.v1 * 0.92 && v.v3 > v.v2 * 1.1, 'value follows occupancy: ' + v.name + ' ' + v.v0 + ' -> emptier ' + v.v2 + ' -> full ' + v.v3);
+  // round 35b: valued on stabilised rent minus the refill (3 years of the missing rent): a vacancy dents value, it does not halve it
+  ok(Math.abs(v.v1 - v.v0) / v.v0 < 0.03 && v.v2 < v.v1 * 0.95 && v.v2 > v.v1 * 0.85 && v.v3 > v.v2 * 1.05, 'value follows occupancy, gently: ' + v.name + ' ' + v.v0 + ' -> emptier ' + v.v2 + ' -> full ' + v.v3);
 
   // price vs NAV at the start, and share issues priced against NAV
   const pn = await pg.evaluate(() => { Financials.runQuarter(); return GameState.company.sharePrice / GameState.ratios.navPerShare; });

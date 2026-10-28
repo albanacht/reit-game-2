@@ -59,9 +59,9 @@ window.PROPS = (() => {
 
     document.getElementById('kpis').innerHTML =
       box('Portfolio value', R.money(s.value)) +
-      box('Annual NOI',      R.money(s.noi)) +
+      box('Rent if fully let',      R.money(s.noi)) +
       box('Avg cap rate',    s.cap + '%') +
-      box('Weighted YoC',    wyoc.toFixed(1) + '%') +
+      box('Avg yield today', s.yNow + '%') +
       box('Avg occupancy',   s.occ + '%') +
       box('Low occupancy',   low,    'click warn', 'low') +
       box('Listed for sale', listed, 'click',      'listed');
@@ -73,9 +73,9 @@ window.PROPS = (() => {
   }
 
   /* -- columns ------------------------------------------------------------- */
-  const COLS_MINE = [['n','Property','l'],['v','Value'],['noi','NOI / yr'],['cap','Cap / YoC'],
+  const COLS_MINE = [['n','Property','l'],['v','Value'],['cap','Cap rate'],['yNow','Yield today'],
                      ['occ','Occupancy'],['status','Status','l'],['act','','l']];
-  const COLS_MKT  = [['n','Property','l'],['ask','Asking'],['noi','NOI / yr'],['cap','Cap rate'],
+  const COLS_MKT  = [['n','Property','l'],['ask','Asking'],['cap','Cap rate'],['yNow','Yield today'],
                      ['occ','Occupancy'],['qlist','Listed','l'],['act','','l']];
   const COLS_REST = [['n','Property','l'],['v','Est. value'],['cap','Cap rate'],['occ','Occupancy'],
                      ['o','Owner','l'],['act','','l']];
@@ -101,12 +101,11 @@ window.PROPS = (() => {
 
   /* -- rows ---------------------------------------------------------------- */
   function rowMine(p) {
-    const yoc = p.yoc != null ? '<div class="sml">YoC ' + R.pct(p.yoc) + '</div>' : '';
     return '<tr class="row' + (R.listedByMe(p) ? ' listed' : '') + '" data-id="' + p.id + '">' +
       '<td class="l">' + nameCell(p, typeSub(p)) + '</td>' +
       '<td>' + R.money(p.v) + '</td>' +
-      '<td>' + R.money(p.noi) + '</td>' +
-      '<td>' + R.pct(p.cap) + yoc + '</td>' +
+      
+      '<td>' + R.pct(p.cap) + '</td><td>' + R.pct(p.yNow) + '</td>' +
       '<td>' + occBar(p.occ) + '</td>' +
       '<td class="l">' + statusBadge(p) +
         (R.listedByMe(p) ? '<div class="sml">' + p.qlist + ' qtrs listed</div>' : '') + '</td>' +
@@ -117,8 +116,7 @@ window.PROPS = (() => {
     return '<tr class="row" data-id="' + p.id + '">' +
       '<td class="l">' + nameCell(p, typeSub(p)) + '</td>' +
       '<td>' + R.money(p.ask) + '<div class="sml">est ' + R.money(p.v) + '</div></td>' +
-      '<td>' + R.money(p.noi) + '</td>' +
-      '<td>' + R.pct(p.cap) + '</td>' +
+      '<td>' + R.pct(p.cap) + '</td><td>' + R.pct(p.yNow) + '</td>' +
       '<td>' + occBar(p.occ) + '</td>' +
       '<td class="l"><span class="sml">' + (p.qlist || 0) + ' qtrs</span></td>' +
       '<td class="l"><button class="act buy" data-v1="buy" data-id="' + p.id + '">Buy</button> <button class="act" data-a="offer" data-id="' + p.id + '" title="Offer less than the asking price">Offer</button></td>' +
@@ -165,11 +163,11 @@ window.PROPS = (() => {
         dl('Current value', R.money(p.v)) +
         dl('Gain / loss', '<span style="color:' + (gain >= 0 ? 'var(--good)' : 'var(--bad)') + '">' +
            (gain >= 0 ? '+' : '') + R.money(gain) + ' (' + (gain >= 0 ? '+' : '') + pc.toFixed(0) + '%)</span>') +
-        dl('Yield on cost', R.pct(p.yoc));
+        dl('Cap rate on what you paid', p.purchasePrice > 0 ? R.pct(Math.round(p.cap * p.v / p.purchasePrice * 10) / 10) : '—');
     } else {
       capital = dl('Cost basis', '<span class="sml">not disclosed</span>') +
                 dl('Current value', R.money(p.v)) +
-                dl('Going-in yield', R.pct(p.cap));
+                dl(p.atAsk ? 'Cap rate at asking' : 'Cap rate', R.pct(p.cap)) + dl('Yield today', R.pct(p.yNow)) + (p.areaCap != null ? dl('Area cap rate', R.pct(p.areaCap)) : '');
     }
 
     const story = p.story

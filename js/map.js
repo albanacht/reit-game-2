@@ -89,9 +89,10 @@ window.MAP = (() => {
         row('Owner', '<span style="color:' + o.color + '">' + o.short + '</span>' +
             (p.jv ? ' &middot; ' + p.jv.mine + '% (JV)' : '')) +
         row('Est. value', R.money(p.v)) +
-        row('Cap rate', R.pct(p.cap)) +
+        row(p.atAsk ? 'Cap rate at asking' : 'Cap rate', R.pct(p.cap)) +                          // round 35b: stabilised rent / price
+        row('Yield today', R.pct(p.yNow)) +                                                       // rent collected now / price
         row('Occupancy', p.occ + '%') +
-        row('Ann. NOI', R.money(p.noi)) +
+        row('Rent if fully let', R.money(p.noi) + ' / yr') +   // round 35b: say what it is
         row('Tenants', p.count || '—') +
         (p.tenants && p.tenants.length === 1 && !p.tenants[0].vacant && (p._raw.lease || {}).type === 'single'
           ? row('Occupier', R.esc(p.tenants[0].name) +
