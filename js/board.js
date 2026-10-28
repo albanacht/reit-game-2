@@ -379,7 +379,7 @@ window.Board = (() => {
         if (cov < 2.5) return mk(id, "int_coverage", function(t) { return "Interest cover of at least " + t + "x by next year."; }, "interestCoverage", 2.5, true);
         return mk(id, "int_coverage", function(t) { return "Keep interest cover at " + t + "x or more."; }, "interestCoverage", 2.5, true);   // round 18: was "stay off the credit line"
       case "hassan": case "mansour":
-        var floor = id === "mansour" ? 0.90 : 0.86;
+        var floor = id === "mansour" ? 0.87 : 0.86;   // round 35: Mansour 87% (was 90%)
         if (worst < 0.75) return mk(id, "no_bad_prop", function(t) { return "No building below " + t + "% occupancy at year end."; }, "worstOccupancy", id === "mansour" ? 0.78 : 0.75, true);
         return mk(id, "occupancy", function(t) { return "Portfolio occupancy of at least " + t + "% by next year."; }, "occupancyPortfolio", Math.min(0.95, Math.max(floor, Math.round((occ + 0.02) * 100) / 100)), true);
       case "petrova":

@@ -517,6 +517,7 @@ window.Decisions = (function() {
   // stress, which is when a real REIT would reach for private capital:
   // leverage above 55% or thin interest coverage, from Y4 onward.
   function checkPrivatePlacement() {
+    return null;   // round 35: retired. Boss Alex: it came when he did not need it. The CFO's rescue facility (story.js, Harlow) replaces it
     if (typeof Staff === "undefined" || !Staff.hasRole("financial")) return null;
     if (GameState._privatePlacementUsed) return null;
     if (GameState.meta.year < 4) return null;

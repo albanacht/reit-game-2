@@ -93,9 +93,15 @@ window.Ending = (() => {
               : r === 'refinanced' ? ['harlow_cold', 'Bob refinanced with another lender and repaid us in full.', 'He never called again.']
               : r === 'partial' ? ['harlow_cold2', 'Harlow sold six stores to repay most of what it owed.', 'Bob runs what is left, from a smaller office.']
               : r === 'bust' ? ['harlow_bust', 'Harlow Grocers went bankrupt. The yacht was sold at auction.', 'Bob consults for grocery chains now. His first slide is about leverage.']
+              // round 35: the rescues
+              : r === 'bust_williams' ? ['harlow_bust', 'Harlow Grocers went bankrupt. Williams found a new grocer for the centre in a week.', 'Hassan took the blame and left the board. Bob consults for grocery chains now.']
+              : r === 'bust_cfo' ? ['harlow_bust', 'Harlow Grocers went bankrupt. Your CFO refinanced everything and sold the trucks.', 'Bob consults for grocery chains now. His first slide is about leverage.']
+              : r === 'family' ? ['harlow_family', 'Harlow Grocers is Family Groceries now, run by Gary. Your stake pays every year.', 'Gary\u2019s face is on every apron. Bob shops there on Sundays.']
+              : r === 'turnaround' ? ['harlow_thriving', 'The turnaround worked. Harlow Grocers is smaller, profitable, and 70% yours.', 'Bob was offered a consultancy. He declined, then asked if the offer still stood.']
+              : r === 'turnaround_failed' ? ['harlow_bust', 'The turnaround failed and the stores closed for good.', 'Bob consults for grocery chains now. His first slide is about leverage.']
               : !dcMine && !h.loan ? ['harlow_never', 'You never did business with Bob Harlow.', 'Harlow Grocers was bought by a national chain in the end.']
               : ['harlow_thriving', 'Harlow Grocers is still your tenant.', 'Bob still calls Hassan on his birthday.'];
-      out.push({ key: v[0], fallback: FACE('bob'), label: 'Bob Harlow', lines: [v[1], v[2]] });
+      out.push({ key: v[0], fallback: FACE(v[0] === 'harlow_family' ? 'gary' : 'bob'), label: v[0] === 'harlow_family' ? 'Bob Harlow and Gary' : 'Bob Harlow', lines: [v[1], v[2]] });
     }
     // Brett Kessler
     if (window.War) {

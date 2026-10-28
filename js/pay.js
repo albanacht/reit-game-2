@@ -105,7 +105,7 @@ window.Pay = (() => {
     const B = bonusFor(), pend = c.pending.slice(), extra = pend.reduce((a, p) => a + p.cash, 0);
     const avg = (b.directors || []).reduce((a, d) => a + d.attitude, 0) / Math.max(1, (b.directors || []).length);
     const approveExtra = extra > 0 && avg >= 4.5;
-    const belt = GameState._belt && GameState._belt.noBonusYear === year;   // round 34: you suspended all bonuses (levi.js)
+    const belt = (GameState._belt && GameState._belt.noBonusYear === year) || GameState._noBonusYear === year;   // round 34: you suspended all bonuses (levi.js); round 35: or waived yours over Family Groceries
     const total = belt ? 0 : fmt(B.amount + (approveExtra ? extra : 0));
     const why = 'Target ' + money(pkg().bonus) + ' × ' + B.hit + '% of the scorecard' + (B.beat ? ', +25% for beating the rivals' : '') + (B.probation ? ', halved: you are on probation' : '') +
                 (pend.length ? '. Special recognition: ' + pend.map(p => p.reason + ' (' + money(p.cash) + ')').join('; ') + (approveExtra ? '' : ' (not approved: the board is not content enough)') : '');

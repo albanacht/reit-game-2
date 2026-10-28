@@ -16,7 +16,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   pg.on('console', m => { if (/war|story/.test(m.text()) && m.type() === 'warning') errs.push('warn: ' + m.text()); });
   const ok = (c, m) => console.log((c ? 'PASS ' : 'FAIL ') + m);
   await pg.goto(R); await wait(300); await pg.evaluate(() => localStorage.clear());
-  await pg.evaluate(() => UI.newGame()); await wait(1500); await pg.evaluate(() => UI.closeModal());
+  await pg.evaluate(() => UI.newGame()); await wait(1500); await pg.evaluate(() => { UI.closeModal(); GameState.debtTranches.forEach(t => { t.maturityYear += 10; }); });   // round 35: the bond stop would pause the war's quarters
   const meetingUp = () => pg.evaluate(() => { const m = document.getElementById('meeting'); return !!m && !m.classList.contains('hidden'); });
   const clearCards = () => pg.evaluate(() => { for (let k = 0; k < 3 && GameState._pendingDecision; k++) { UI.openPendingDecision(); const c = document.querySelector('#modal-body .decision-choice:not(.decision-choice-disabled):not(.decision-hold)'); if (c) c.click(); else { GameState._pendingDecision = null; } } UI.closeModal(); });
   const advance = async () => { await clearCards(); await pg.click('#btn-advance-quarter'); await wait(900); await pg.evaluate(() => UI.closeModal()); };

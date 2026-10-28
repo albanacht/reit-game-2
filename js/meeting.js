@@ -229,7 +229,7 @@ window.Meeting = (() => {
      The chairman and the activist have their own stories; not here. */
   const CANDIDATES = ['mansour', 'grace'];
   const PROFILE = {
-    mansour: () => 'Born in Cairo; twenty years running operations for a Gulf retail group, then a US supermarket chain. Judges occupancy harder than Hassan did: wants 90% (Hassan: 86%). Red line: any building below 75%. Starts Content.',
+    mansour: () => 'Born in Cairo; twenty years running operations for a Gulf retail group, then a US supermarket chain. Judges occupancy a little harder than Hassan did: wants 87% (Hassan: 86%), and no building below 75%. Red line: any building below 75%. Starts Content.',
     grace:  () => 'Sustainability champion. Judges your ESG score (wants 60, you are at ' + Story.esgScore() + '). Proposes a new initiative every year, and they cost money. At ESG 60, ESG funds buy your shares: share price +5%. Happy for you to borrow.',
   };
   function beatDeparture() {

@@ -193,6 +193,8 @@ window.Financials = (() => {
     const sp = GameState._spendQ || {};
     const leasingCosts = fmt(sp.leasing || 0);
     const affo = fmt(ffo - capex - leasingCosts);
+    // round 35: CORE AFFO, what the market prices: without one-off write-offs and recoveries (a loan written off is not lost rent every year)
+    const coreAffo = fmt(affo - (GameState.pnl.nonCash || 0));
 
     // Preferred dividend — a fixed charge paid BEFORE common dividends.
     const preferredDiv = fmt(
@@ -234,6 +236,7 @@ window.Financials = (() => {
       netIncome:           netIncome,
       ffo:                 ffo,
       affo:                affo,
+      coreAffo:            coreAffo,
       capexReserve:        capex,
       leasingCosts:        leasingCosts,
       projects:            fmt(sp.projects || 0),   // renovations, repositioning, building sites: into the buildings' value, not profit
@@ -478,8 +481,9 @@ window.Financials = (() => {
      null when there is no history yet. */
   function trailingAffoPS(pnl) {
     var h = GameState.history || [], v = [], sh = GameState.company.sharesOutstanding || 1;
-    if (pnl && isFinite(pnl.affo)) v.push((pnl.affo - (pnl.preferredDiv || 0)) / sh);   // round 26: after the preferred dividend
-    for (var i = h.length - 1; i >= 0 && v.length < 4; i--) v.push(isFinite(h[i].affoPerShare) ? h[i].affoPerShare : 0);
+    var core = function (x) { return x.coreAffo != null && isFinite(x.coreAffo) ? x.coreAffo : x.affo; };   // round 35: one-offs excluded
+    if (pnl && isFinite(pnl.affo)) v.push((core(pnl) - (pnl.preferredDiv || 0)) / sh);   // round 26: after the preferred dividend
+    for (var i = h.length - 1; i >= 0 && v.length < 4; i--) { var e = h[i], ps = e.coreAffoPerShare != null && isFinite(e.coreAffoPerShare) ? e.coreAffoPerShare : e.affoPerShare; v.push(isFinite(ps) ? ps : 0); }
     if (!v.length) return null;
     return v.reduce(function (a, x) { return a + x; }, 0) / v.length * 4;
   }
@@ -489,8 +493,15 @@ window.Financials = (() => {
      next year, not multiplied into the price. Kills "sell the buildings,
      pay it all out, watch the shares fly". */
   var COVER = 1.10;
+  /* round 35: the market looks through one bad year: the better of the last 4 and the last 8 quarters */
+  function lookThroughAffoPS(pnl) {
+    var a4 = trailingAffoPS(pnl), h = GameState.history || [];
+    if (h.length < 6) return a4;
+    var v = h.slice(-8).map(function (e) { var ps = e.coreAffoPerShare != null ? e.coreAffoPerShare : e.affoPerShare; return isFinite(ps) ? ps : 0; }), a8 = v.reduce(function (x, y) { return x + y; }, 0) / v.length * 4;
+    return a4 == null ? a8 : Math.max(a4, a8);
+  }
   function sustainableDividend(annualDiv, pnl) {
-    var a = trailingAffoPS(pnl);
+    var a = lookThroughAffoPS(pnl);
     if (a == null || !isFinite(a)) return { covered: annualDiv, excess: 0 };
     var cap = Math.max(0, a * COVER);
     return { covered: Math.min(annualDiv, cap), excess: Math.max(0, annualDiv - cap) };
@@ -549,7 +560,7 @@ window.Financials = (() => {
       if (rate > r4) bad.push("interest rates up " + (rate - r4).toFixed(2) + " points in a year: bonds pay more, so investors want a higher yield from REITs");
       else good.push("interest rates down " + (r4 - rate).toFixed(2) + " points in a year: REIT dividends look better next to bonds");
     }
-    stress = Math.max(0, Math.min(1, stress));
+    stress = Math.max(0, Math.min(0.6, stress));   // round 35: capped (was 1): bad news stacks, but not to a 70% crash
 
     var targetYield = healthyYield + (distressYield - healthyYield) * stress;
 
@@ -584,7 +595,7 @@ window.Financials = (() => {
     if (prP !== 1) { fair = fair * prP; (prP > 1 ? good : bad).push(PR.active().map(function (b) { return b.name.toLowerCase(); }).join(", ")); }
 
     // NAV sanity backstop, as before
-    if (navPS > 0) fair = Math.max(navPS * 0.30, Math.min(navPS * 1.6, fair));
+    if (navPS > 0) fair = Math.max(navPS * 0.40, Math.min(navPS * 1.6, fair));   // round 35: floor 40% of NAV (was 30%)
     if (growthAdj > 0.01) good.push("real dividend growth");
     if (!opening) GameState._priceWhy = { fair: fmt(fair), yieldWanted: fmt(targetYield), rate: rate,
                                           dividend: annualDiv, bad: bad, good: good };
@@ -706,6 +717,7 @@ window.Financials = (() => {
       // Ratios
       ffoPerShare:        GameState.ratios.ffoPerShare,
       affoPerShare:       GameState.ratios.affoPerShare,
+      coreAffoPerShare:   pnl.coreAffo != null ? fmt((pnl.coreAffo - (pnl.preferredDiv || 0)) / (GameState.company.sharesOutstanding || 1)) : GameState.ratios.affoPerShare,   // round 35
       dividendPerShare:   GameState.company.dividendPerShare,
       dividendCoverage:   GameState.ratios.dividendCoverage,
       debtToAssets:       GameState.ratios.debtToAssets,
@@ -1288,6 +1300,7 @@ window.Financials = (() => {
 
     // Reset unusual items (events.js will populate this before we run)
     GameState.pnl.unusualItems = GameState._pendingUnusual || 0;   // in-turn decision charges (world.js)
+    GameState.pnl.nonCash = GameState._pendingNonCash || 0; GameState._pendingNonCash = 0;   // round 35: one-off write-offs and recoveries (story.js), inside unusualItems
     GameState._pendingUnusual = 0;
 
     // 1. Roll random events (they modify portfolio and unusualItems)

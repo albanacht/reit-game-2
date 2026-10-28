@@ -36,7 +36,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   async function choose(i, shot) {
     await pg.evaluate(() => UI.openPendingDecision()); await wait(300);
     if (shot) await pg.screenshot({ path: OUT + '/' + shot + '.png' });
-    const txt = await pg.evaluate(i => { const c = document.querySelectorAll('#modal-body .decision-choice')[i]; const t = c ? c.textContent.replace(/\s+/g, ' ').trim() : ''; c && c.click(); return t; }, i);
+    const txt = await pg.evaluate(i => { const all = [...document.querySelectorAll('#modal-body .decision-choice')]; const c = typeof i === 'string' ? all.find(x => x.textContent.indexOf(i) > -1) : all[i]; const t = c ? c.textContent.replace(/\s+/g, ' ').trim() : ''; c && c.click(); return t; }, i);
     await wait(400); await pg.evaluate(() => UI.closeModal());
     return txt;
   }
@@ -132,7 +132,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await pg.evaluate(() => showView('map'));
     // round 9: the bankruptcy is a pinned card, then the Asset Manager finds a tenant
     ok(await advanceUntil('story_harlow_after', 3), 'the bankruptcy arrives as a pinned card');
-    console.log('     ' + (await choose(0, 'harlow_after')).slice(0, 160));
+    console.log('     ' + (await choose('Market it ourselves', 'harlow_after')).slice(0, 160));   // round 35: the rescue card has three new ways out first
     await pg.evaluate(() => { Story.H().at = 0; });
     ok(await advanceUntil('story_harlow_relet', 3), 'a tenant for the empty centre');
     console.log('     ' + (await choose(0, 'harlow_relet')).slice(0, 160));

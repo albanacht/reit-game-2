@@ -122,7 +122,7 @@ window.Market = (() => {
     var score = levScore + covScore; // 0-100
     // round 34: a bond extension is a "distressed exchange": the agencies mark us down for a year (ui.js bond panel)
     var RH = GameState._ratingHit, nowQ = (GameState.meta.year - 1) * 4 + GameState.meta.quarter;
-    if (RH && nowQ <= RH.until) score -= 14;
+    if (RH && nowQ <= RH.until) score -= (RH.pts || 14);   // round 35: a rating watch is 7
 
     // Map blended score to rating band
     var qualifiedRating, qualifiedSpread;

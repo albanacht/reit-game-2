@@ -96,7 +96,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await press(/^Continue/); await wait(1500); await pg.evaluate(() => { UI.closeModal(); const m = document.getElementById('meeting'); if (m) m.classList.add('hidden'); GameState.meta.quarter = 2; GameState.meta.year = 4; GameState.meta.totalQuarters = 13; GameState.balance.cash = 2; if (GameState.revolver) { GameState.revolver.limit = 0; GameState.revolver.drawn = 0; } Story.S().due = null; GameState._pendingDecision = null; GameState._pendingOffer = null; });
   await pg.click('#btn-advance-quarter'); await wait(400); p = await panel();
   ok(p.open && !p.btns.some(x => /one more year/.test(x)), 'a year later: no second extension [' + p.btns.join(' | ') + ']');
-  await press(/Declare default/); await wait(1500);
+  await press(/Declare default/); await wait(3000);   // the ending screen can take a moment
   const dft = await pg.evaluate(() => ({ over: GameState.meta.gameOver, why: GameState.meta.gameOverReason, ending: !!document.getElementById('ending-overlay') && !document.getElementById('ending-overlay').classList.contains('hidden'),
     skip: !!document.querySelector('#ending-overlay .en-skip'), btns: [...document.querySelectorAll('#ending-overlay button')].map(x => x.textContent) }));
   ok(dft.over && /defaulted/.test(dft.why), 'declare default: the game ends');

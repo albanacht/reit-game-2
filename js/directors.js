@@ -203,7 +203,7 @@ window.Directors = (() => {
     }
     if (id === 'mansour') {                                     // Hassan's job, done harder
       const o = r.occupancyPortfolio || 0;
-      add(o >= 0.94 ? 2 : o >= 0.92 ? 1 : o >= 0.90 ? 0 : o >= 0.87 ? -1 : o >= 0.84 ? -2 : -3, 'occupancy ' + (o * 100).toFixed(0) + '% (she wants 90%)');
+      add(o >= 0.91 ? 2 : o >= 0.89 ? 1 : o >= 0.87 ? 0 : o >= 0.84 ? -1 : o >= 0.81 ? -2 : -3, 'occupancy ' + (o * 100).toFixed(0) + '% (she wants 87%)');   // round 35: was 90
       const worst = G.portfolio.filter(p => !p.underConstruction).sort((a, b) => a.occupancy - b.occupancy)[0];
       if (worst && worst.occupancy < 0.75) add(-1.5, worst.name + ' only ' + Math.round(worst.occupancy * 100) + '% let');
     }
@@ -532,7 +532,7 @@ window.Directors = (() => {
     rows.push({ id: 'okafor', k: 'Interest cover', v: cov ? cov.toFixed(1) + 'x' : '—', want: '≥ 2.0x', ok: cov ? cov >= 2 : null });
     rows.push({ id: 'hassan', k: 'Occupancy', v: occ ? Math.round(occ * 100) + '%' : '—', want: '≥ 86%', ok: occ ? occ >= 0.86 : null });
     if (has('activist')) rows.push({ id: 'activist', k: 'Share price / NAV', v: Math.round(pnav() * 100) + '%', want: '≥ ' + Math.round(actWant() * 100) + '% (rivals)', ok: H().length ? pnav() >= actWant() : null });
-    rows.push({ id: 'mansour', k: 'Occupancy', v: occ ? Math.round(occ * 100) + '%' : '—', want: '≥ 90%', ok: occ ? occ >= 0.90 : null });
+    rows.push({ id: 'mansour', k: 'Occupancy', v: occ ? Math.round(occ * 100) + '%' : '—', want: '≥ 87%', ok: occ ? occ >= 0.87 : null });
     const esg = window.Story && Story.esgScore ? Story.esgScore() : 0;
     rows.push({ id: 'grace', k: 'ESG score', v: String(esg), want: '≥ 60', ok: esg >= 60 });
     const ch = GameState.board.chair, cr3 = ch && CHAIR_RED[ch];

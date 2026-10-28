@@ -60,7 +60,9 @@ window.Story = (() => {
   const pnlLater = d => { GameState._pendingUnusual = fmt((GameState._pendingUnusual || 0) + d); };
   /* A loss with no cash leaving: the P&L line also runs through cash in
      financials (now) or at the next quarter (later), so put the cash back. */
-  function writeOff(amount, now) { if (Math.abs(amount) < 0.005) return; (now ? pnlNow : pnlLater)(-amount); cash(amount); }
+  function writeOff(amount, now) { if (Math.abs(amount) < 0.005) return; (now ? pnlNow : pnlLater)(-amount); cash(amount); oneOff(-amount, now); }
+  /* round 35: tag one-offs so the market's "core" cash profit leaves them out (financials.js coreAffo) */
+  function oneOff(d, now) { if (now) GameState.pnl.nonCash = fmt((GameState.pnl.nonCash || 0) + d); else GameState._pendingNonCash = fmt((GameState._pendingNonCash || 0) + d); }
 
   function attitude(id, d, why) {
     const x = (GameState.board.directors || []).find(v => v.id === id); if (!x) return;
@@ -129,7 +131,7 @@ window.Story = (() => {
   function protects(tid) {
     if (tid === 'atlas_cold_chain') return true;                  // round 16: Atlas never gets into trouble (port.js)
     if (tid !== HID) return false;
-    const h = S().harlow; return !!h && ['owned', 'news', 'late', 'ask', 'loan', 'refused', 'decide'].indexOf(h.stage) > -1;
+    const h = S().harlow; return !!h && (['owned', 'news', 'late', 'ask', 'loan', 'refused', 'decide'].indexOf(h.stage) > -1 || h.rescue === 'family' || (h.rescue === 'turnaround' && !(h.turn && h.turn.done && h.turn.fails)));   // round 35: our own chain only fails if the story says so
   }
 
   // -- the odds -----------------------------------------------------------------
@@ -170,13 +172,14 @@ window.Story = (() => {
     const owed = L ? L.amt : 0, back = fmt(owed * RECOVER), w = fmt(Math.max(0, owed - back - (L ? L.prov : 0)));
     const dcLoss = p && dcMine() ? fmt(p.currentValue * 0.35) : 0;
     const loss = fmt(owed - back + dcLoss);
-    return { owed, back, writeoff: w, dcLoss, rent: harlowRent(), drop: Math.round(clamp(0.6 * loss / marketCap(), 0, 0.3) * 100) };
+    return { owed, back, writeoff: w, dcLoss, rent: harlowRent(), drop: Math.round(clamp(0.6 * loss / marketCap(), 0, 0.2) * 100) };   // round 35: at most -20% on the day (was 30%)
   }
 
   // -- the quarter ----------------------------------------------------------------
   function harlowQuarter(out) {
     ensure();
     const s = S(), h = H(), now = tq(), t = HT();
+    try { rescueQuarter(out, now); } catch (e) { if (window.console) console.warn('rescue', e); }   // round 35
     const pdc = dc(); if (pdc) pdc.storyLock = h.stage !== 'done';   // random events leave it alone while the story runs
     if (!t || h.stage === 'done') return;
     // the story's hand on Harlow's health: a slow slide while overexpanded
@@ -227,7 +230,7 @@ window.Story = (() => {
       }
 
       case 'aftermath':                                       // bankrupt: the pinned card waits for its turn
-        if (!dcMine()) { h.stage = 'done'; h.result = 'bust_lost'; return; }   // sold (or forced to sell) meanwhile
+        if (!dcMine() && !(h.bust && h.bust.owed > 0)) { h.stage = 'done'; h.result = 'bust_lost'; return; }   // sold (or forced to sell) meanwhile
         if (!s.due || lowDue()) s.due = 'story_harlow_after';
         return;
       case 'reletAsk': if (!dcMine()) { h.stage = 'done'; h.result = 'bust_lost'; } return;
@@ -237,9 +240,9 @@ window.Story = (() => {
         return;
       case 'ramp': {                                          // the new tenant's rent steps up
         const p = dc(); if (!p || !dcMine()) { h.stage = 'done'; return; }
-        const k = now - h.ramp.start, f = k < h.ramp.free ? 0 : Math.min(1, (k - h.ramp.free + 1) * 0.25);
+        const k = now - h.ramp.start, f = k < h.ramp.free ? 0 : Math.min(1, (k - h.ramp.free + 1) * (h.ramp.step || 0.25));
         p.rentFactor = f;                                     // the lease is signed at full rent; what is collected steps up
-        if (f >= 1) { p.rentFactor = null; h.stage = 'done'; h.result = (h.result || 'bust') + '_relet';
+        if (f >= 1) { p.rentFactor = null; h.stage = 'done'; h.result = h.rescue ? h.rescue : (h.result || 'bust') + '_relet';
           out.push({ good: true, text: h.ramp.name + ' now pays full rent at the Harlow centre: ' + money(h.ramp.full) + ' a year.' }); }
         return;
       }
@@ -338,13 +341,14 @@ window.Story = (() => {
     const line = Tenants.forceDefault(HID);
     if (p && dcMine() && p.lease && p.lease.positions[0]) p.lease.positions[0].relet = 999;   // the story finds the next tenant
     h.bust = { why, owed: c.owed, back: c.back, writeoff: c.writeoff, rent: c.rent, dcLoss: c.dcLoss, drop: c.drop, q: tq() };
-    if (p && dcMine()) { h.stage = 'aftermath'; if (!S().due || /^story_harlow/.test(S().due) || lowDue()) S().due = 'story_harlow_after'; }
+    // round 35: the rescue card comes whenever we were in deep (the centre, or the loan)
+    if ((p && dcMine()) || c.owed > 0) { h.stage = 'aftermath'; if (!S().due || /^story_harlow/.test(S().due) || lowDue()) S().due = 'story_harlow_after'; }
     G.company.sharePrice = fmt(G.company.sharePrice * (1 - c.drop / 100));
     attitude('petrova', -1.5, 'Harlow went bust'); attitude('chen', -1, 'Harlow went bust');
     if (h.lent) attitude('okafor', -1, 'you lent to Harlow against his advice');
     h.hassanDiscredited = !!(h.bought || h.lent);              // for the board story: Hassan pushed Bob
     if (h.bought) repOf('hassan', -25, 'Harlow, his deal, went bust');
-    if (!(p && dcMine()))
+    if (!(p && dcMine()) && !(c.owed > 0))
       say(dname('okafor'), 'Balance sheet', 'Harlow Grocers is bankrupt',
           'Harlow ' + why + ' and filed for bankruptcy.' + nums([['Loan', L ? money(c.owed) + ' lent, ' + money(c.back) + ' recovered' : 'none'], ['Rent lost', money(c.rent) + ' a year'], ['Share price', '−' + c.drop + '%']]), FACE('okafor'));
     if (h.hassanDiscredited)
@@ -422,7 +426,8 @@ window.Story = (() => {
                       ['The loan', money(LOAN) + ', 2 years, 10%: ' + money(LOAN * RATE) + ' interest a year'],
                       ['Security', 'store inventory: about 25% back if Harlow fails'],
                       ['If you refuse', 'about ' + f0 + '% chance Harlow goes bust within 18 months'],
-                      ['If Harlow fails', 'lose ' + money(harlowRent()) + ' rent a year; the centre loses ~30% of its value; share price about −' + b.drop + '%']]) +
+                      ['If Harlow fails', 'lose ' + money(harlowRent()) + ' rent a year; the centre loses ~30% of its value; share price about −' + b.drop + '%'],
+                      ['With this loan', 'Harlow is ' + pc(harlowShare()) + ' of your rent and ' + money(LOAN) + ' of loans: if Harlow fails in a downturn, about ' + Math.min(100, Math.round((harlowRent() + LOAN * RATE) / Math.max(0.5, (GameState.history || []).slice(-4).reduce((a, e) => a + (e.affoPerShare || 0), 0) * GameState.company.sharesOutstanding) * 100)) + '% of your cash profit goes with it']]) +
                 voices([voice('hassan', '"Bob is a superb manager. He will sort it out. We keep a good tenant."'),
                         voice('okafor', '"We lend a tenant money so it can pay us rent. I have seen this film."')]),
           choices: [
@@ -789,35 +794,161 @@ window.Story = (() => {
     const pct = better === true ? 0.8 : better === false ? 0.6 : 0.7 + (am ? (am.skill - 5) * 0.01 : -0.03);
     return { name: NEW_TENANTS[Math.floor(rnd() * NEW_TENANTS.length)], rent: fmt(base * pct), pct: Math.round(pct * 100), free: better === true ? 1 : 2, years: 10 };
   }
+  /* -- round 35: THE RESCUE. When Harlow goes bust and we were in deep (the centre,
+     the loan, or both), three hard ways out, so no path ends in a 70% crash:
+       A  The chairman makes a call. The board blames Hassan; he is forced out and
+          Mansour takes his seat. A grocer takes the centre after 1 quarter at 85%
+          of Harlow's rent. The courts return 40% of the loan, over a year.
+       B  The CFO's rescue facility (needs a CFO). Every bond due in the next two
+          years is refinanced into one 3-year loan at base + 5%; the bondholders
+          waive the debt limit for a year; the rating goes on watch; Okafor -2.
+          Selling Harlow's trucks, stock and stores returns 70% of the loan and
+          half the unpaid rent, over a year. The centre re-lets on the market
+          in 4 to 6 quarters.
+       C  We take over Harlow. The loan becomes a 70% stake (or we buy it from
+          the court for $8M). No rent for 2 quarters, then 85% of the old rent,
+          to the end. The stake sits on the balance sheet at a fixed value and
+          pays 8% a year from the next year.
+            Gary runs it ("Family Groceries"): $0.2M, and Nora may run the story
+              (then: a community food drive and a donation, your bonus waived;
+              or ride it out: the board remembers).
+            A turnaround firm runs it: $1.5M, 1 in 5 it fails within a year (the
+              stores close, the stake is written off, the centre goes to market).
+     Plus the plain ways: market it ourselves, or sell the centre as it stands. */
+  const STAKE_YIELD = 0.08, BUY_STAKE = 8;
+  const pickOne = a => a[Math.floor(rnd() * a.length)];
+  const instal = (amt, n, why) => { const h = H(); h.instal = h.instal || []; const per = fmt(amt / n); for (let k = 1; k <= n; k++) h.instal.push({ q: tq() + k, amt: per, why }); };
+  function rescueQuarter(out, now) {
+    const h = H(), G = GameState;
+    (h.instal || []).filter(x => x.q === now).forEach(x => { pnlNow(x.amt); oneOff(x.amt, true); out.push({ good: true, text: x.why + ': ' + money(x.amt) + ' back this quarter.' }); });
+    if (h.instal) h.instal = h.instal.filter(x => x.q > now);
+    if (h.stake && h.stake.v > 0 && now >= h.stake.from) GameState.pnl.loanInterest = fmt((GameState.pnl.loanInterest || 0) + h.stake.v * STAKE_YIELD / 4);
+    if (G._covWaiver && now > G._covWaiver.until) { G.credit.covenantLimit = G._covWaiver.prev; G._covWaiver = null; out.push({ good: null, text: 'The bondholders’ waiver has ended: the debt limit is back to ' + Math.round((G.credit.covenantLimit || 0.6) * 100) + '%.' }); }
+    if (h.turn && !h.turn.done && now >= h.turn.q) {
+      h.turn.done = true;
+      if (h.turn.fails) {
+        const p = dc(), v = h.stake ? h.stake.v : 0; if (v) writeOff(v, true); h.stake = null; h.rescue = 'turnaround_failed';
+        const T = HT(); if (T) T.status = 'active'; const line = Tenants.forceDefault(HID);
+        if (p && dcMine()) { p.rentFactor = null; if (p.lease && p.lease.positions[0]) p.lease.positions[0].relet = 999; h.stage = 'relet'; h.at = now + rint(4, 6); h.offer = null; }
+        else { h.stage = 'done'; h.result = 'turnaround_failed'; }
+        say(dname('okafor'), 'Balance sheet', 'The turnaround failed', 'The turnaround firm could not save the chain. The stores close for good. Our stake is written off (' + money(v) + ')' + (p && dcMine() ? ', and the centre goes back on the leasing market.' : '.'), FACE('okafor'));
+        out.push({ good: false, text: 'The Harlow turnaround failed: stake written off (' + money(v) + ').' }); if (line) out.push(line);
+      } else say('Jenkins', 'Chief of Staff', 'Harlow is trading again', 'Boss, the turnaround firm says the chain is stable. Fewer stores, better ones. Rent is paid on time and our stake pays from next year.', FACE('jenkins'));
+    }
+    if (h.nora && !h.nora.done && now >= h.nora.q && (!S().due || lowDue())) { h.nora.done = true; S().due = 'story_family_nora'; }
+  }
+  function otherStake() { const h = H(); return h.stake ? h.stake.v : 0; }
+  function reopen(p, name, free) {
+    const h = H(), T = HT(), old = h.oldRent || p.annualNOI;
+    if (T) { T.status = 'active'; T.coverage = 1.4; T.base = 1.4; T.trend = 0; if (name) T.name = name; }
+    p.lease = { type: 'single', positions: [{ t: HID, share: 1, q: 40 }] }; p.occupancy = 1; p.annualNOI = fmt(old * 0.85); p.rentFactor = 0; p.ownerNote = null;
+    h.ramp = { start: tq(), free: free, full: p.annualNOI, name: name || 'Harlow Grocers', step: 1 }; h.stage = 'ramp';
+  }
+  function signNew(p, o, free) {
+    const h = H(), G = GameState, id = 'story_tenant_' + tq();
+    G.tenants[id] = { id, name: o.name, industry: 'Grocery', story: 'Took the Harlow centre after the bankruptcy.', coverage: 2.0, base: 2.0, trend: 0, esc: 0.02, status: 'active', history: [] };
+    p.lease = { type: 'single', positions: [{ t: id, share: 1, q: o.years * 4 }] }; p.occupancy = 1; p.annualNOI = o.rent; p.rentFactor = 0; p.ownerNote = null;
+    h.ramp = { start: tq(), free: free, full: o.rent, name: o.name, step: 1 }; h.stage = 'ramp'; h.offer = null;
+  }
   CARDS.push({
     id: 'story_harlow_after', system: true, story: true,
     build() {
-      const h = H(), B = h.bust, p = dc(); if (!B || h.stage !== 'aftermath' || !p || !dcMine()) return null;
-      const am = AM(), sale = fmt(p.currentValue * 0.75);
+      const h = H(), B = h.bust, p = dc(), G = GameState; if (!B || h.stage !== 'aftermath') return null;
+      const mine = !!(p && dcMine()), old = h.oldRent || (p ? p.annualNOI : LEASE), owed = B.owed || 0;
+      const hasH = onBoard('hassan'), chairId = window.Directors ? Directors.chair() : 'williams', chairN = dname(chairId).replace(/^(Chairman|Chair|Director) /, '');
+      const cfo = !!(window.Staff && Staff.hasRole && Staff.hasRole('financial')), cfoN = cfo && Staff.getStaff('financial') ? Staff.getStaff('financial').name : 'Your CFO';
+      const dueSoon = (G.debtTranches || []).filter(t => G.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) <= 8 && !t.rescue), dueAmt = fmt(dueSoon.reduce((a, t) => a + t.amount, 0));
+      const arrears = fmt(B.rent / 2), rateB = fmt((G.market.baseInterestRate || 3) + 5);
+      const back40 = fmt(owed * (0.40 - RECOVER)), back70 = fmt(owed * (0.70 - RECOVER) + arrears * 0.5);
+      const stakeV = owed > 0 ? fmt(owed * 0.5) : BUY_STAKE;
+      const ch = [];
+      ch.push({ label: chairN + ' makes a call' + (hasH ? '; the board blames Hassan' : ' (2 political capital)'),
+        detail: (mine ? 'A grocer takes the centre after 1 quarter, at 85% of Harlow’s rent (' + money(old * 0.85) + ' a year). ' : '') + (owed ? 'The courts return 40% of the loan (' + money(back40) + ' more, over a year). ' : '') +
+                (hasH ? 'Hassan is forced off the board; Mansour (operations, wants 87% occupancy) takes his seat. ' : '') + chairN + ' +1.',
+        check: () => hasH || (G.board.politicalCapital || 0) >= 2, checkMsg: 'Needs 2 political capital',
+        apply() {
+          if (!hasH) G.board.politicalCapital = (G.board.politicalCapital || 0) - 2;
+          if (back40 > 0) instal(back40, 4, 'The Harlow bankruptcy court');
+          if (hasH && window.Directors) { Directors.removeDirector('hassan', 'Hassan was forced out over Harlow.'); if (!Directors.has('mansour')) Directors.addDirector('mansour', 5, 'Director Mansour joined (operations), in Hassan’s seat.'); }
+          if (window.Directors) Directors.remember(chairId, 1, 'he saved the Harlow centre with one call');
+          h.rescue = 'bust_williams'; h.result = h.rescue;
+          if (mine) { signNew(p, { name: pickOne(['Riverton Fresh Markets', 'Greenleaf Grocers', 'Valley Foods']), rent: fmt(old * 0.85), years: 12 }, 1); return chairN + ' called an old friend. A grocer moves into the centre next quarter.' + (hasH ? ' Hassan has cleared his desk.' : ''); }
+          h.stage = 'done'; h.result = 'bust_williams'; return chairN + ' called the court’s administrators. We will get 40% back.' + (hasH ? ' Hassan has cleared his desk.' : '');
+        } });
+      ch.push({ label: 'The CFO’s rescue facility' + (dueAmt > 0 ? ': ' + money(dueAmt) + ' refinanced at ' + rateB.toFixed(1) + '%' : ''),
+        detail: (dueAmt > 0 ? 'Every bond due in the next two years becomes one 3-year loan, secured on our buildings. ' : 'A 3-year facility, secured on our buildings, for a year of lost rent (' + money(B.rent) + '). ') +
+                'The bondholders waive the debt limit for a year. Selling Harlow’s assets returns ' + money(back70) + ' over a year (70% of the loan, half the unpaid rent). ' + (mine ? 'The centre re-lets on the market in 4 to 6 quarters. ' : '') + 'Rating on watch, Okafor −2.',
+        check: () => cfo, checkMsg: 'Needs a CFO (Staff screen)',
+        apply() {
+          const now = tq();
+          if (dueAmt > 0) G.debtTranches = G.debtTranches.filter(t => dueSoon.indexOf(t) < 0);
+          const amt = dueAmt > 0 ? dueAmt : fmt(B.rent), my = G.meta.year + 3;
+          G.debtTranches.push({ id: 'rescue' + now, amount: amt, rate: rateB, maturityQuarter: G.meta.quarter, maturityYear: my, quartersUntilMaturity: 12, label: rateB.toFixed(1) + '% Rescue facility due Y' + my + 'Q' + G.meta.quarter, rescue: true });
+          if (!(dueAmt > 0)) cash(amt);
+          pnlLater(-fmt(amt * 0.01));
+          G._covWaiver = { until: now + 4, prev: G.credit.covenantLimit || 0.60 }; G.credit.covenantLimit = 0.70;
+          G._ratingHit = { until: now + 4, pts: 7 };
+          if (back70 > 0) instal(back70, 4, 'Harlow’s trucks, stock and stores, sold');
+          if (window.Directors) Directors.remember('okafor', -2, 'the rescue facility');
+          h.rescue = 'bust_cfo'; h.result = h.rescue;
+          if (mine) { h.stage = 'relet'; h.at = now + rint(4, 6); return cfoN + ' closed the facility in a week: ' + money(amt) + ', three years, ' + rateB.toFixed(1) + '%. Nothing falls due for two years.'; }
+          h.stage = 'done'; h.result = 'bust_cfo'; return cfoN + ' closed the facility. The administrators start selling Harlow’s assets.';
+        } });
+      const take = gary => ({ label: 'Take over Harlow: ' + (gary ? 'Gary runs it ("Family Groceries")' : 'a turnaround firm runs it'),
+        detail: (owed > 0 ? 'Our loan becomes a 70% stake' : 'We buy 70% from the court for ' + money(BUY_STAKE)) + ', on the books at ' + money(stakeV) + ', paying 8% a year from next year. ' +
+                (mine ? 'No rent for 2 quarters, then 85% of the old rent (' + money(old * 0.85) + ' a year) to the end. ' : '') +
+                (gary ? 'Gary costs $0.2M and renames it Family Groceries. Nora may run the story.' : 'The firm costs $1.5M. About 1 in 5, it fails within a year and the stake is lost.'),
+        check: () => owed > 0 || spend() >= BUY_STAKE, checkMsg: 'Needs ' + money(BUY_STAKE) + ' to buy the stake',
+        apply() {
+          const now = tq();
+          if (!(owed > 0)) cash(-BUY_STAKE); else { pnlLater(stakeV); cash(-stakeV); oneOff(stakeV, false); }   // the written-off loan comes back as an asset: a gain, no cash
+          h.stake = { v: stakeV, from: G.meta.year * 4 + 1 };
+          pnlLater(-(gary ? 0.2 : 1.5));
+          if (gary) { h.rescue = 'family'; if (rnd() < 0.5) h.nora = { q: now + rint(2, 4) }; }
+          else { h.rescue = 'turnaround'; h.turn = { q: now + 4, fails: rnd() < 0.2 }; }
+          h.result = h.rescue;
+          if (mine) reopen(p, gary ? 'Family Groceries' : 'Harlow Grocers', 2);
+          else { h.stage = 'done'; h.result = h.rescue; const T = HT(); if (T) { T.status = 'active'; T.coverage = 1.4; if (gary) T.name = 'Family Groceries'; } }
+          return gary ? 'Gary has the keys. The signs say FAMILY GROCERIES. He has ordered aprons with his face on them.' : 'The turnaround firm moved in on Monday. Bob was offered a consultancy. He declined.';
+        } });
+      ch.push(take(true), take(false));
+      if (mine) {
+        const sale = fmt(p.currentValue * 0.75);
+        ch.push({ label: 'Sell the centre as it stands, for about ' + money(sale), detail: 'An empty specialist warehouse sells about 25% under its value. The story ends here.',
+          apply() { const r = Properties.sellProperty(p.id); if (!r || !r.success) return 'The sale fell through.'; G.balance.cash = fmt(G.balance.cash - (r.salePrice || 0) + sale); h.stage = 'done'; h.result = 'bust_sold'; return 'Sold the Harlow centre for ' + money(sale) + '.'; } });
+        ch.push({ label: 'Market it ourselves', detail: (AM() ? 'Your Asset Manager: about 2 to 3 quarters.' : 'About 4 to 6 quarters without an Asset Manager.') + ' About 70% of Harlow’s rent. The loan: what has been recovered (25%).',
+          apply() { h.stage = 'relet'; h.at = tq() + (AM() ? rint(2, 3) : rint(4, 6)); return 'The centre is on the leasing market.'; } });
+      } else ch.push({ label: 'Write it off and move on', detail: 'The 25% already recovered is all we get.', apply() { h.stage = 'done'; h.result = 'bust'; return 'Written off. Okafor has filed the papers under "lessons".'; } });
       return {
-        title: 'Harlow Grocers is bankrupt', from: dname('okafor') + ', Balance sheet', face: FACE('okafor'),
+        title: 'Harlow Grocers is bankrupt. What now?', from: dname('okafor') + ', Balance sheet', face: FACE('okafor'),
         body: 'Harlow ' + B.why + ' and filed for bankruptcy this week. Bob Harlow has not returned calls.' +
-              nums([['Loan', B.owed ? money(B.owed) + ' lent, ' + money(B.back) + ' recovered from inventory, ' + money(B.writeoff) + ' written off' : 'none'],
+              nums([['Loan', owed ? money(owed) + ' lent, ' + money(B.back) + ' recovered so far, ' + money(B.writeoff) + ' written off' : 'none'],
                     ['Rent lost', money(B.rent) + ' a year, from today'],
-                    ['The distribution centre', 'empty, now worth about ' + money(p.currentValue) + ' (' + '\u2212' + money(B.dcLoss) + ')'],
-                    ['Share price', '\u2212' + B.drop + '%']]) +
-              '<div class="dv-nums"><b>What do we do with the empty centre?</b></div>',
-        choices: [
-          { label: 'Find a new tenant',
-            detail: (am ? am.name + ', your Asset Manager, will market it: about 2 to 3 quarters.' : 'Without an Asset Manager, Jenkins asks around: about 4 to 6 quarters. Hiring one speeds this up.') +
-                    ' Expect about 70% of Harlow\u2019s rent, with a quarter or two rent free.',
-            apply() { h.stage = 'relet'; h.at = tq() + (AM() ? rint(2, 3) : rint(4, 6)); return 'The centre is on the leasing market.'; } },
-          { label: 'Sell it as it stands, for about ' + money(sale),
-            detail: 'An empty specialist warehouse sells at a discount: about 25% under its value. The story ends here.',
-            apply() {
-              const r = Properties.sellProperty(p.id);
-              if (!r || !r.success) return 'The sale fell through.';
-              GameState.balance.cash = fmt(GameState.balance.cash - (r.salePrice || 0) + sale);
-              h.stage = 'done'; h.result = 'bust_sold';
-              return 'Sold the Harlow centre for ' + money(sale) + '.';
-            } },
-        ]
+                    ...(mine ? [['The distribution centre', 'empty, now worth about ' + money(p.currentValue)]] : []),
+                    ['Bonds due in the next two years', dueAmt > 0 ? money(dueAmt) : 'none']]) +
+              '<div class="dv-nums"><b>It is bad. It is not the end. Three ways out, each with a price.</b></div>' +
+              voices([voice(chairId, hasH ? '"The shareholders want a name. Hassan brought us Bob. I can make one call that fills the building."' : '"I can make one call. It will cost us."'),
+                      voice('okafor', '"Whatever we do, nothing may fall due while the rent is gone."')]),
+        choices: ch
       };
+    }
+  });
+  CARDS.push({
+    id: 'story_family_nora', system: true, story: true, holdQ: 1,
+    build() {
+      const h = H(); if (!h.nora || h.rescue !== 'family') return null;
+      return { title: 'The Ledger: "CEO’s brother-in-law runs bankrupt grocer with shareholders’ money"', from: JOURNO + ', ' + PAPER, face: FACE('journalist'),
+        body: 'Nora Whitlock has the story: the REIT turned its bad loan into a grocery chain and handed it to the CEO’s brother-in-law. Gary told her "family is a business model".' +
+              voices([voice('petrova', '"Our shareholders read this over breakfast. Fix it."'), voice('williams', '"A good cause and a quiet year. That is how this goes away."')]),
+        choices: [
+          { label: 'Quiet it: a community food drive, a $0.5M donation, and your bonus waived this year', detail: 'The story fades. The board calms down.',
+            apply() { pnlLater(-0.5); GameState._noBonusYear = GameState.meta.year; if (window.Directors) Directors.remember('petrova', 0.5, 'you paid to quiet the Family Groceries story');
+                      return 'Family Groceries fed 4,000 families at Thanksgiving. Gary gave the speech. Nora wrote a second, kinder piece.'; } },
+          { label: 'Ride it out', detail: 'No cost now. Every director remembers it, Petrova most. Share price −3%.',
+            apply() { GameState.company.sharePrice = fmt(GameState.company.sharePrice * 0.97);
+                      (GameState.board.directors || []).forEach(d => { if (d.id !== 'tex' && d.id !== 'voss' && window.Directors) Directors.remember(d.id, d.id === 'petrova' ? -2.5 : -1.5, 'Family Groceries in the Ledger'); });
+                      return 'No comment. The story ran for a week.'; } },
+        ] };
     }
   });
   CARDS.push({
@@ -1074,7 +1205,7 @@ window.Story = (() => {
     return out;
   }
   function dueCard() { return S().due; }
-  function otherAssets() { const L = S().harlow && S().harlow.loan; return L ? fmt(L.amt - (L.prov || 0)) : 0; }
+  function otherAssets() { const L = S().harlow && S().harlow.loan; return (L ? fmt(L.amt - (L.prov || 0)) : 0) + otherStake(); }   // round 35: and the Harlow stake
 
   /* "On the clock" lines (inbox). */
   function clockRows() {
@@ -1087,9 +1218,10 @@ window.Story = (() => {
   }
 
   /* For tests and tuning: jump the Harlow story to a stage. */
+  function debugBust(why) { const out = []; bust(out, why || 'ran out of cash', true); return out; }   // round 35: tools/browser_round35b.js
   function debug(stage, extra) { const h = H(); Object.assign(h, { stage }, extra || {}); if (extra && extra.due) S().due = extra.due; return h; }
 
-  return { lowDue, init, ensure, processQuarter, dueCard, otherAssets, protects, clockRows, S, H, maturityOdds, finalOdds, failOdds, debug,
+  return { debugBust, lowDue, init, ensure, processQuarter, dueCard, otherAssets, protects, clockRows, S, H, maturityOdds, finalOdds, failOdds, debug,
            esgScore, esgPremium, esgNewThisYear, esgRefusedRecently, esgCancelledRecently, esgItems, esgCancel, onDirectorJoin, ESG_LINE,
            CEO, ceoWorth, texChecks, awardOdds, payAward, flagOdds, AWARD_CASH, AWARD_SHARES, macroLine, agenda };
 })();

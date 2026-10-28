@@ -762,6 +762,7 @@ window.UI = (function() {
       '</div>' +
       '<div class="feed-bottom-detail">Rental income ' + fmtM(report.netRentalIncome !== undefined ? report.netRentalIncome : (GameState.pnl ? GameState.pnl.noi : 0)) +
         ' · interest ' + fmtM(-(GameState.pnl ? GameState.pnl.interestExpense : 0)) +
+        (GameState.pnl && GameState.pnl.loanInterest ? ' · loan interest received ' + fmtM(GameState.pnl.loanInterest) : '') +   // round 35: was missing
         ' · dividends ' + fmtM(-(GameState.pnl ? GameState.pnl.dividendsPaid : 0)) +
         (GameState.pnl && GameState.pnl.unusualItems ? ' · one-offs ' + fmtM(GameState.pnl.unusualItems) : '') +
         '</div>';

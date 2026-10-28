@@ -136,6 +136,7 @@ window.Inbox = (() => {
       kind: 'summary', title: (done % 4 === 0 ? qLabel(done) : 'Q' + ((done - 1) % 4 + 1)) + ' results', rc,
       detail: 'Rent ' + money(report.netRentalIncome !== undefined ? report.netRentalIncome : (pnl.noi || 0)) +
               ' · interest ' + money(-(pnl.interestExpense || 0)) +
+              (pnl.loanInterest ? ' · loan interest received ' + money(pnl.loanInterest) : '') +   // round 35: the Harlow loan's interest was invisible here
               ' · dividends ' + money(-(pnl.dividendsPaid || 0)) +
               (pnl.unusualItems ? ' · one-offs ' + money(pnl.unusualItems) : ''),
       actions: actions || [],
