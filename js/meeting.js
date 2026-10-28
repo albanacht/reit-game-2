@@ -52,7 +52,8 @@ window.Meeting = (() => {
     const box = document.getElementById('mt-portraits'); if (!box) return;
     // round 32: every guest of the year sits at the table from the start; the one on the agenda now is lit
     const gs = (S.guests || []).slice(); if (S.guest && !gs.some(g => g.name === S.guest.name)) gs.push(S.guest);
-    box.style.gridTemplateColumns = 'repeat(' + (order().length + gs.length) + ', 1fr)';
+    // round 35: guests sit apart, behind a divider, with their role under the name
+    box.style.gridTemplateColumns = 'repeat(' + order().length + ', 1fr)' + (gs.length ? ' 34px repeat(' + gs.length + ', 1fr)' : '');
     box.innerHTML = order().map(id => {
       const a = S.shown[id] != null ? S.shown[id] : dir(id).attitude, L = Directors.level(a);
       const v = S.votes[id];
@@ -60,8 +61,9 @@ window.Meeting = (() => {
         '<img src="' + Directors.face(id) + '" alt=""><div class="mt-pn">' + esc(sn(id)) + '</div>' +
         '<div class="mt-mood ' + L[2] + '">' + L[1] + '</div>' +
         (v ? '<div class="mt-stamp ' + (v === 'FOR' ? 'for' : 'against') + '">' + v + '</div>' : '') + '</div>';
-    }).join('') + gs.map(g => { const on = S.guest && S.guest.name === g.name;
-      return '<div class="mt-p guest' + (on ? ' on' : ' waiting') + (on && S.speaking === 'guest' ? ' talking' : '') + '"><img src="' + g.face + '" alt=""><div class="mt-pn">' + esc(g.name) + '</div><div class="mt-mood mt-guest">' + (on ? 'Guest' : 'Waiting') + '</div></div>'; }).join('');
+    }).join('') + (gs.length ? '<div class="mt-gdiv"><span>Guests</span></div>' : '') + gs.map(g => { const on = S.guest && S.guest.name === g.name;
+      return '<div class="mt-p guest' + (on ? ' on' : ' waiting') + (on && S.speaking === 'guest' ? ' talking' : '') + '"><img src="' + g.face + '" alt=""><div class="mt-pn">' + esc(g.name) + '</div>' +
+        (g.role ? '<div class="mt-grole">' + esc(g.role) + '</div>' : '') + '<div class="mt-mood mt-guest">' + (on ? 'Speaking' : 'Waiting') + '</div></div>'; }).join('');
   }
 
   /* The chat: lines queue up, each appears after a short "typing" pause. */
@@ -371,6 +373,11 @@ window.Meeting = (() => {
             Directors.remember(other, -1, 'you sold him out to ' + sn(id));
             say(id, pick(['That is all I wanted to hear.', 'Good. That is a deal.'])); say(other, pick(['Noted.', 'I see how it is.']));
             mood(id); mood(other); S.q[S.q.length - 1].mood = dir(other).attitude; pump(beatDemands); } },
+        // round 35: shares that bought buildings are an answer Petrova accepts
+        ...(id === 'petrova' && /new shares/.test(c.cause) ? [{ label: 'Explain: the money bought buildings', detail: Directors.issueInvested() ? 'True: what we bought this year is worth what the shares raised. +1.5 mood, and the new shares stop counting against you.' : 'Not true yet: the money is still mostly cash.',
+          disabled: !Directors.issueInvested(), why: 'The money from the shares has not been spent on buildings yet', go: () => {
+            say('you', 'Every dollar from those shares went into buildings that pay rent. Look at the portfolio.');
+            Directors.explainIssue(); say(id, 'Fair. As long as they keep paying. Next time, sell shares when they are dear.'); mood(id); S.q[S.q.length - 1].mood = dir(id).attitude; pump(beatDemands); } }] : []),
         { label: 'Spend 1 political capital', detail: 'Private lunch: +1.5 mood. You have ' + pc + ' capital.', disabled: pc < 1, why: 'No political capital left', go: () => {
             b.politicalCapital = pc - 1; say('you', 'Let’s talk properly. Lunch tomorrow, just us.');
             Directors.remember(id, 1.5, 'you made time for his concerns');

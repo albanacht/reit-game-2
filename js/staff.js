@@ -22,9 +22,9 @@ window.Staff = (function() {
     acquisitions: {
       id:        "acquisitions",
       title:     "Acquisitions Lead",
-      blurb:     "Buys cheaper: sellers ask 2 to 6% less, and you hear their number. Half the fees. Finds buyers for what you sell.",
-      salaryMin: 0.4,
-      salaryMax: 0.9,
+      blurb:     "Buys cheaper: sellers ask 2 to 6% less, and you hear their number. Half the fees. Finds buyers for what you sell. Pays for himself if you buy off-market (Dealroom) or sell buildings; for one market purchase a year, a luxury.",
+      salaryMin: 0.3,   // round 35: was 0.4-0.9, a third dearer than the other roles after round 29's halving
+      salaryMax: 0.6,
       unlocks:   "Cheaper offers + the seller's price + lower fees + buyers for your listings",
       candidateNames: ["Marcus Webb", "Diana Cho", "Rafael Ortiz", "Susan Bell"],
       hints: [

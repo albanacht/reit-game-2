@@ -383,6 +383,9 @@ window.Board = (() => {
         if (worst < 0.75) return mk(id, "no_bad_prop", function(t) { return "No building below " + t + "% occupancy at year end."; }, "worstOccupancy", id === "mansour" ? 0.78 : 0.75, true);
         return mk(id, "occupancy", function(t) { return "Portfolio occupancy of at least " + t + "% by next year."; }, "occupancyPortfolio", Math.min(0.95, Math.max(floor, Math.round((occ + 0.02) * 100) / 100)), true);
       case "petrova":
+        // round 35: if she is upset about new shares, the fix she asks for is about new shares
+        if (typeof Directors !== "undefined" && /new shares/.test((Directors.card("petrova") || {}).cause || ""))
+          return mk(id, "no_equity", "No new shares below 85% of NAV this year.", "noCheapEquity", 1, true);
         if (pnav < 0.70) return mk(id, "pet_buyback", function(t) { return "Buy back at least " + t + "% of our shares this year. We trade at " + Math.round(pnav * 100) + "% of NAV."; }, "buybackPct", 2, true);
         if (pnav > 1.10) return mk(id, "pet_issue", function(t) { return "We trade above NAV. Sell at least " + t + "% new shares this year and put the money to work."; }, "equityIssuedPct", 5, true);
         if (failing("Total return")) return mk(id, "beat_rivals", "Beat the rivals\u2019 total return this year.", "beatRivals", 1, true);
@@ -508,6 +511,7 @@ window.Board = (() => {
       sharePriceHeld:      co.sharePrice >= startYearSharePrice ? 1 : 0,
       sharePriceGrowthPct: startYearSharePrice > 0 ? ((co.sharePrice - startYearSharePrice) / startYearSharePrice) * 100 : 0,
       noEquityIssued:      b.noEquityBroken ? 0 : 1,
+      noCheapEquity:       (b.cheapIssueThisYear || 0) > 0 ? 0 : 1,   // round 35
       noDebtIncrease:      GameState.balance.totalDebt <= (b.startYearDebt || GameState.balance.totalDebt) + 0.5 ? 1 : 0,
       occupancyPortfolio:  r.occupancyPortfolio,
       worstOccupancy:      worstOcc,
@@ -526,6 +530,7 @@ window.Board = (() => {
   var COUNT_METRICS = { acquisitionsThisYear: 1, accretiveBuysThisYear: 1, leaseUpsThisYear: 1, esgScore: 1 };
   /* round 17: every demand says how to meet it */
   var HOW = {
+    noCheapEquity: "if you need money, borrow or sell a building; sell new shares only when they trade at 85% of NAV or more",
     dividendGrowthPct: "raise the quarterly dividend (Finance screen), and keep cash profit above it",
     noDividendCut: "keep the dividend where it is, even if retained cash dips for a quarter",
     payoutOk: "cut the dividend to what cash profit pays (Finance screen), or grow cash profit by buying and filling buildings",
@@ -742,6 +747,7 @@ window.Board = (() => {
     GameState.board.startYearShares       = GameState.company.sharesOutstanding;
     GameState.board.buybackSharesThisYear = 0;
     GameState.board.equitySharesThisYear  = 0;
+    GameState.board.cheapIssueThisYear    = 0;   // round 35
   }
 
   // ----------------------------------------------------------

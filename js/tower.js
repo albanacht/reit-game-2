@@ -315,6 +315,7 @@ window.Tower = (() => {
     if (A) {                                           // the city's pandemic, then the tower's own hit
       const ev = window.Events && Events.EVENT_CATALOGUE && Events.EVENT_CATALOGUE.find(e => e.id === 'pandemic_shock');
       if (ev) { try { const r = ev.apply(); if (r) out.push({ good: false, text: r.headline + ': ' + r.impact, w: 10 }); } catch (e) {} }
+      if (window.Directors && Directors.shock) Directors.shock('the pandemic hit us all');   // round 35
     }
     // round 33: the city's floors (mayor.js), pre-let at the city's rent; government tenants move in pandemic or not
     const city = t.city && !t.city.applied ? t.city : null;

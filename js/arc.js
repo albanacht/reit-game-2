@@ -253,7 +253,7 @@ window.Arc = (() => {
   function suppresses(eventId) {
     if (!active()) return false;
     if (OWNED_EVENTS.indexOf(eventId) !== -1) return true;
-    if (eventId === "pandemic_shock") return phase() === "crisis";   // never stack on the crisis
+    if (eventId === "pandemic_shock") return true;   // round 35: never random (a calm-economy pandemic in Year 3 felt unfair); the tower's road A still uses it
     return false;
   }
 

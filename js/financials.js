@@ -1096,6 +1096,7 @@ window.Financials = (() => {
     GameState.company.sharePrice          = fmt(GameState.company.sharePrice * (1 - totalDrop));
     GameState.company.equityIssuanceCount = pnav < 0.8 ? count + 1 : count;   // only cheap issues count against you
     GameState.company.equityIssuanceYear  = GameState.meta.year;
+    if (typeof Directors !== "undefined" && Directors.noteIssue) Directors.noteIssue(shares, pnav, proceeds);   // round 35: Petrova remembers the price
     // Suppress positive share price drift for 2 quarters
     GameState.company.equitySuppressQuarters = 2;
 
@@ -1291,6 +1292,8 @@ window.Financials = (() => {
 
     // 1. Roll random events (they modify portfolio and unusualItems)
     const firedEvents = Events.rollEvents();
+    // round 35: a harmful economy-wide event is not your doing: the board judges the numbers gently for a year (directors.js)
+    firedEvents.forEach(function (e) { if (e.harmful && e.isMacro && typeof Directors !== "undefined" && Directors.shock && !Directors.shockOn()) Directors.shock(/Pandemic/.test(e.headline || "") ? "the pandemic hit us all" : "the economy hit us all"); });
 
     /* Property-level texture from world.js. Small, frequent, always naming a
        building and a number — this is what makes the city feel alive between

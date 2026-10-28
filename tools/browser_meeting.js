@@ -37,7 +37,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       if (btns.length > 1 && /wants an answer/.test(prompt)) await pg.screenshot({ path: OUT + '/meeting_agenda_' + (shots.tag || 'x') + '.png' });
       if (btns.length === 1) { transcript.push('> ' + btns[0].t); await pg.evaluate(() => document.querySelector('#mt-actions .mt-btn').click());
         if (/Back to work|Leave/.test(btns[0].t)) break; continue; }
-      const i = choose(prompt, btns); transcript.push('> [' + prompt + '] ' + btns[i].t);
+      let i = choose(prompt, btns); if (!btns[i] || btns[i].dis) i = btns.findIndex(x => !x.dis);   // never keep clicking a locked choice
+      transcript.push('> [' + prompt + '] ' + btns[i].t);
       await pg.evaluate(i => document.querySelectorAll('#mt-actions .mt-btn')[i].click(), i);
       if (/^Back to work/.test(btns[i].t)) break;              // round 15: Back to work now sits next to Resign
     }

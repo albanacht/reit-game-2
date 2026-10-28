@@ -165,10 +165,11 @@ window.Events = (() => {
         applyOccupancyHit(officeProps, 0.10, 0.20);
         applyNOIChange(indProps, 0.02, 0.06); // e-commerce boost
 
-        addUnusualItem(-randBetween(5, 15));
-
-        const msg = `A public health emergency has been declared. Retail properties are facing forced closures and your office tenants have vacated to work-from-home. Industrial assets are seeing a modest boost from accelerated e-commerce demand. Expect occupancy pain for 2–4 quarters.`;
-        return { isMacro: true, headline: "🦠 Pandemic Shock", body: msg, impact: "Retail & Office occupancy -15–30%" };
+        // round 35: the one-off, explained
+        const total = randBetween(5, 15), relief = fmt(total * 0.55), safety = fmt(total * 0.30), legal = fmt(total - relief - safety);
+        addUnusualItem(-fmt(total));
+        const msg = `A public health emergency has been declared. Shops are under forced closure and office workers have gone home. Industrial is busier than ever: everyone is ordering online.<br><br><b>What it cost us this quarter: $${fmt(total)}M.</b> Rent relief for tenants ordered to close: $${relief}M. Cleaning, ventilation and safety work in our buildings: $${safety}M. Lawyers for tenants who stopped paying: $${legal}M.<br><br>Jenkins: "Boss, the closures will pass. The empty space will take longer. Watch the cash."`;
+        return { isMacro: true, headline: "🦠 Pandemic Shock", body: msg, impact: "Retail & Office occupancy -15–30%; one-off $" + fmt(total) + "M (rent relief, safety work, legal)" };
       },
     },
 
@@ -659,6 +660,9 @@ window.Events = (() => {
         const result = evt.apply();
         if (result) {
           result.harmful = true;
+          // round 35: a city-wide or sector shock is not your doing: the board judges the numbers gently for a year
+          if ((evt.type === 'macro' || evt.type === 'sector' || evt.id === 'hurricane_citywide') && typeof Directors !== 'undefined' && Directors.shock)
+            Directors.shock(evt.id === 'hurricane_citywide' ? 'the hurricane hit us all' : evt.type === 'macro' ? 'the economy hit us all' : 'the whole sector took the hit');
           firedIds.add(evt.id);
           firedEvents.push(result);
           firedNegativeThisQuarter++;

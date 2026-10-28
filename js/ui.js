@@ -574,6 +574,7 @@ window.UI = (function() {
         case "sharePriceHeld":      return co.sharePrice >= (b.startYearSharePrice || co.sharePrice) ? 1 : 0;
         case "sharePriceGrowthPct": return (b.startYearSharePrice > 0) ? (co.sharePrice - b.startYearSharePrice) / b.startYearSharePrice * 100 : 0;
         case "noEquityIssued":      return b.noEquityBroken ? 0 : 1;
+        case "noCheapEquity":       return (b.cheapIssueThisYear || 0) > 0 ? 0 : 1;   // round 35
         case "occupancyPortfolio":  return (r.occupancyPortfolio || 0) * 100;
         case "worstOccupancy":      return worstOcc * 100;
         case "leaseUpsThisYear":    return b.leaseUpsThisYear || 0;
@@ -770,7 +771,8 @@ window.UI = (function() {
         var tone = "neutral";
         if (e.harmful) tone = "bad";
         else if (/Boom|Windfall|Signed|Approval|Surge|Prestige|Shortage|Rate Cut|Cuts Rates|cheaper|relief|renewed|re-let|New tenants/i.test(e.headline + " " + (e.impact||""))) tone = "good";
-        return { headline: e.headline, impact: e.impact, tone: tone, more: e.more || "", macro: !!e.isMacro, src: e.src || "news" };
+        var why = e.more || (e.body ? String(e.body).replace(/<br\s*\/?>/g, " ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() : "");   // round 35: the explanation every event carries was never shown
+        return { headline: e.headline, impact: e.impact, tone: tone, more: why && why !== e.impact ? why : "", macro: !!e.isMacro, src: e.src || "news" };
       });
       // your actions belong to the quarter just played, not the one starting
       var dq = GameState.meta.totalQuarters, py = Math.floor((dq - 1) / 4) + 1, pq = (dq - 1) % 4 + 1;
@@ -1842,7 +1844,8 @@ window.UI = (function() {
      above the covenant), sell new shares, ask the bondholders for one more year
      (once per bond, and it costs), or declare default. Selling a building is up to
      the player beforehand: Close, sell, come back. */
-  function bondsDue() { return (GameState.debtTranches || []).filter(function(t) { return GameState.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) <= 0; }); }
+  // round 35: runQuarter moves the calendar on BEFORE it checks maturities, so a bond dated next quarter is repaid in this run (round 34 checked <= 0: the stop never fired)
+  function bondsDue() { return (GameState.debtTranches || []).filter(function(t) { return GameState.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) <= 1; }); }
   function spendableNow() { return (typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash; }
   function bondShort() { var due = bondsDue().reduce(function(a, t) { return a + t.amount; }, 0); return { due: fmt(due, 1), have: fmt(spendableNow(), 1), short: due > 0 ? Math.round(Math.max(0, due - spendableNow()) * 10) / 10 : 0 }; }   // no bond due: no stop, whatever the cash
   function bondGate() { var s = bondShort(); if (s.short <= 0) return false; showBondPanel(''); return true; }
@@ -2118,6 +2121,8 @@ window.UI = (function() {
     GameState._endingShown     = false;  // ending.js
     GameState._belt            = null;   // round 34: belt-tightening (levi.js)
     GameState._ratingHit       = null;   // round 34: a bond extension marks the rating down for a year
+    GameState._funny           = null;   // round 35: the once-a-game small events (world.js)
+    GameState._shock           = null;   // round 35: board grace after a shock you did not cause (directors.js)
     GameState.deals = null; GameState.agents = null; GameState.pr = null;   // round 22: deals.js, agents.js, pr.js
     GameState._spendQ = { leasing: 0, projects: 0 };
     GameState._scorePosted = false;

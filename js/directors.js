@@ -31,7 +31,7 @@ window.Directors = (() => {
   const ROLE = { williams: 'Chairman', chen: 'Growth', okafor: 'Balance sheet', petrova: 'Shareholders', hassan: 'Operations', activist: 'Activist investor',
                  mansour: 'Operations', grace: 'Sustainability', tex: 'Government affairs', voss: 'Rennick\u2019s nominee' };
   const RED = {
-    williams: 'a dividend cut', petrova: 'selling more than 10% new shares in a year', chen: 'three years without buying a building',
+    williams: 'a dividend cut', petrova: 'selling more than 10% new shares in a year below 85% of NAV', chen: 'three years without buying a building',
     okafor: 'a frozen credit line or a broken bank condition', hassan: 'occupancy below 80%',
     activist: 'selling new shares below NAV',
     mansour: 'any building below 75% occupancy', grace: 'cancelling a sustainability initiative', tex: 'none: he is your friend', voss: 'none: he answers to Kessler'
@@ -143,8 +143,9 @@ window.Directors = (() => {
       if (y) { const gap = y.you - y.sector; add(Math.max(-3, Math.min(3, gap * 100 / 4)), 'total return ' + pct(y.you, 1) + ' vs ' + (y.bench === 'rivals' ? 'the rivals’ ' : 'the sector’s ') + pct(y.sector, 1) + ' (' + y.label + ')'); }
       const dil = dilution();
       if (overPaying() >= 2) { const pr = payout(); add(-Math.min(3, 0.6 * (overPaying() - 1)), 'dividend ' + (pr >= 9 ? 'with no cash profit behind it' : Math.round(pr * 100) + '% of cash profit') + ': investors price it as a one-off'); }
-      if (B().red.petrova) add(-3, 'you sold ' + pct(dil) + ' new shares in a year');
-      else if (dil > 0.01) add(-1, 'you sold ' + pct(dil) + ' new shares');
+      // round 35: her line is cheap shares (below 85% of NAV); shares that bought buildings, once explained, she accepts
+      if (B().red.petrova) add(-3, 'you sold ' + pct(cheapDilution()) + ' new shares below 85% of NAV in a year');
+      else if (dil > 0.01 && !(B().explainedQ && tq() - B().explainedQ < 4)) add(-1, 'you sold ' + pct(dil) + ' new shares');
     }
     if (id === 'chen') {
       // two full years of history, and a real base: early quarters make silly percentages
@@ -227,6 +228,37 @@ window.Directors = (() => {
     }
     return out;
   }
+  /* -- round 35: a shock you did not cause (events.js, tower.js, the crisis) ------
+     For 4 quarters what your NUMBERS do to moods counts half, and directors say
+     "not your fault". What you DO is judged as usual. */
+  function shock(why) { const G = GameState; G._shock = { until: tq() + 3, why: why || 'the shock hit us all' }; }
+  function shockOn() { const S = GameState._shock; return S && tq() <= S.until ? S.why : null; }
+  /* -- round 35: Petrova and new shares ------------------------------------------
+     Every share sale is remembered with its price against NAV. Her red line is
+     more than 10% new shares in 12 months sold below 85% of NAV, from Year 2. */
+  function noteIssue(n, pn, proceeds) {
+    const b = B(), G = GameState; b.issues = b.issues || [];
+    b.issues.push({ q: tq(), n, pnav: pn, cash: proceeds || 0 }); while (b.issues.length > 30) b.issues.shift();
+    if (pn < 0.85) G.board.cheapIssueThisYear = fmt((G.board.cheapIssueThisYear || 0) + n);
+    if (G.meta.year === 1 && !b.y1warned && pn < 0.85 && window.Inbox && has('petrova')) {
+      const y1 = b.issues.filter(x => x.q <= 4 && x.pnav < 0.85).reduce((a, x) => a + x.n, 0), base = (b.shares[0] || G.company.sharesOutstanding);
+      if (y1 / base > 0.10) { b.y1warned = true;
+        Inbox.message(name('petrova'), ROLE.petrova, 'This year I let it go', 'You sold ' + Math.round(y1 / base * 100) + '% new shares at ' + Math.round(pn * 100) + '% of what our buildings are worth. It is your first year, so I let it go. From next year, more than 10% in a year below 85% of NAV crosses my line. Sell shares when they are dear, not when they are cheap.', face('petrova')); }
+    }
+  }
+  function cheapDilution() {
+    const b = B(), s = b.shares, now = GameState.company.sharesOutstanding, base = s.length >= 4 ? s[s.length - 4] : (s[0] || now);
+    const n = (b.issues || []).filter(x => x.q > 4 && tq() - x.q < 4 && x.pnav < 0.85).reduce((a, x) => a + x.n, 0);
+    return base > 0 ? n / base : 0;
+  }
+  /* "Explain: the money bought buildings": true if what we bought in 12 months is worth at least what the shares raised */
+  function issueInvested() {
+    const b = B(), raised = (b.issues || []).filter(x => tq() - x.q < 4).reduce((a, x) => a + (x.cash || 0), 0);
+    const bought = b.buys.filter(x => tq() - x.q < 4).reduce((a, x) => a + (x.v || 0), 0);
+    return raised > 0 && bought >= raised * 0.9;
+  }
+  function explainIssue() { B().explainedQ = tq(); remember('petrova', 1.5, 'the new shares bought buildings'); }
+
   /* round 34: Okafor's line, and this year's step toward it: the leverage demand from the
      last meeting if there is one, else 55%. */
   const OK_LINE = 0.55;
@@ -297,13 +329,14 @@ window.Directors = (() => {
   function redLines() {
     const G = GameState, r = {}, d0 = ago(4, 'dividendPerShare');
     r.williams = d0 != null && G.company.dividendPerShare < d0 - 0.0005 && !cutForgiven();
-    r.petrova = dilution() > 0.10;
+    r.petrova = cheapDilution() > 0.10;                     // round 35: only shares sold below 85% of NAV, from Year 2
     r.chen = G.meta.year >= 4 && tq() - (B().lastBuyQ || 0) >= 12;
     r.okafor = !!(G.revolver && G.revolver.frozen);
     r.hassan = H().length > 0 && (G.ratios.occupancyPortfolio || 1) < 0.80;
     r.activist = has('activist') && dilution() > 0.02 && pnav() < 0.95;
     r.mansour = has('mansour') && G.portfolio.some(p => !p.underConstruction && p.occupancy < 0.75);
     r.grace = has('grace') && !!(window.Story && Story.esgCancelledRecently && Story.esgCancelledRecently());
+    if (G.meta.year < 2) Object.keys(r).forEach(k => { r[k] = false; });   // round 35: Year 1 is practice: no red lines
     return r;
   }
 
@@ -323,6 +356,9 @@ window.Directors = (() => {
     });
     G._attCause = {};
 
+    // round 35: the crisis (and the aftershock) is a shock you did not cause: 4 quarters of grace when it starts
+    if (!live && window.Arc && Arc.phase) { const ph = Arc.phase(); b.shocked = b.shocked || {};
+      if ((ph === 'crisis' || ph === 'aftershock') && !b.shocked[ph]) { b.shocked[ph] = true; shock(ph === 'crisis' ? 'the crisis hit us all' : 'the second shock hit us all'); } }
     // bookkeeping once a quarter: buys, share count, the sector index
     if (!live) {
       const ids = G.portfolio.map(p => p.id);
@@ -353,7 +389,7 @@ window.Directors = (() => {
       const j = judge(d.id); parts[d.id] = j;
       // what your NUMBERS can do to a mood is capped; beyond that only what you DID moves it
       let s = Math.max(-4, Math.min(4, j.reduce((t, x) => t + x.pts, 0)));
-      if (G.meta.year === 1) s = s < 0 ? s * 0.5 : s;          // a patient first year
+      if (G.meta.year === 1 || shockOn()) s = s < 0 ? s * 0.5 : s;   // a patient first year; round 35: and after a shock you did not cause
       raw[d.id] = 5 + (GRUMPY[d.id] || 0) + s + memoryPts(d.id) + bondPts(d.id);
     });
     // allies move together; rivals pull apart
@@ -376,7 +412,7 @@ window.Directors = (() => {
       // the cause shown: the biggest thing pushing in the direction of the mood
       const j = parts[d.id].slice().sort((x, y) => a < 5 ? x.pts - y.pts : y.pts - x.pts);
       const mem = memories(d.id)[0];
-      b.causes[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? j[0].why
+      b.causes[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? (j[0].pts < 0 && shockOn() ? 'not your fault, ' + shockOn() + ', but ' + j[0].why : j[0].why)
                      : mem && Math.abs(mem.d) >= 0.5 ? mem.t
                      : a >= 4.75 ? 'no complaints for now' : (j[0] ? j[0].why : 'no complaints for now');
       /* Worth a letter: a red line; dropping INTO Unhappy/Furious; climbing OUT
@@ -657,7 +693,7 @@ window.Directors = (() => {
     /* round 25: Petrova on shares, by band: below 70% of NAV buy back; 70-95% do not
        sell new ones; from 95% new shares are fine if the money goes into buildings.
        She says it only when the band changes, not at every meeting. */
-    const band = pn < 0.70 ? 'buy' : pn < 0.95 ? 'hold' : 'issue', bb = B();
+    const band = pn < 0.70 ? 'buy' : pn < 0.85 ? 'hold' : 'issue', bb = B();   // round 35: 85%, the same line as her red line
     if (bb.petBand !== band) {
       const P = Math.round(pn * 100);
       list.push({ id: 'petrova', band, text: band === 'buy' ? 'At ' + P + '% of NAV our shares are cheap. I would buy some back: every dollar buys more than a dollar of buildings.'
@@ -677,7 +713,7 @@ window.Directors = (() => {
   /* round 32: start counting buys from day one (buys in Year 1 Q1 were missed: the
      first snapshot of what you own was taken after them, so Chen said you bought nothing) */
   function startTracking() { const b = B(); b.owned = (GameState.portfolio || []).map(p => p.id); b.lastBuyQ = 0; b.buys = []; }
-  return { okaforTarget, OK_LINE, startTracking, boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
+  return { shock, shockOn, noteIssue, cheapDilution, issueInvested, explainIssue, okaforTarget, OK_LINE, startTracking, boardGrant, BOARD_SHARES, noteSale, shrink, payout, uncovQ, overPaying, cutForgiven, update, refresh, letters, votesAgainst, remember, scorecard, ytd, card, level, crisis, RED, ROLE, williamsTarget, name, face,
            addActivist, personal, hint, has, pnav, actWant, bond, bondOf,
            rep, repChange, REP_LINE, REP0, addDirector, removeDirector, logBoard, chair, CHAIR_RED };
 })();

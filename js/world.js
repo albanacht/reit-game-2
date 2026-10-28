@@ -172,7 +172,55 @@ window.World = (() => {
         return { good: false, text: `Heavy unit turnover at ${p.name} — ${money(cost)} of make-ready costs.` };
       }
     },
+    // round 35: small, true-to-life, a bit funny. Each happens at most once a game.
+    {
+      id: "film_crew", good: true, weight: 2,
+      when: () => !seen("film_crew") && mine().some(p => p.sector === "office" || p.sector === "retail"),
+      fire() {
+        once("film_crew"); const p = pick(mine().filter(x => x.sector === "office" || x.sector === "retail"));
+        GameState.balance.cash = fmt(GameState.balance.cash + 0.3);
+        return { good: true, text: `A film crew rented the lobby of ${p.name} for a week to shoot a bank heist. +$0.3M. The security guard is in the trailer, briefly.` };
+      }
+    },
+    {
+      id: "birds_ac", good: false, weight: 2,
+      when: () => !seen("birds_ac") && mine().length > 0,
+      fire() {
+        once("birds_ac"); const p = pick(mine()); const names = pick(["Bob and Linda", "Gordon and Patricia", "Mr and Mrs Fluff"]);
+        GameState.balance.cash = fmt(GameState.balance.cash - 0.1);
+        return { good: false, text: `A family of birds moved into the air conditioning at ${p.name}. Moving them out humanely cost $0.1M. The tenants had already named them ${names}.` };
+      }
+    },
+    {
+      id: "influencer_mall", good: true, weight: 2,
+      when: () => !seen("influencer_mall") && bySector("retail").some(p => p.occupancy < 0.97),
+      fire() {
+        once("influencer_mall"); const p = pick(bySector("retail").filter(x => x.occupancy < 0.97));
+        const pp = nudgeOcc(p, 0.02);
+        return { good: true, text: `An influencer with two million followers called ${p.name} "so aesthetic". Shoppers came for photos and stayed for coffee: occupancy +${pp}pp.` };
+      }
+    },
+    {
+      id: "sewage_leak", good: false, weight: 2,
+      when: () => !seen("sewage_leak") && mine().length > 0,
+      fire() {
+        once("sewage_leak"); const p = pick(mine());
+        GameState.balance.cash = fmt(GameState.balance.cash - 0.2);
+        return { good: false, text: `During repair works at ${p.name}, the maintenance team cracked a sewage pipe. Tenants complained about the smell for a week. Compensation: $0.2M.` };
+      }
+    },
+    {
+      id: "green_fountain", good: true, weight: 2,
+      when: () => !seen("green_fountain") && bySector("multifamily").length > 0,
+      fire() {
+        once("green_fountain"); const p = pick(bySector("multifamily"));
+        GameState.balance.cash = fmt(GameState.balance.cash - 0.1); const pp = nudgeOcc(p, 0.01);
+        return { good: true, text: `Kids painted the lobby fountain at ${p.name} green for St Patrick's Day. Repainting: $0.1M. An Irish family who saw the photos signed a lease the same week: occupancy +${pp}pp.` };
+      }
+    },
   ];
+  const seen = id => !!(GameState._funny && GameState._funny[id]);
+  const once = id => { GameState._funny = GameState._funny || {}; GameState._funny[id] = true; };
 
   // How many background lines per quarter, and how the balance tilts.
   // v1 measured 1.81 benign per harmful. A world that hands out nearly twice as
