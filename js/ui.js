@@ -575,6 +575,7 @@ window.UI = (function() {
         case "sharePriceGrowthPct": return (b.startYearSharePrice > 0) ? (co.sharePrice - b.startYearSharePrice) / b.startYearSharePrice * 100 : 0;
         case "noEquityIssued":      return b.noEquityBroken ? 0 : 1;
         case "noCheapEquity":       return (b.cheapIssueThisYear || 0) > 0 ? 0 : 1;   // round 35
+        case "dividendRestored":    return GameState._eCut && GameState.company.dividendPerShare >= GameState._eCut.from - 0.005 ? 1 : 0;   // round 37
         case "occupancyPortfolio":  return (r.occupancyPortfolio || 0) * 100;
         case "worstOccupancy":      return worstOcc * 100;
         case "leaseUpsThisYear":    return b.leaseUpsThisYear || 0;
@@ -823,6 +824,18 @@ window.UI = (function() {
       });
     }
     setText("action-div-current", "$" + fmt(GameState.company.dividendPerShare, 2) + " /share each quarter");
+    // round 37: the emergency cut, only in a crisis
+    var ecr = el("emergency-cut-row");
+    if (ecr && Financials.canEmergencyCut) {
+      var ec = Financials.canEmergencyCut();
+      ecr.style.display = ec.show ? "" : "none";
+      ecr.innerHTML = ec.show ? '<button class="btn btn-sm ' + (ec.ok ? 'btn-danger' : 'btn-secondary') + '" id="btn-emergency-cut"' + (ec.ok ? '' : ' disabled title="' + (ec.why || '') + '"') + '>Emergency cut: halve the dividend (1 political capital)</button>' +
+        (ec.ok ? '<div class="action-meta">The board approves it in a crisis. Williams accepts it; he will want it back after.</div>' : '<div class="action-meta">' + (ec.why || '') + '</div>') : '';
+      var ecb = el("btn-emergency-cut"); if (ecb && ec.ok) ecb.onclick = function() {
+        showModal("Emergency dividend cut", "Halve the dividend to $" + fmt(GameState.company.dividendPerShare / 2, 2) + " a share, with the board's approval.\n\nCosts 1 political capital. Williams accepts it as prudence (\u22120.5), not as a broken promise. Share price \u22126% (a normal halving: \u221218%). After the crisis, his demand will be to restore it.",
+          [{ label: "Halve the dividend", style: "btn-danger", onClick: function() { var r = Financials.emergencyCut(); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
+      };
+    }
     var equityUsedThisYear = GameState.company.equityIssuanceYear === GameState.meta.year;
     var debtCooldown = GameState.company.debtIssuanceQuarter > 0 ?
       Math.max(0, 2 - (GameState.meta.totalQuarters - GameState.company.debtIssuanceQuarter)) : 0;
@@ -1085,6 +1098,15 @@ window.UI = (function() {
     );
   }
 
+  /* round 37: an empty single-tenant building, marketed with incentives (tenants.js) */
+  function offerIncentives(propertyId) {
+    var p = GameState.portfolio.find(function(x) { return x.id === propertyId; }); if (!p || !Tenants.canIncent) return;
+    var c = Tenants.canIncent(p); if (!c.ok) { showToast(c.why, "error"); return; }
+    showModal("Offer incentives: " + p.name,
+      "The brokers find a tenant within a quarter, on a long lease at " + Math.round(c.pct * 100) + "% of the old rent" + (p.renovated ? " (renovated: full rent)" : " (renovate first and they pay 100%)") +
+      ". The rent steps up: 25%, 50%, 75%, then full.\nBroker\u2019s fee: " + fmtM(c.fee) + " (a quarter\u2019s rent).",
+      [{ label: "Offer incentives: " + fmtM(c.fee), style: "btn-primary", onClick: function() { var r = Tenants.offerIncentives(p); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
+  }
   function leaseUp(propertyId) {
     var prop = GameState.portfolio.find(function(p) { return p.id === propertyId; });
     if (!prop) return;
@@ -2124,6 +2146,7 @@ window.UI = (function() {
     GameState._belt            = null;   // round 34: belt-tightening (levi.js)
     GameState._ratingHit       = null;   // round 34: a bond extension marks the rating down for a year
     GameState._funny           = null;   // round 35: the once-a-game small events (world.js)
+    GameState._eCut = null; GameState._eCutUsed = null; GameState._noBonusYear = null; GameState._covWaiver = null;   // round 37 / 36
     GameState._shock           = null;   // round 35: board grace after a shock you did not cause (directors.js)
     GameState.deals = null; GameState.agents = null; GameState.pr = null;   // round 22: deals.js, agents.js, pr.js
     GameState._spendQ = { leasing: 0, projects: 0 };
@@ -2413,6 +2436,7 @@ window.UI = (function() {
     handleRedeemPreferred: handleRedeemPreferred,
     handleSetDividend:   handleSetDividend,
     leaseUp:             leaseUp,
+    offerIncentives:     offerIncentives,   // round 37
     confirmRenovate:     confirmRenovate,
     confirmReposition:   confirmReposition,
     hireStaff:           hireStaff,

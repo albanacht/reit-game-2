@@ -88,11 +88,12 @@ window.Ending = (() => {
     // Bob Harlow
     const h = window.Story && Story.H ? Story.H() : null;
     if (h && h.stage !== 'wait') {
-      const r = h.result, dcMine = (G.portfolio || []).some(p => p.id === 'ind_hdc');
-      const v = (r === 'healthy' || r === 'survived' || r === 'repaid') ? ['harlow_thriving', 'Harlow Grocers runs 140 stores now. Bob still has the yacht.', 'He sends a card every Christmas. It is always late.']
+      const r = h.result, dcMine = (G.portfolio || []).some(p => p.id === 'ind_hdc'), sold = !!h.yachtSold;   // round 36: you made Bob sell the yacht
+      const v = (r === 'healthy' || r === 'survived' || r === 'repaid') ? ['harlow_thriving', 'Harlow Grocers runs 140 stores now.' + (sold ? ' Bob never got over selling the yacht.' : ' Bob still has the yacht.'), sold ? 'There is a photo of it in every store.' : 'He sends a card every Christmas. It is always late.']
               : r === 'refinanced' ? ['harlow_cold', 'Bob refinanced with another lender and repaid us in full.', 'He never called again.']
               : r === 'partial' ? ['harlow_cold2', 'Harlow sold six stores to repay most of what it owed.', 'Bob runs what is left, from a smaller office.']
-              : r === 'bust' ? ['harlow_bust', 'Harlow Grocers went bankrupt. The yacht was sold at auction.', 'Bob consults for grocery chains now. His first slide is about leverage.']
+              : r === 'bust' ? (sold ? ['harlow_cold', 'Harlow Grocers went bankrupt anyway. Bob had already sold the yacht to pay us back.', 'Bob consults for grocery chains now. His first slide is about leverage.']
+                                     : ['harlow_bust', 'Harlow Grocers went bankrupt. The yacht was sold at auction.', 'Bob consults for grocery chains now. His first slide is about leverage.'])
               // round 35: the rescues
               : r === 'bust_williams' ? ['harlow_bust', 'Harlow Grocers went bankrupt. Williams found a new grocer for the centre in a week.', 'Hassan took the blame and left the board. Bob consults for grocery chains now.']
               : r === 'bust_cfo' ? ['harlow_bust', 'Harlow Grocers went bankrupt. Your CFO refinanced everything and sold the trucks.', 'Bob consults for grocery chains now. His first slide is about leverage.']
@@ -101,6 +102,7 @@ window.Ending = (() => {
               : r === 'turnaround_failed' ? ['harlow_bust', 'The turnaround failed and the stores closed for good.', 'Bob consults for grocery chains now. His first slide is about leverage.']
               : !dcMine && !h.loan ? ['harlow_never', 'You never did business with Bob Harlow.', 'Harlow Grocers was bought by a national chain in the end.']
               : ['harlow_thriving', 'Harlow Grocers is still your tenant.', 'Bob still calls Hassan on his birthday.'];
+      if (sold && v[0] === 'harlow_bust') v[0] = 'harlow_cold';   // round 36: no yacht auction picture once the yacht is long gone
       out.push({ key: v[0], fallback: FACE(v[0] === 'harlow_family' ? 'gary' : 'bob'), label: v[0] === 'harlow_family' ? 'Bob Harlow and Gary' : 'Bob Harlow', lines: [v[1], v[2]] });
     }
     // Brett Kessler
@@ -177,8 +179,8 @@ window.Ending = (() => {
     // Levi
     if (window.Levi && Levi.ending() !== 'none') {
       const e = Levi.ending(), l = Levi.L();
-      const V = { stayed: ['Levi is still there. His fifth paper was accepted: "Residuals of a Real Estate Company (n = 1)".', l.hits + ' of his challenges met. He has framed none of them.'],
-                  quit: ['Levi resigned and wrote a paper about you.', 'It has been cited twice. Both times by Levi.'],
+      const V = { stayed: ['Levi is still there. His fifth paper was accepted: "Residuals of a Real Estate Company (n = 1)".', (window.Levi && Levi.gemsTaken ? Levi.gemsTaken() : 0) + ' of his finds acted on. He has framed none of them.'],
+                  quit: ['Levi resigned because nobody read his work, and wrote a paper about you.', 'It has been cited twice. Both times by Levi.'],
                   passed: ['Levi went to work for Eleanor at Wexmoor.', 'Wexmoor saw the crisis coming.'] }[e];
       if (V) out.push({ key: 'levi_' + e, fallback: FACE('levi'), label: 'Dr. Levi Cohen', lines: V });
     }

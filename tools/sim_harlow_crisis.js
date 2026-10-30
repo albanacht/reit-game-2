@@ -33,7 +33,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       for (let q = 0; q < 60 && !G.meta.gameOver; q++) {
         const h = G.history;
         if (h.length && G.meta.quarter === 1) { const affo4 = h.slice(-4).reduce((a, e) => a + (e.affoPerShare || 0), 0) / Math.min(4, h.length);
-          const want = Math.max(0.01, Math.round(affo4 * 0.8 * 100) / 100); Financials.setDividend(want); }
+          const want = Math.max(0.01, Math.round(affo4 * 0.8 * 100) / 100), cur = G.company.dividendPerShare;
+          // round 37: in a crisis, a player halves the dividend the approved way; otherwise trims gently
+          if (want < cur * 0.9 && Financials.canEmergencyCut && Financials.canEmergencyCut().ok) Financials.emergencyCut(); else if (want >= cur * 0.95 || !Financials.canEmergencyCut || !Financials.canEmergencyCut().show) Financials.setDividend(want); }
         const d2a = G.ratios.debtToAssets || 0.3;
         if (d2a < 0.40 && q >= 1) { const mk = G.propertyMarket.filter(p => p.askingPrice > 5 && p.listedByOwner).sort((a, b) => Properties.stabRent(b) / b.askingPrice - Properties.stabRent(a) / a.askingPrice)[0];
           if (mk && Properties.stabRent(mk) / mk.askingPrice * 100 > Market.getCurrentBorrowingRate() + 0.5) { const need = mk.askingPrice * 1.02 - Math.max(0, G.balance.cash - 10), room = (0.45 * G.balance.totalAssets - G.balance.totalDebt) / 0.55;

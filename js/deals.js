@@ -518,7 +518,10 @@ window.Deals = (() => {
     const w = where(id); if (!w || !window.UI) return;
     const why = blocked(id), p = w.p, owner = w.owner;
     const head = nums([['Owner', esc(ownerLabel(p, owner))], ['Value', money(p.currentValue)], p.listedByOwner && p.askingPrice ? ['Asking', money(p.askingPrice)] : null,
-                       ['Rent', money(p.annualNOI * p.occupancy) + ' a year (' + (p.annualNOI * p.occupancy / p.currentValue * 100).toFixed(1) + '% yield)'], ['Occupancy', pc(p.occupancy)]].filter(Boolean));
+                       ['Rent if fully let', money(p.annualNOI) + ' a year'], ['Occupancy', pc(p.occupancy)]].filter(Boolean));
+    // round 37: the same two yields as the tables, on YOUR price (stabilised rent; rent collected now, costs 28% of gross rent)
+    const stab = window.Properties && Properties.stabRent ? Properties.stabRent(p) : p.annualNOI, now = p.underConstruction ? 0 : p.annualNOI * Math.max(0, p.occupancy - 0.28) / 0.70;
+    const yields = x => 'Cap rate on your price <b>' + (stab / x * 100).toFixed(1) + '%</b> · yield today <b>' + (now / x * 100).toFixed(1) + '%</b> (you borrow at about ' + (window.Market ? Market.getCurrentBorrowingRate().toFixed(1) : '?') + '%)';
     if (why) { UI.showModal('Make an offer: ' + p.name, head + '<div class="dp-lead">' + esc(why) + '</div>', owner !== 'none' && window.Rivals ? [{ label: OWN(owner).short + '’s profile', onClick: () => setTimeout(() => Rivals.openProfile(owner), 0) }] : []); return; }
     const q0 = quote(id, 0), am = window.Staff && Staff.getStaff && Staff.getStaff('acquisitions');
     const tip = am ? '<b>' + esc(am.name) + '</b> (Acquisitions Lead): "They would take about ' + money(q0.rb) + ', give or take 5%."'
@@ -532,8 +535,7 @@ window.Deals = (() => {
     const upd = () => {
       const x = f1(p.currentValue * document.getElementById('dl-r').value / 100), rb = quote(id, agS()).rb, o = odds(x, rb);
       document.getElementById('dl-px').textContent = money(x) + ' (' + (x / p.currentValue * 100 - 100 >= 0 ? '+' : '') + Math.round(x / p.currentValue * 100 - 100) + '% vs value)';
-      document.getElementById('dl-odds').innerHTML = 'They say <b>yes ' + pc(o.yes) + '</b> · counter ' + pc(o.counter) + ' · no ' + pc(o.no) + '. With fees ' + money(x + fee(x)) +
-        '; rent ' + (p.annualNOI * p.occupancy / x * 100).toFixed(1) + '% on your price.' + (owner === 'none' && !(agK() === 'x_pryce') ? ' A rival may bid too (1 in 5).' : '') +
+      document.getElementById('dl-odds').innerHTML = yields(x) + '<br>They say <b>yes ' + pc(o.yes) + '</b> · counter ' + pc(o.counter) + ' · no ' + pc(o.no) + '. With fees ' + money(x + fee(x)) + '.' + (owner === 'none' && !(agK() === 'x_pryce') ? ' A rival may bid too (1 in 5).' : '') +
         (spendable() < x + fee(x) ? ' <b style="color:#c2410c">More than your cash plus credit line.</b>' : '');
     };
     document.getElementById('dl-r').oninput = upd; const ag = document.getElementById('dl-ag'); if (ag) ag.onchange = upd; upd();

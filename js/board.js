@@ -360,6 +360,11 @@ window.Board = (() => {
     var worst = G.portfolio.length ? Math.min.apply(null, G.portfolio.filter(function(p) { return !p.underConstruction; }).map(function(p) { return p.occupancy; })) : 1;
     switch (id) {
       case "williams":
+        // round 37: after the crisis, the emergency cut must be undone
+        var EC = G._eCut, ph37 = typeof Arc !== "undefined" && Arc.phase ? Arc.phase() : "";
+        if (EC && !EC.restored && co.dividendPerShare >= EC.from - 0.005) EC.restored = true;
+        if (EC && !EC.restored && ph37 !== "crisis" && ph37 !== "aftershock")
+          return mk(id, "div_restore", "Restore the dividend to $" + EC.from.toFixed(2) + " a share, as we agreed in the crisis.", "dividendRestored", 1, true);
         if (typeof Directors !== "undefined" && Directors.overPaying && Directors.overPaying() >= 2)   // round 21
           return mk(id, "div_earned", "Pay the dividend from what we earn: no more than our cash profit by next year. I will not count that cut against you.", "payoutOk", 1, true);
         if (cr) return mk(id, "div_nocut", "Hold the dividend through this crisis: no cut at any point this year.", "noDividendCut", 1, true);
@@ -512,6 +517,7 @@ window.Board = (() => {
       sharePriceGrowthPct: startYearSharePrice > 0 ? ((co.sharePrice - startYearSharePrice) / startYearSharePrice) * 100 : 0,
       noEquityIssued:      b.noEquityBroken ? 0 : 1,
       noCheapEquity:       (b.cheapIssueThisYear || 0) > 0 ? 0 : 1,   // round 35
+      dividendRestored:    GameState._eCut && GameState.company.dividendPerShare >= GameState._eCut.from - 0.005 ? 1 : 0,   // round 37
       noDebtIncrease:      GameState.balance.totalDebt <= (b.startYearDebt || GameState.balance.totalDebt) + 0.5 ? 1 : 0,
       occupancyPortfolio:  r.occupancyPortfolio,
       worstOccupancy:      worstOcc,

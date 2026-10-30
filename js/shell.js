@@ -345,6 +345,16 @@ window.REIT = (() => {
       return '<div class="hud" title="Below zero you are drawing on your credit line. Run past it and the company defaults.">' +
         '<div class="k">Cash</div><div class="v down">\u2212$' + (-c).toFixed(1) + 'M</div><div class="sub">' + left + '</div></div>';
     };
+    /* round 37: the top bar shows the ECONOMY (the crisis storyline), not our company's own state */
+    const ecoCell = () => {
+      const ph = window.Arc && Arc.phase ? Arc.phase() : 'cheap';
+      const E = { cheap: ['Calm', 'stable', 'Money is cheap and the economy is steady.'], late: ['Calm', 'stable', 'The economy is steady.'],
+                  warning: ['Storm warning', 'distress', 'Warning signs: banks and bond buyers are nervous. A downturn is coming.'],
+                  crisis: ['Crisis', 'crisis', 'The economy is in crisis: rents, values and lenders are all under pressure.'],
+                  recovery: ['Recovering', 'opportunity', 'The worst is over. Buildings are still cheap.'],
+                  aftershock: ['Aftershock', 'crisis', 'A second, smaller shock.'] }[ph] || ['Calm', 'stable', ''];
+      return '<div class="hud" title="' + E[2] + '"><div class="k">Economy</div><div class="v sit-' + E[1] + '">' + E[0] + '</div></div>';
+    };
     const signed = (v, dp, unit) => (v >= 0 ? '+' : '\u2212') + Math.abs(v).toFixed(dp) + unit;
     const cell = (k, v, extra, cls, opt) =>
       '<div class="hud' + (opt ? ' opt' : '') + '"><div class="k">' + k + '</div>' +
@@ -360,7 +370,7 @@ window.REIT = (() => {
              signed(tsr, 0, '%') + '</span>' : '') +
       cell('Debt / assets', d2a.toFixed(0) + '%', '', d2a > 60 ? 'down' : '', true) +
       '<div class="hud" title="Your credit rating sets the spread you pay over the central bank base rate on new bonds and the credit line. It follows debt / assets and interest cover; like the real agencies, it counts preferred shares as half debt and their dividends next to interest."><div class="k">Rating \u00b7 base rate</div><div class="v"><span class="' + (/^A/.test(G.credit.rating) ? 'up' : /^B{1,2}$/.test(G.credit.rating) || /^C/.test(G.credit.rating) ? 'down' : '') + '">' + (G.credit.rating || '\u2014') + '</span> \u00b7 ' + (G.market.baseInterestRate || 0).toFixed(2) + '%</div></div>' +
-      cell('Situation', sit ? sit.label : 'Stable', '', 'sit-' + (sit ? sit.state : 'stable'));
+      ecoCell();
     // round 20: the retained-cash cell is the first to go on narrower screens (the inbox shows it every quarter)
     box.innerHTML = box.innerHTML.replace('<div class="hud opt"><div class="k">Retained last qtr', '<div class="hud opt hud-rc"><div class="k">Retained last qtr');
   }

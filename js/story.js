@@ -589,7 +589,7 @@ window.Story = (() => {
             apply() { hit(); repOf('hassan', -20, 'the jet and yacht story'); return 'No comment. The story ran for three days.'; } },
           { label: 'Force Bob to sell the yacht',
             detail: '$4.0M of the loan repaid now (' + money(L.amt) + ' \u2192 ' + money(L.amt - 4) + '). Bob\u2019s rent cover \u22120.10x and he turns cold: no more political capital from him. Hassan\u2019s reputation \u221210.',
-            apply() { hit(); L.amt = fmt(L.amt - 4); cash(4); setCover(cover() - 0.1); h.pcGiven = 2; repOf('hassan', -10, 'the jet and yacht story (yacht sold)');
+            apply() { hit(); L.amt = fmt(L.amt - 4); cash(4); setCover(cover() - 0.1); h.pcGiven = 2; h.yachtSold = true;   // round 36: the endings remember repOf('hassan', -10, 'the jet and yacht story (yacht sold)');
                       return 'The Harlow Gold was sold at a loss. $4.0M came back to us. Bob has stopped returning calls.'; } },
         ]
       };
@@ -812,8 +812,7 @@ window.Story = (() => {
             Gary runs it ("Family Groceries"): $0.2M, and Nora may run the story
               (then: a community food drive and a donation, your bonus waived;
               or ride it out: the board remembers).
-            A turnaround firm runs it: $1.5M, 1 in 5 it fails within a year (the
-              stores close, the stake is written off, the centre goes to market).
+            A turnaround firm runs it: $1.5M, and safe (round 36: it no longer fails).
      Plus the plain ways: market it ourselves, or sell the centre as it stands. */
   const STAKE_YIELD = 0.08, BUY_STAKE = 8;
   const pickOne = a => a[Math.floor(rnd() * a.length)];
@@ -897,7 +896,7 @@ window.Story = (() => {
       const take = gary => ({ label: 'Take over Harlow: ' + (gary ? 'Gary runs it ("Family Groceries")' : 'a turnaround firm runs it'),
         detail: (owed > 0 ? 'Our loan becomes a 70% stake' : 'We buy 70% from the court for ' + money(BUY_STAKE)) + ', on the books at ' + money(stakeV) + ', paying 8% a year from next year. ' +
                 (mine ? 'No rent for 2 quarters, then 85% of the old rent (' + money(old * 0.85) + ' a year) to the end. ' : '') +
-                (gary ? 'Gary costs $0.2M and renames it Family Groceries. Nora may run the story.' : 'The firm costs $1.5M. About 1 in 5, it fails within a year and the stake is lost.'),
+                (gary ? 'Gary costs $0.2M and renames it Family Groceries. Half the time, Nora runs the story.' : 'The firm costs $1.5M. Safe: no family, no story.'),
         check: () => owed > 0 || spend() >= BUY_STAKE, checkMsg: 'Needs ' + money(BUY_STAKE) + ' to buy the stake',
         apply() {
           const now = tq();
@@ -905,7 +904,7 @@ window.Story = (() => {
           h.stake = { v: stakeV, from: G.meta.year * 4 + 1 };
           pnlLater(-(gary ? 0.2 : 1.5));
           if (gary) { h.rescue = 'family'; if (rnd() < 0.5) h.nora = { q: now + rint(2, 4) }; }
-          else { h.rescue = 'turnaround'; h.turn = { q: now + 4, fails: rnd() < 0.2 }; }
+          else { h.rescue = 'turnaround'; h.turn = { q: now + 4, fails: false }; }   // round 36: the firm no longer fails (Boss Alex: the 85% rent is price enough)
           h.result = h.rescue;
           if (mine) reopen(p, gary ? 'Family Groceries' : 'Harlow Grocers', 2);
           else { h.stage = 'done'; h.result = h.rescue; const T = HT(); if (T) { T.status = 'active'; T.coverage = 1.4; if (gary) T.name = 'Family Groceries'; } }

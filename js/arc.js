@@ -23,7 +23,7 @@ window.Arc = (() => {
 
   const DIFF = {
     easy:   { warn: [6, 6], sev: 0.6, after: false, afterSev: 0   },
-    normal: { warn: [4, 6], sev: 1.0, after: true,  afterSev: 0.5 },
+    normal: { warn: [4, 6], sev: 0.8, after: true,  afterSev: 0.4 },   // round 37: 80% strength (was 1.0 / 0.5): a survival game, not hard mode
     hard:   { warn: [2, 3], sev: 1.4, after: true,  afterSev: 0.8 },
   };
   const WINDOW       = [17, 28];   // crisis starts between Y5Q1 and Y7Q4

@@ -5,7 +5,11 @@
    read. Petrova writes about him in Year 2 Q3 (round 33; a meeting in Years 3-4 is the fallback).
 
    - He is staff, not a director: no vote, $0.6M a year, on the Staff screen.
-   - Every other meeting he sets a challenge in glorious gibberish ("the
+   - Round 37 (Moneyball): no more challenges. Four gems a game: the crisis warning
+     plus his cost research (belt-tightening), a mispriced suburban building at 15%
+     under value, the rate call (lock in 7-year bonds), and the bottom. Ignore two
+     and he resigns to write a paper about you. One awkward line at one meeting.
+   - (Before round 37:) Every other meeting he set a challenge in glorious gibberish ("the
      heteroskedastic Macaulay convexity of our maturity duration"). Under the
      gibberish is a real number from your books, shown to three decimals, and
      Jenkins quietly translates. Meet it by the next meeting: Williams is
@@ -26,6 +30,7 @@ window.Levi = (() => {
   function L() {
     const s = Story.S();
     if (!s.levi) s.levi = { stage: 'wait', misses: 0, hits: 0, history: [], warned: {}, log: [] };
+    if (!s.levi.gems) s.levi.gems = {};                      // round 37
     return s.levi;
   }
   const has = id => window.Directors && Directors.has(id);
@@ -81,7 +86,7 @@ window.Levi = (() => {
         ['guest', 'Five, actually. The fifth is under review. It has been under review for three years.'],
         [lead('okafor', 'williams'), 'Another salary.']],
         choices: [
-          { label: 'Hire Dr. Levi Cohen ($0.6M a year)', primary: true, detail: 'Strategy advisor: no vote. He forecasts crises and the bottom of them, and sets the board a challenge every other year. ' + (who === 'petrova' ? 'Petrova' : 'Chen') + ' +1, Okafor −0.5.',
+          { label: 'Hire Dr. Levi Cohen ($0.6M a year)', primary: true, detail: 'Strategy advisor: no vote. He forecasts crises and the bottom of them, and finds what the market misprices. ' + (who === 'petrova' ? 'Petrova' : 'Chen') + ' +1, Okafor −0.5.',
             go: () => { l.stage = 'hired'; l.year = year; surcharge(SAL_Q); remember(who, 1, 'you hired Levi'); remember('okafor', -0.5, 'another salary'); note('Hired.'); return 'Levi shook every hand and called the boardroom table "a fascinating dataset".'; } },
           { label: 'Pass', detail: (who === 'petrova' ? 'Petrova' : 'Chen') + ' −0.5. He goes to work for Eleanor at Wexmoor instead.',
             go: () => { l.stage = 'passed'; remember(who, -0.5, 'you passed on Levi'); note('Passed.'); return 'Levi took a job at Wexmoor the following week.'; } },
@@ -89,27 +94,14 @@ window.Levi = (() => {
       return items;
     }
     if (!hired()) return items;
-    // the verdict on last year's challenge
-    if (l.ch && l.ch.year < year && !l.ch.done) {
-      const m = metric(l.ch.id), v = fmt(m.val()), met = v >= l.ch.target - 0.0005;
-      l.ch.done = true; l.ch.final = v; l.ch.met = met; l.history.push({ y: year, id: l.ch.id, met, v, target: l.ch.target });
-      if (met) { l.hits++; items.push({ guest: LEVI, lines: [['guest', 'The ' + m.name.replace(/^the /, '') + ': ' + v.toFixed(3) + '. Target ' + l.ch.target.toFixed(3) + '. The residuals are… normal. I’m genuinely moved.'], ['williams', 'Well done. I think.']],
-        effect: () => { remember('williams', 0.5, 'you did what Levi asked'); return 'Levi’s challenge met. Williams +0.5.'; } }); }
-      else { l.misses++; items.push({ guest: LEVI, lines: [['guest', v.toFixed(3) + '. The target was ' + l.ch.target.toFixed(3) + '. I’ll need to re-specify the model. Possibly the company.'], ['williams', 'Levi asked for one number.']],
-        effect: () => { remember('williams', -0.5, 'you ignored Levi’s number'); if (l.misses >= 3) { quit(); return 'Levi has resigned to write a paper about you. Williams −0.5.'; } return 'Levi’s challenge missed. Williams −0.5.'; } }); }
-      return items;
-    }
-    // a new challenge, every other meeting
-    if ((!l.ch || l.ch.done) && (!l.ch || year - l.ch.year >= 2) && year > l.year) {
-      const used = (l.history || []).map(h => h.id), pool = METRICS.filter(m => used.indexOf(m.id) < 0 && m.val() > 0.02);
-      const m = pick(pool.length ? pool : METRICS), v = fmt(m.val()), st = STATS();
-      l.ch = { id: m.id, year, base: v, target: fmt(v + 0.03) };
-      const nodder = ['okafor', 'chen', 'petrova', 'hassan', 'mansour', 'grace', 'tex'].filter(has);
+    // round 37: no more challenges. Once, at one meeting, he says something awkward and the room reacts. No effect on anyone.
+    if (!l.quipDone && year > (l.year || 0) && (year - (l.year || 0) >= 2 || rnd() < 0.4)) {
+      l.quipDone = year;
+      const st = STATS(), nodder = ['okafor', 'chen', 'petrova', 'hassan', 'mansour', 'grace', 'tex'].filter(has);
       items.push({ guest: LEVI, lines: [
-        ['guest', 'I ran a two-tailed z-test on ' + m.name + '. z = ' + st.z + ', p = ' + st.p + ', ' + pick(SNARK) + '. Current reading: ' + v.toFixed(3) + '. I’d like ' + l.ch.target.toFixed(3) + ' by the next meeting. Plus or minus nothing.'],
+        ['guest', 'Quick one. I ran a two-tailed z-test on ' + pick(METRICS).name + '. z = ' + st.z + ', p = ' + st.p + ', ' + pick(SNARK) + '. That is all. I just wanted someone to know.'],
         ...(nodder.length ? [[pick(nodder), pick(NOD)]] : []),
-        ['williams', 'Levi is right. Make the… that number… work by next year.']],
-        note: 'Levi’s number: ' + v.toFixed(3) + ' → ' + l.ch.target.toFixed(3) + ' by the next meeting. Jenkins, quietly: "I think he means: ' + m.hint + '."' });
+        ['williams', 'Thank you, Levi. Moving on.']] });
     }
     return items;
   }
@@ -134,8 +126,41 @@ window.Levi = (() => {
     // round 34: the belt-tightening question follows each warning, once
     l.beltAsked = l.beltAsked || {};
     ['crisis', 'after'].forEach(k => { if (l.warned[k] && !l.beltAsked[k] && !l.beltFor) { const s = Story.S(); if (!s.due || (Story.lowDue && Story.lowDue())) { l.beltAsked[k] = true; l.beltFor = k; s.due = 'levi_belt'; } } });
-    if (ph === 'crisis' && in1 === 'recovery') once('bottom', 'The bottom, statistically',
-      'The cointegration between our cap rates and the base rate has broken back toward its mean. <b>The worst is about to pass.</b> Weak owners will have to sell in the next few quarters. This is when people get rich. Usually other people. It could be us.');
+    // round 37: the gems (Moneyball). Each one is a card; ignore two and he leaves.
+    const G = GameState, free = () => !s.due || (Story.lowDue && Story.lowDue());
+    if (ph === 'crisis' && in1 === 'recovery' && !l.gems.bottom && free()) { l.gems.bottom = 'asked'; s.due = 'levi_bottom'; return; }
+    if (!l.gems.rates && ph === 'cheap' && G.arc && G.arc.warnStart - now >= 2 && G.arc.warnStart - now <= 4 && longDue().length && free()) { l.gems.rates = 'asked'; s.due = 'levi_rates'; return; }
+    if (!l.gems.gem && G.meta.year >= 4 && ph !== 'crisis' && ph !== 'aftershock' && rnd() < 0.3 && gemPick() && free()) { l.gems.gem = 'asked'; l.gemId = gemPick().id; s.due = 'levi_gem'; return; }
+    // the second year of belt-tightening: asked in its last quarter
+    if (G._belt && !G._belt.y2asked && now >= G._belt.until && free()) { G._belt.y2asked = true; s.due = 'levi_belt2'; return; }
+    // deferred maintenance while the second year runs, and the catch-up bill after
+    if (G._belt && G._belt.y2 && now <= G._belt.until) {
+      const ps = (G.portfolio || []).filter(p => !p.underConstruction && !(window.Tenants && Tenants.isLocked(p)) && p.occupancy > 0.6);
+      if (ps.length) { const p = ps[Math.floor(rnd() * ps.length)]; p.occupancy = Math.max(0.5, fmt(p.occupancy - 0.01)); }
+    }
+    if (G._belt && G._belt.y2 && !G._belt.billed && now > G._belt.until) {
+      G._belt.billed = true; const bill = fmt((G._belt.saved || 0.5) / 3);
+      G.pnl.unusualItems = fmt((G.pnl.unusualItems || 0) - bill);
+      if (window.Inbox) Inbox.message('Jenkins', 'Chief of Staff', 'The catch-up bill', 'Boss, two years of saving have a price: the repairs we put off are due. ' + '$' + bill.toFixed(1) + 'M this quarter. Worth it, on balance.', 'assets/faces/jenkins.jpg');
+    }
+  }
+  /* -- round 37: helpers for the gems -- */
+  function ignored() { const l = L(); l.ignored = (l.ignored || 0) + 1;
+    if (l.ignored >= 2 && hired()) { quit(); say('Nobody here reads my work', 'I have now been ignored twice, which is statistically significant. I resign, effective Friday. I will be writing a paper about this company. You will be in it.'); return ' Levi has resigned. He is writing a paper about you.'; }
+    return ''; }
+  const spendable = () => (window.Revolver && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash;
+  function longDue() { const G = GameState; return (G.debtTranches || []).filter(t => !t.rescue && !t.unsecured && G.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) <= 12 && G.quartersUntilMaturity(t.maturityYear, t.maturityQuarter) > 1); }
+  /* the building his model says is mispriced: suburban, privately held, not for sale, the best cap rate */
+  function gemPick() {
+    const G = GameState, l = L();
+    if (l.gemId) { const g = (G.propertyMarket || []).concat(G.cityRivals || []).find(p => p.id === l.gemId); if (g && (G.portfolio || []).indexOf(g) < 0) return g; }
+    const c = (G.propertyMarket || []).filter(p => !p.listedByOwner).concat((G.cityRivals || []).filter(p => p.owner === 'none'))
+      .filter(p => p.location === 'suburban' && p.annualNOI > 0 && !p.storyLock && !p.underConstruction && p.currentValue > 5 && p.currentValue <= Math.max(20, (G.balance.totalAssets || 200) * 0.25));
+    return c.sort((a, b) => Properties.stabRent(b) / b.currentValue - Properties.stabRent(a) / a.currentValue)[0] || null;
+  }
+  function bestListing() {
+    const G = GameState; return (G.propertyMarket || []).filter(p => p.listedByOwner && p.askingPrice > 0 && p.annualNOI > 0)
+      .sort((a, b) => Properties.stabRent(b) / b.askingPrice - Properties.stabRent(a) / a.askingPrice)[0] || null;
   }
 
   /* round 33: the arrival letter (Year 2 Q3). Same deal as the meeting version. */
@@ -146,9 +171,9 @@ window.Levi = (() => {
       return { title: 'Our models are a spreadsheet from 2009', from: Directors.name(who), face: 'assets/faces/' + who + '.jpg',
         body: '"Our forecasting is a spreadsheet somebody’s nephew built in 2009. I know a man. Dr. Levi Cohen: PhD in financial econometrics, CFA charterholder, four published papers nobody has read. He sees downturns coming. He is also… a lot."' +
               '<div class="dv"><img src="' + LEVI.face + '" alt=""><div><b>Levi:</b> "Five papers, actually. The fifth is under review. It has been under review for three years."</div></div>' +
-              '<div class="dv-nums">Strategy advisor, not a director: no vote, $0.6M a year. He warns you about two quarters before a crisis, calls the bottom, and sets the board a number to hit every other year (Williams likes it when you hit it).</div>',
+              '<div class="dv-nums">Strategy advisor, not a director: no vote, $0.6M a year. He warns you about two quarters before a crisis, calls the bottom and the rates, and finds buildings the market misprices. A few gems a game; ignore two and he leaves.</div>',
         choices: [
-          { label: 'Hire Dr. Levi Cohen ($0.6M a year)', detail: W + ' +1, Okafor −0.5. He sets his first challenge at the next board meeting.',
+          { label: 'Hire Dr. Levi Cohen ($0.6M a year)', detail: W + ' +1, Okafor −0.5. A few times a game his research finds something worth acting on. Ignore him twice and he leaves.',
             apply() { l.stage = 'hired'; l.year = GameState.meta.year - 1; surcharge(SAL_Q); remember(who, 1, 'you hired Levi'); remember('okafor', -0.5, 'another salary'); note('Hired (letter).');
                       return 'Levi starts on Monday. He has asked for a second monitor and "access to the residuals".'; } },
           { label: 'Pass', detail: W + ' −0.5. He goes to work for Eleanor at Wexmoor instead.',
@@ -163,22 +188,83 @@ window.Levi = (() => {
       const l = L(); if (!l.beltFor) return null;
       const after = l.beltFor === 'after', G = GameState, ga = G.pnl && G.pnl.gAndA ? G.pnl.gAndA * 4 : 0;
       const bonus = window.Pay && Pay.bonusFor ? Pay.bonusFor().amount : 0;
-      return { title: after ? 'Brace for the second shock?' : 'Tighten our belts before it hits?', from: 'Jenkins, Chief of Staff', face: 'assets/faces/jenkins.jpg',
-        body: '"Boss, you read Levi’s note. If he is right, ' + (after ? 'a second shock is coming' : 'the next two years will be hard') + '. We could act first: cut overheads by a tenth for a year and suspend every bonus. Yours too. The board likes a CEO who goes first."' +
+      return { title: after ? 'My research: brace for the second shock' : 'My research: what we can cut before it hits', from: LEVI.name + ', ' + LEVI.role, face: LEVI.face,
+        body: '"I regressed every cost line we have against what it earns us. A tenth of our overheads is, statistically, decoration. ' + (after ? 'A second shock is coming. ' : 'The next two years will be hard. ') + 'Cut it for a year and suspend every bonus, yours too. Jenkins says the board likes a CEO who goes first. I would not know."' +
               '<table class="dv-nums"><tr><td>Overheads now</td><td>about $' + ga.toFixed(1) + 'M a year</td></tr><tr><td>Saving</td><td>about $' + (ga * 0.1).toFixed(1) + 'M over the year</td></tr>' +
               '<tr><td>Your cost</td><td>no bonus at the next pay committee (about $' + bonus.toFixed(1) + 'M at today’s scorecard) and no share grant this year</td></tr></table>' +
               '<div class="dv-nums">It saves less than it signals: lenders, directors and shareholders see a company getting ready.</div>',
         choices: [
-          { label: 'Tighten belts for a year', detail: 'Overheads −10% for 4 quarters. No bonuses or share grants this year, for anyone, you included. Okafor +1, Petrova +0.5, +1 political capital.',
-            apply() { const G = GameState, now = tq(); G._belt = { until: now + 3, noBonusYear: G.meta.year, why: l.beltFor }; l.beltFor = null; l.belt = (l.belt || 0) + 1;
+          { label: 'Tighten belts for a year (1 political capital)', detail: 'Every department has to be talked into it. Overheads −10% for 4 quarters. No bonuses or share grants this year, for anyone, you included. Okafor +1, Petrova +0.5.',
+            check: () => (GameState.board.politicalCapital || 0) >= 1, checkMsg: 'Needs 1 political capital',
+            apply() { const G = GameState, now = tq(); G._belt = { until: now + 3, noBonusYear: G.meta.year, why: l.beltFor }; l.beltFor = null; l.belt = (l.belt || 0) + 1; l.gems.belt = 'taken';
                       remember('okafor', 1, 'you tightened belts before the storm'); remember('petrova', 0.5, 'you suspended your own bonus');
-                      G.board.politicalCapital = Math.min(G.board.maxCapital || 8, (G.board.politicalCapital || 0) + 1); note('Belts tightened.');
+                      G.board.politicalCapital = Math.max(0, (G.board.politicalCapital || 0) - 1); note('Belts tightened.');
                       return 'Done. Overheads are down a tenth for a year and the bonus pool is closed. Jenkins has already cancelled the Christmas party’s ice sculpture.'; } },
           { label: 'Carry on as normal', detail: 'Nothing changes. Levi sighs, statistically.',
-            apply() { l.beltFor = null; note('Carried on as normal.'); return 'Business as usual. Levi updated his model to include "management optimism".'; } },
+            apply() { l.beltFor = null; note('Carried on as normal.'); return 'Business as usual. Levi updated his model to include "management optimism".' + ignored(); } },
         ] };
     } };
   if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === BELT.id)) World.DECISIONS.push(BELT);
+
+  /* -- round 37: the gem cards -- */
+  const GEMS = [
+    { id: 'levi_gem', system: true, story: true, holdQ: 2,
+      build() {
+        const l = L(), p = gemPick(); if (l.gems.gem !== 'asked' || !p) return null;
+        const price = fmt(p.currentValue * 0.85), stab = Properties.stabRent(p), capOn = stab / price * 100, after = capOn * 1.10;
+        return { title: 'My model found a mispriced building', from: LEVI.name + ', ' + LEVI.role, face: LEVI.face,
+          body: '"Nobody looks at <b>' + p.name + '</b>. Suburban, unfashionable, the photos are terrible. But the owner is retiring, the rents are 10% under the area’s, and the tenants never leave. It is the Moneyball building: ugly, and it catches every ball."' +
+                '<table class="dv-nums"><tr><td>Value</td><td>$' + p.currentValue.toFixed(1) + 'M</td></tr><tr><td>The owner would take</td><td>$' + price.toFixed(1) + 'M (15% under value)</td></tr>' +
+                '<tr><td>Cap rate on that price</td><td>' + capOn.toFixed(1) + '%, about ' + after.toFixed(1) + '% once rents reset to the area’s</td></tr><tr><td>You borrow at about</td><td>' + (window.Market ? Market.getCurrentBorrowingRate().toFixed(1) : '?') + '%</td></tr></table>',
+          choices: [
+            { label: 'Buy it for $' + price.toFixed(1) + 'M', detail: 'Off the market, at 15% under value. Rents reset 10% higher. Chen +1.',
+              check: () => spendable() >= price * 1.02, checkMsg: 'Not enough cash and credit line',
+              apply() { const m = window.World && World.buyAt ? World.buyAt(p, price) : ''; if ((GameState.portfolio || []).indexOf(p) > -1) { p.annualNOI = fmt(p.annualNOI * 1.10); p.vb = null; remember('chen', 1, 'Levi’s building'); l.gems.gem = 'taken'; note('Bought the Moneyball building.'); return 'Bought ' + p.name + '. Levi printed the regression and pinned it in the lobby.'; } return m || 'The deal fell through.'; } },
+            { label: 'Pass', detail: 'Levi will notice.', apply() { l.gems.gem = 'passed'; return 'You passed. Levi said "fine" in a way that had a confidence interval.' + ignored(); } },
+          ] };
+      } },
+    { id: 'levi_rates', system: true, story: true, holdQ: 2,
+      build() {
+        const l = L(), due = longDue(); if (l.gems.rates !== 'asked' || !due.length) return null;
+        const amt = fmt(due.reduce((a, t) => a + t.amount, 0)), r7 = fmt((Financials.getCurrentBorrowingRateForTerm ? Financials.getCurrentBorrowingRateForTerm(7) : 6) + 0.25), fee = fmt(amt * 0.005);
+        return { title: 'Lock in long money. Now.', from: LEVI.name + ', ' + LEVI.role, face: LEVI.face,
+          body: '"The yield curve is doing something I have only seen in papers about bad decades. In about a year, money will cost a lot more. $' + amt.toFixed(0) + 'M of our bonds fall due within three years. Swap them for 7-year bonds today and the storm can do what it likes."',
+          choices: [
+            { label: 'Swap them into 7-year bonds at ' + r7.toFixed(2) + '% ($' + fee.toFixed(1) + 'M fee)', detail: 'Nothing falls due for 7 years. Okafor +1.',
+              apply() { const G = GameState, y = G.meta.year + 7; due.forEach(t => { t.maturityYear = y; t.maturityQuarter = G.meta.quarter; t.rate = r7; t.label = r7.toFixed(2) + '% Notes due Y' + y + 'Q' + G.meta.quarter; t.quartersUntilMaturity = G.quartersUntilMaturity(y, G.meta.quarter); });
+                        G._pendingUnusual = fmt((G._pendingUnusual || 0) - fee); remember('okafor', 1, 'you locked in long money'); l.gems.rates = 'taken'; note('Locked in long bonds.'); return 'Done: $' + amt.toFixed(0) + 'M now falls due in Year ' + y + '.'; } },
+            { label: 'Not now', detail: 'Levi will notice.', apply() { l.gems.rates = 'passed'; return 'Levi added a footnote to his paper.' + ignored(); } },
+          ] };
+      } },
+    { id: 'levi_bottom', system: true, story: true, holdQ: 1,
+      build() {
+        const l = L(); if (l.gems.bottom !== 'asked') return null;
+        const p = bestListing();
+        return { title: 'The bottom, statistically', from: LEVI.name + ', ' + LEVI.role, face: LEVI.face,
+          body: '"The cointegration between our cap rates and the base rate has broken back toward its mean. <b>The worst is about to pass.</b> Weak owners will sell in the next few quarters. This is when people get rich. Usually other people. It could be us."' +
+                (p ? '<table class="dv-nums"><tr><td>My pick</td><td>' + p.name + ', asking $' + p.askingPrice.toFixed(1) + 'M, cap rate ' + (Properties.stabRent(p) / p.askingPrice * 100).toFixed(1) + '%</td></tr></table>' : ''),
+          choices: [
+            { label: p ? 'Make an offer on ' + p.name : 'Noted: we buy this year', detail: p ? 'Opens the offer screen.' : 'Chen +0.5.',
+              apply() { l.gems.bottom = 'taken'; remember('chen', 0.5, 'you listened to Levi at the bottom'); if (p && window.Deals && Deals.openOffer) setTimeout(() => Deals.openOffer(p.id), 0); return 'Levi looked almost happy.'; } },
+            { label: 'Not now', detail: 'Levi will notice.', apply() { l.gems.bottom = 'passed'; return 'Levi muttered something about "regime persistence".' + ignored(); } },
+          ] };
+      } },
+    { id: 'levi_belt2', system: true, story: true, holdQ: 1,
+      build() {
+        const G = GameState, B = G._belt; if (!B || B.y2 || !B.y2asked) return null;
+        const ga = G.pnl && G.pnl.gAndA ? G.pnl.gAndA * 4 : 3;
+        return { title: 'Another year of belt-tightening?', from: 'Jenkins, Chief of Staff', face: 'assets/faces/jenkins.jpg',
+          body: '"Boss, the year of savings ends this quarter. We can do one more, but it will start to show: repairs get put off, the buildings notice, and some of the bill comes back later."' +
+                '<table class="dv-nums"><tr><td>Saves</td><td>about $' + (ga * 0.1).toFixed(1) + 'M over the year</td></tr><tr><td>Costs</td><td>2 political capital, no bonuses again, a point of occupancy a quarter somewhere, and a catch-up bill of about a third of the saving</td></tr></table>',
+          choices: [
+            { label: 'One more year (2 political capital)', check: () => (G.board.politicalCapital || 0) >= 2, checkMsg: 'Needs 2 political capital',
+              detail: 'Overheads −10% for 4 more quarters. No bonuses next year either.',
+              apply() { G.board.politicalCapital -= 2; B.until = tq() + 4; B.noBonusYear = G.meta.year + (G.meta.quarter >= 3 ? 1 : 0); B.y2 = true; B.saved = fmt(ga * 0.1); return 'Another year of savings. The maintenance team has started a betting pool.'; } },
+            { label: 'End it here', detail: 'Overheads go back to normal next quarter.', apply() { return 'The savings end. The coffee machine is back.'; } },
+          ] };
+      } },
+  ];
+  GEMS.forEach(c => { if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === c.id)) World.DECISIONS.push(c); });
 
   /* The Staff screen card. */
   function staffHTML() {
@@ -186,12 +272,13 @@ window.Levi = (() => {
     const l = L(), m = l.ch && !l.ch.done ? metric(l.ch.id) : null;
     return '<div class="staff-row"><img class="staff-portrait" src="' + LEVI.face + '" alt="Levi">' +
       '<div class="staff-info"><div class="staff-name-row"><span class="staff-name">Dr. Levi Cohen</span></div><div class="staff-title">Strategy advisor · PhD, CFA · no vote</div>' +
-      '<div class="staff-trait">' + (m ? 'Current challenge: ' + m.name + ': ' + fmt(m.val()).toFixed(3) + ' → ' + l.ch.target.toFixed(3) + ' <span class="text-muted">(Jenkins: "' + m.hint + '")</span>' : 'Forecasts crises and the bottom of them. ' + l.hits + ' challenge' + (l.hits === 1 ? '' : 's') + ' met, ' + l.misses + ' missed.') + '</div></div>' +
+      '<div class="staff-trait">Runs the numbers nobody else runs: the crisis, the bottom, rates, and buildings the market misprices. ' + gemsTaken() + ' of his finds acted on' + (l.ignored ? ', ' + l.ignored + ' ignored (two and he leaves)' : '') + '.</div></div>' +
       '<div class="staff-right"><div class="staff-cost">$' + SAL_Q.toFixed(2) + 'M/q</div></div></div>';
   }
   /* The ending card. */
+  function gemsTaken() { const g = L().gems || {}; return Object.keys(g).filter(k => g[k] === 'taken').length; }
   function ending() { const s = L().stage; return s === 'hired' ? 'stayed' : s === 'quit' ? 'quit' : s === 'passed' ? 'passed' : 'none'; }
   function debug(o) { Object.assign(L(), o || {}); return L(); }
 
-  return { L, agenda, processQuarter, staffHTML, ending, debug, METRICS, metric };
+  return { L, agenda, processQuarter, staffHTML, ending, debug, METRICS, metric, gemPick, gemsTaken };
 })();

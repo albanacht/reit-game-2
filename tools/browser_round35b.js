@@ -70,14 +70,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   m = await pg.evaluate(() => { const k = World.DECISIONS.find(x => x.id === 'story_family_nora').build(); const r = k.choices[0].apply(); Story.S().due = null; return { r, nb: GameState._noBonusYear === GameState.meta.year }; });
   ok(m.nb, 'quieted with a food drive; your bonus is waived this year: "' + m.r.slice(0, 80) + '"');
 
-  // C2. the turnaround firm fails
+  // C2. the turnaround firm: safe (round 36: it no longer fails, even on the unluckiest roll)
   s = await setup(false);
-  await pg.evaluate(() => { window.__rnd = Math.random; Math.random = () => 0.05; });
+  await pg.evaluate(() => { window.__rnd = Math.random; Math.random = () => 0.01; });
   m = await pickApply(/turnaround firm/);
   await pg.evaluate(() => { Math.random = window.__rnd; });
   await q(5);
-  c = await pg.evaluate(() => ({ stake: Story.otherAssets(), res: Story.H().result, rescue: Story.H().rescue, st: Story.H().stage, vac: GameState.portfolio.find(x => x.id === 'ind_hdc').lease.positions[0].vacant }));
-  ok(c.stake === 0 && c.rescue === 'turnaround_failed' && (c.st === 'relet' || c.st === 'reletAsk'), 'turnaround failed a year on: stake written off, centre back on the market (' + c.st + ')');
+  c = await pg.evaluate(() => ({ stake: Story.otherAssets(), rescue: Story.H().rescue, active: GameState.tenants.harlow_grocers.status, rf: GameState.portfolio.find(x => x.id === 'ind_hdc').rentFactor }));
+  ok(c.stake > 0 && c.rescue === 'turnaround' && c.active === 'active' && (c.rf == null || c.rf === 1), 'turnaround firm, a year on: Harlow trading, paying rent, our stake worth $' + c.stake + 'M');
+
+  // F. the yacht: if you made Bob sell it, the endings remember
+  const y = await pg.evaluate(() => { const H = Story.H(), card = () => (Ending.cards().find(x => /Bob Harlow/.test(x.label)) || {});
+    H.result = 'bust'; H.stage = 'done'; H.yachtSold = false; const a = card(); H.yachtSold = true; const b = card(); H.result = 'repaid'; const c = card();
+    return { a: a.key + ': ' + (a.lines || [])[0], b: b.key + ': ' + (b.lines || [])[0], c: c.key + ': ' + (c.lines || []).join(' ') }; });
+  ok(/^harlow_bust: .*auction/.test(y.a) && /^harlow_cold: .*already sold the yacht/.test(y.b) && /never got over selling the yacht/.test(y.c), 'yacht endings: ' + y.b + ' | ' + y.c);
 
   // D. the share price: no 70% crash (bust, then a year of quarters)
   s = await setup(false);

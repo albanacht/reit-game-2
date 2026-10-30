@@ -131,7 +131,7 @@ window.Directors = (() => {
         add(-Math.min(5, overPaying() * (pr >= 2 ? 1 : 0.6)),   // twice what we earn: a point a quarter; a little over: slower
            'dividend ' + (pr >= 9 ? 'with no cash profit behind it' : 'is ' + Math.round(pr * 100) + '% of cash profit') + ': he loves a good dividend, not at the cost of survival');
       }
-      else if (d1 < d0 - 0.0005 && cutForgiven()) add(-0.5, 'you cut the dividend back to what we earn; he accepts it');
+      else if (d1 < d0 - 0.0005 && cutForgiven()) add(-0.5, GameState._eCut && tq() - GameState._eCut.q <= 5 ? 'you halved the dividend in the crisis, with the board\u2019s blessing' : 'you cut the dividend back to what we earn; he accepts it');
       else if ((G.meta.totalQuarters || 0) <= 4) add(0, 'no dividend target until after the first meeting');   // round 17: Year 1 is for learning
       else if (cr && g >= 0) add(0.5, 'you held the dividend through a hard year');
       else if (g >= want) add(2.5, 'dividend up ' + pct(g) + ' in a year (target ' + pct(want) + ')');
@@ -285,7 +285,7 @@ window.Directors = (() => {
   const uncovQ = () => B().uncovQ || 0;
   /* still paying out too much right now (a cut counts at once); 0 = no */
   const overPaying = () => { const pr = payout(); return pr != null && pr > payLine() ? uncovQ() : 0; };
-  const cutForgiven = () => tq() - (B().uncovLastQ || -99) <= 4;
+  const cutForgiven = () => tq() - (B().uncovLastQ || -99) <= 4 || !!(GameState._eCut && tq() - GameState._eCut.q <= 5);   // round 37: the emergency cut is approved
   function watchPayout() {
     const b = B(), pr = payout(), G = GameState;
     if (G.meta.year >= 2 && pr != null && pr > payLine()) { b.uncovQ = (b.uncovQ || 0) + 1; b.uncovLastQ = tq(); }

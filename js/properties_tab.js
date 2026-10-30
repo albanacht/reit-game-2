@@ -77,7 +77,7 @@ window.PROPS = (() => {
                      ['occ','Occupancy'],['status','Status','l'],['act','','l']];
   const COLS_MKT  = [['n','Property','l'],['ask','Asking'],['cap','Cap rate'],['yNow','Yield today'],
                      ['occ','Occupancy'],['qlist','Listed','l'],['act','','l']];
-  const COLS_REST = [['n','Property','l'],['v','Est. value'],['cap','Cap rate'],['occ','Occupancy'],
+  const COLS_REST = [['n','Property','l'],['v','Est. value'],['cap','Cap rate'],['yNow','Yield today'],['occ','Occupancy'],
                      ['o','Owner','l'],['act','','l']];
 
   function head(cols) {
@@ -138,7 +138,7 @@ window.PROPS = (() => {
     return '<tr class="row" data-id="' + p.id + '">' +
       '<td class="l">' + nameCell(p, typeSub(p)) + '</td>' +
       '<td>' + R.money(p.v) + '</td>' +
-      '<td>' + R.pct(p.cap) + '</td>' +
+      '<td>' + R.pct(p.cap) + '</td><td>' + R.pct(p.yNow) + '</td>' +   // round 37
       '<td>' + occBar(p.occ) + '</td>' +
       '<td class="l">' + (R.isRival(p) ? '<a class="rv-link" data-rival="' + p.o + '"><span class="dot" style="background:' + o.color + '"></span>' + o.short + '</a>' : '<span class="dot" style="background:' + o.color + '"></span>' + o.short) + '</td>' +
       '<td class="l">' + (function () {   // round 22: every building takes an offer (deals.js), unless something blocks it
@@ -146,7 +146,7 @@ window.PROPS = (() => {
         return why ? '<button class="act mute" title="' + R.esc(why) + '" data-a="offer" data-id="' + p.id + '">' + (/war/.test(why) ? 'At war' : 'Not now') + '</button>'
                    : '<button class="act" data-a="offer" data-id="' + p.id + '">Make an offer</button>';
       })() +
-      '</td></tr>' + drawer(p, 6);
+      '</td></tr>' + drawer(p, 7);
   }
 
   /* -- expandable detail --------------------------------------------------- */
@@ -203,8 +203,12 @@ window.PROPS = (() => {
           ? '<span class="sml">Leased up this year</span>'
           : b('lease', 'Lease up', 'Pay brokers and incentives to fill space now'));
       }
+      // round 37: an empty single-tenant building: offer incentives (or renovate first, for full rent)
+      if (locked && Tenants.canIncent) { const ci = Tenants.canIncent(raw);
+        if (ci.ok) out.push(b('incent', 'Offer incentives', 'A tenant signs next quarter at ' + Math.round(ci.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + ci.fee.toFixed(1) + 'M.' + (raw.renovated ? '' : ' Renovate first for 100%.')));
+        else if (/Asset Manager/.test(ci.why)) out.push('<button class="act mute" title="' + ci.why + '" disabled>Offer incentives</button>'); }
       if (Properties.canRenovate && Properties.canRenovate(raw).ok)
-        out.push(b('renovate', 'Renovate $' + (raw.currentValue * 0.10).toFixed(1) + 'M'));
+        out.push(b('renovate', 'Renovate $' + (raw.currentValue * 0.10).toFixed(1) + 'M' + (locked ? ' (then 100% rent)' : '')));
       if (Properties.canReposition && Properties.canReposition(raw).ok)
         out.push(b('reposition', 'Reposition $' + (raw.currentValue * 0.15).toFixed(1) + 'M'));
     }
@@ -348,7 +352,7 @@ window.PROPS = (() => {
 
     document.querySelectorAll('#tab-properties .rv-link').forEach(a => a.onclick = e => { e.stopPropagation(); if (window.Rivals) Rivals.openProfile(a.dataset.rival); });
     const V1 = { sell:'confirmSellProperty', buy:'confirmBuyProperty', lease:'leaseUp',
-                 renovate:'confirmRenovate', reposition:'confirmReposition' };
+                 renovate:'confirmRenovate', reposition:'confirmReposition', incent:'offerIncentives' };
     document.querySelectorAll('#tab-properties button[data-v1]').forEach(b => b.onclick = e => {
       e.stopPropagation();
       const fn = window.UI && UI[V1[b.dataset.v1]];

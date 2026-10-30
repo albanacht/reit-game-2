@@ -23,8 +23,8 @@ window.Financials = (() => {
      portfolio). v1 was a survival game tuned max-harsh; 2.0 is a fight
      between REITs, and overhead that big made every passive company trade at
      ~65% of NAV. The fixed base also gives growth a real scale economy. */
-  const GA_BASE           = 0.25;   // Fixed G&A per quarter $M (v1: 0.4)
-  const GA_PORTFOLIO_PCT  = 0.0015; // Additional G&A per quarter per $M of portfolio value (v1: 0.003)
+  const GA_BASE           = 0.20;   // Fixed G&A per quarter $M: $0.8M a year (round 37: was 0.25; v1: 0.4)
+  const GA_PORTFOLIO_PCT  = 0.0010; // Additional G&A per quarter per $M of portfolio value: 0.4% a year (round 37: was 0.6%; real REITs run overheads at ~6-8% of rent)
   const CAPEX_RESERVE_PCT = 0.005; // Annual normalized capex reserve as % of asset value
 
   // ----------------------------------------------------------
@@ -1187,6 +1187,33 @@ window.Financials = (() => {
   }
 
   // Set quarterly dividend per share
+  /* -- round 37: THE EMERGENCY DIVIDEND CUT ---------------------------------------
+     In a crisis (or the aftershock), with the dividend not covered by cash profit,
+     the board approves halving it: 1 political capital, once per crisis and once in
+     the aftershock. Williams accepts it as prudence (-0.5, not his red line); the
+     market dips 6% (a normal halving costs 18%). After the crisis he asks for it back. */
+  function canEmergencyCut() {
+    var G = GameState, ph = (typeof Arc !== "undefined" && Arc.phase) ? Arc.phase() : "";
+    if (ph !== "crisis" && ph !== "aftershock") return { ok: false, show: false };
+    var used = G._eCutUsed || {}, pr = payoutRatio();
+    if (used[ph]) return { ok: false, show: true, why: "Already used in this " + (ph === "crisis" ? "crisis" : "aftershock") };
+    if (!(G.company.dividendPerShare > 0.005)) return { ok: false, show: false };
+    if (pr == null || pr <= 1.0) return { ok: false, show: true, why: "Only when the dividend is not covered by cash profit (now " + (pr == null ? "?" : Math.round(pr * 100)) + "% of it)" };
+    if ((G.board.politicalCapital || 0) < 1) return { ok: false, show: true, why: "Needs 1 political capital" };
+    return { ok: true, show: true, phase: ph };
+  }
+  function emergencyCut() {
+    var c = canEmergencyCut(), G = GameState; if (!c.ok) return { success: false, message: c.why || "Not available now." };
+    var old = G.company.dividendPerShare, nw = Math.max(0.01, fmt(old / 2));
+    G.board.politicalCapital = (G.board.politicalCapital || 0) - 1;
+    G.company.dividendPerShare = nw; G.company.sharePrice = fmt(G.company.sharePrice * 0.94);
+    G.board.pressurePoints = Math.min(G.board.maxPressure, (G.board.pressurePoints || 0) + 1);
+    G._eCutUsed = G._eCutUsed || {}; G._eCutUsed[c.phase] = true;
+    G._eCut = { q: (G.meta.year - 1) * 4 + G.meta.quarter, from: old, to: nw, restored: false };
+    if (typeof Directors !== "undefined") Directors.remember("williams", -0.5, "the emergency dividend cut, which he approved");
+    if (typeof News !== "undefined" && News.add) News.add(G.company.name + " halves its dividend to protect its balance sheet through the downturn.", "dividend");
+    return { success: true, message: "The board approved it: the dividend is halved to $" + nw.toFixed(2) + " a share. Williams: \"Prudence, son. I expect it back when this is over.\" Share price \u22126%." };
+  }
   function setDividend(newDividendPerShare) {
     if (typeof Revolver !== "undefined" && Revolver.dividendFrozen() &&
         newDividendPerShare > GameState.company.dividendPerShare + 0.0001) {
@@ -1520,6 +1547,7 @@ window.Financials = (() => {
     amendCovenant,
     consentFee,
     setDividend,
+    canEmergencyCut, emergencyCut,   // round 37
     noteSpend,
     trailingAffoPS,
     fairPrice,          // round 25: for tests (what the price is pulled toward)

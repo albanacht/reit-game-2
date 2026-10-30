@@ -123,8 +123,8 @@ window.Journal = (() => {
     if (l.stage === 'wait' || l.stage === 'offered' || l.stage === 'letter') return null;
     if (l.stage !== 'hired') return { title: 'Dr. Levi Cohen', face: FACE('levi'), status: 'Ended', now: l.stage === 'quit' ? 'Levi resigned to write a paper about you.' : 'You passed on Levi. He works for Wexmoor.', next: '', log: l.log || [] };
     const m = l.ch && !l.ch.done ? Levi.metric(l.ch.id) : null;
-    return { title: 'Dr. Levi Cohen', face: FACE('levi'), status: 'Active', now: 'Strategy advisor. ' + l.hits + ' challenge' + (l.hits === 1 ? '' : 's') + ' met, ' + l.misses + ' missed (three misses and he leaves).',
-             next: m ? 'His challenge: ' + m.name + ', now ' + m.val().toFixed(3) + ', target ' + l.ch.target.toFixed(3) + ' by the next meeting. (Jenkins: "' + m.hint + '".)' : 'He forecasts crises in your inbox.', log: l.log || [] };
+    return { title: 'Dr. Levi Cohen', face: FACE('levi'), status: 'Active', now: 'Strategy advisor. ' + (Levi.gemsTaken ? Levi.gemsTaken() : 0) + ' of his finds acted on' + (l.ignored ? ', ' + l.ignored + ' ignored' : '') + '.',   // round 37
+             next: 'He watches for the crisis, the bottom, the rates and mispriced buildings. Ignore two of his finds and he leaves.', log: l.log || [] };
   }
 
   /* round 30: the old yard (gary.js) */

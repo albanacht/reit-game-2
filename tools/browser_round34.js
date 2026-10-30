@@ -58,14 +58,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const A = G.arc, q = G.totalQuartersElapsed(); A.warnStart = q - 1; A.crisisStart = q + 2; A.crisisEnd = q + 10;
     Levi.processQuarter([]); r.due = Story.S().due; r.warned = !!Levi.L().warned.crisis;
     const c = World.DECISIONS.find(x => x.id === 'levi_belt').build(); r.title = c.title; r.n = c.choices.length;
-    const pc0 = G.board.politicalCapital || 0; Financials.runQuarter(); const ga0 = G.pnl.gAndA;
+    G.board.politicalCapital = 3; const pc0 = 3; Financials.runQuarter(); const ga0 = G.pnl.gAndA;
     r.msg = c.choices[0].apply(); Story.S().due = null; r.pc = (G.board.politicalCapital || 0) - pc0; r.belt = JSON.stringify(G._belt);
     Financials.runQuarter(); r.ratio = G.pnl.gAndA / ga0;
     const it = Pay.meeting(G._belt.noBonusYear);
     r.pay = it.map(x => (x.lines[0] || [])[1] || '').join(' | '); r.grant = it.some(x => x.effect && /Granted/.test(String(x.effect)));
     return r; });
   ok(bt.warned && bt.due === 'levi_belt' && bt.n === 2, 'Levi warns, then Jenkins asks: "' + bt.title + '"');
-  ok(bt.pc === 1 && Math.abs(bt.ratio - 0.9) < 0.04, 'tightened: overheads ×' + bt.ratio.toFixed(2) + ', +1 political capital');
+  ok(bt.pc === -1 && Math.abs(bt.ratio - 0.9) < 0.04, 'tightened: overheads ×' + bt.ratio.toFixed(2) + ', costs 1 political capital (round 37)');
   ok(/No bonuses this year/.test(bt.pay), 'the pay committee: "' + bt.pay.slice(0, 90) + '"');
 
   // 6. the bond due stop
