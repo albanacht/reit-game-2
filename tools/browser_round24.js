@@ -43,7 +43,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     return { a, step5, step6, step7, done: titles().filter(t => /Done/.test(t)) }; });
   ok(j.a.length === 2 && /Asset Manager/.test(j.step5), 'CFO hired → "Step 5: Hire an Asset Manager"');
   ok(/65% and 85%/.test(j.step6), 'Asset Manager hired → Step 6, lease up: "' + j.step6.replace(/<[^>]+>/g, '').slice(0, 140) + '…"');
-  ok(/75% to 90%/.test(j.step7), 'leased up → Step 7, renovate: "' + j.step7.replace(/<[^>]+>/g, '').slice(0, 140) + '…"');
+  ok(/Renovate a <strong>Worn<\/strong> one/.test(j.step7), 'leased up → Step 7, renovate: "' + j.step7.replace(/<[^>]+>/g, '').slice(0, 140) + '…"');
   ok(j.done.some(t => /renovated/.test(t)), 'each step ticks off: ' + j.done.join(' | '));
 
   // 3. the land auction letter

@@ -96,8 +96,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     return { why: c.why, ok: c.ok, btn: !!btn && !btn.disabled, msg: r.message, div: G.company.dividendPerShare, pc: G.board.politicalCapital, px: G.company.sharePrice / p0, red: !!Directors.card('williams').redNow, again: Financials.canEmergencyCut().ok }; });
   ok(!e0 && ec.ok && ec.btn && Math.abs(ec.div - 0.3) < 0.011 && ec.pc === 2 && ec.px > 0.9 && !ec.red && !ec.again, 'emergency cut: hidden in calm times; in the crisis the button halves $0.60 → $' + ec.div + ', 1 political capital, price ×' + ec.px.toFixed(2) + ', no red line, once per crisis' + (ec.why ? ' (' + ec.why + ')' : ''));
   await setPhase('recovery');
-  const rd = await pg.evaluate(() => (Board.demandFor('williams') || {}).text);
-  ok(/Restore the dividend to \$0\.60/.test(rd || ''), 'after the crisis Williams asks for it back: "' + rd + '"');
+  // round 38: he asks at the meeting (crisis.js), not as a demand
+  const rd = await pg.evaluate(() => { const w = []; Crisis.agenda(5, w); if (w.length) return 'asked while uncovered';   // not covered yet: he waits
+    const pr = Financials.payoutRatio; Financials.payoutRatio = () => 0.5; const it = []; Crisis.agenda(5, it); Financials.payoutRatio = pr; return it[0] ? it[0].lines[0][1] + ' [' + (it[0].choices || []).map(c => c.label).join(' | ') + ']' : 'pr ' + Financials.payoutRatio(); });
+  ok(/back where it was: \$0\.60/.test(rd || ''), 'after the crisis Williams asks for it back: "' + rd + '"');
 
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 4).join(' / ') : ''));
   await b.close();

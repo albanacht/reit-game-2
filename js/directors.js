@@ -629,6 +629,7 @@ window.Directors = (() => {
     const G = GameState, b = G.board;
     if (!has(id)) return false;
     b.directors = b.directors.filter(d => d.id !== id);
+    b.formerly = b.formerly || {}; b.formerly[id] = true;   // round 38: once gone, gone (no re-offers)
     b.activeMandates = (b.activeMandates || []).filter(m => m.directorId !== id);
     logBoard(text || name(id) + ' left the board.');
     return true;

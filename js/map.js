@@ -18,7 +18,7 @@ window.MAP = (() => {
   // 2.0: 50% bigger (Alexander: they are the key data points)
   const TIER_W = { tier1:60, tier2:46, suburban:36 };
 
-  let mode = 'owner';
+  let mode = 'owner', labels = true;   // round 38: labels on by default
   let wrap, card, mapEl;
 
   /* -- marker geometry ----------------------------------------------------- */
@@ -47,8 +47,11 @@ window.MAP = (() => {
     const gold = p.ti === 'tier1'
       ? '<circle cx="20" cy="43.5" r="2.6" fill="#ecc84b" stroke="#fff" stroke-width="1"/>' : '';
     // for sale: a tilted SALE tag instead of a $ badge
-    const sale = p.listed ? '<span class="mk-sale">SALE</span>' : '';
-    return '<svg width="' + TIER_W[p.ti] + '" viewBox="0 0 40 46">' + shape(p.t, c) + gold + '</svg>' + sale;
+    // round 38: a short line under ours and under those for sale (Labels on/off in the map controls)
+    const mine = R.isMine(p), tag = labels && (mine || (p.listed && !mine))
+      ? '<span class="mk-lbl' + (mine ? ' own' : ' sale') + '">' + (mine ? R.money(p.v) + ' · ' + R.pct(p.yNow) + ' · ' + p.occ + '%' : 'SALE ' + R.money(p.ask || p.v) + ' · ' + R.pct(p.yNow)) + '</span>' : '';
+    const sale = p.listed && !tag ? '<span class="mk-sale">SALE</span>' : '';
+    return '<svg width="' + TIER_W[p.ti] + '" viewBox="0 0 40 46">' + shape(p.t, c) + gold + '</svg>' + sale + tag;
   }
 
   /* -- card ---------------------------------------------------------------- */
@@ -224,6 +227,8 @@ window.MAP = (() => {
     /* Marker positions are percentages, so a resize needs no recalculation,
        but the open card would be left pointing at nothing. */
     window.addEventListener('resize', hide);
+    const lb = document.getElementById('map-labels');
+    if (lb) lb.onclick = e => { e.stopPropagation(); labels = !labels; lb.classList.toggle('on', labels); lb.textContent = labels ? 'Labels: on' : 'Labels: off'; render(); };
     render();
   }
 

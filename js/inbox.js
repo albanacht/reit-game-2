@@ -71,7 +71,7 @@ window.Inbox = (() => {
     leaseup: { done: G => (G.portfolio || []).some(p => p.leaseUpYear),
               note: G => 'Leased up. Occupancy is ' + Math.round((G.ratios.occupancyPortfolio || 0) * 100) + '% across the portfolio; the extra rent shows next quarter.' },
     renovate: { done: G => (G.portfolio || []).some(p => p.renovated || p.renovating),
-              note: G => 'Renovation under way. One quarter offline, then more rent and a building that ages slower.' },
+              note: G => 'Renovation under way. One quarter offline, then more rent, and the building is New again.' },
   };
   /* round 24: after the CFO, Jenkins moves on to the buildings, one step at a time */
   const NEXT = {
@@ -80,7 +80,7 @@ window.Inbox = (() => {
     asset: { task: 'leaseup', title: 'Step 6: Lease up a building',
       body: 'On <strong>Properties</strong>, open a building below 90% let and press <strong>Lease up</strong>. It costs 12% of that building\u2019s yearly rent (brokers, free months) and fills 3 to 8 points at once, more the emptier it is.<br><br><strong>Best between 65% and 85% let</strong>: there it pays for itself in about two years. Above 85% it barely pays. Once a year per building.' },
     leaseup: { task: 'renovate', title: 'Step 7: Renovate one',
-      body: 'Renovation costs 10% of a building\u2019s value and takes it offline for a quarter. In return: <strong>rent +15%</strong>, value up about as much as it cost, 8 more points let, and it stops ageing for 4 years.<br><br><strong>Best for older buildings 75% to 90% let.</strong> Not downtown towers (already premium). Below 70% let, think <strong>repositioning</strong>: changing what the building is for.' },
+      body: 'Every building shows its <strong>condition</strong> on Properties: New, Good, <strong>Worn</strong>, Tired. Renovate a <strong>Worn</strong> one below 90% let.<br><br>It costs 10% of its value and a quarter offline. In return: <strong>rent +15%</strong>, 8 more points let, and it is New again. About 6 years later it is Worn, and you can renovate again. Tired buildings let a little worse.' },
   };
   function taskDone(id) { const t = TASKS[id]; return !!(t && window.GameState && t.done(GameState)); }
   function checkTasks() {
@@ -136,6 +136,7 @@ window.Inbox = (() => {
       kind: 'summary', title: (done % 4 === 0 ? qLabel(done) : 'Q' + ((done - 1) % 4 + 1)) + ' results', rc,
       detail: 'Rent ' + money(report.netRentalIncome !== undefined ? report.netRentalIncome : (pnl.noi || 0)) +
               ' · interest ' + money(-(pnl.interestExpense || 0)) +
+              (pnl.cashInterest ? ' · interest on cash ' + money(pnl.cashInterest) : '') +   // round 38
               (pnl.loanInterest ? ' · loan interest received ' + money(pnl.loanInterest) : '') +   // round 35: the Harlow loan's interest was invisible here
               ' · dividends ' + money(-(pnl.dividendsPaid || 0)) +
               (pnl.unusualItems ? ' · one-offs ' + money(pnl.unusualItems) : ''),

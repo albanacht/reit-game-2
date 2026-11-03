@@ -384,13 +384,14 @@ window.Tenants = (() => {
     if (pos.relet >= 900) return { ok: false, why: 'A story is handling this building' };
     if (pos.incent || pos.relet <= 1) return { ok: false, why: 'A tenant is already signing' };
     if (!(typeof Staff !== 'undefined' && Staff.hasRole && Staff.hasRole('asset'))) return { ok: false, why: 'Needs an Asset Manager (Staff screen)' };
-    return { ok: true, fee: fmt(p.annualNOI / 4), pct: p.renovated ? 1.0 : 0.9 };
+    return { ok: true, fee: fmt(p.annualNOI / 4), pct: (typeof Properties !== 'undefined' && Properties.isFresh ? Properties.isFresh(p) : p.renovated) ? 1.0 : 0.9 };   // round 38: renovated in the last 4 years
   }
   function offerIncentives(p) {
     const c = canIncent(p); if (!c.ok) return { success: false, message: c.why };
     const pos = p.lease.positions[0]; pos.relet = 1; pos.incent = { pct: c.pct };
     GameState.balance.cash = fmt(GameState.balance.cash - c.fee);
     if (typeof Financials !== 'undefined' && Financials.noteSpend) Financials.noteSpend('leasing', c.fee);
+    if (window.Crisis) Crisis.credit();   // round 38
     return { success: true, message: p.name + ': the brokers have a tenant. They sign next quarter at ' + Math.round(c.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + c.fee.toFixed(1) + 'M.' };
   }
   return { canIncent, offerIncentives, K, init, attachLease, isLocked, processQuarter, buildingsOf, shareOfMyRent,

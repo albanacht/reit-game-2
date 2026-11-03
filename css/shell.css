@@ -403,6 +403,12 @@ body { background: #eef2f7; }
 #tab-map .mk .mk-sale { position: absolute; top: -4px; right: -18px; transform: rotate(-30deg); background: #dc2626; color: #fff;
   font: 900 9px/1 system-ui, sans-serif; letter-spacing: .6px; padding: 3px 5px; border-radius: 3px; border: 1.5px solid #fff;
   box-shadow: 0 1px 3px rgba(0,0,0,.35); pointer-events: none; }
+/* round 38: short labels under markers (map.js) */
+#tab-map .mk .mk-lbl { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; pointer-events: none;
+  font: 700 9.5px/1 system-ui, sans-serif; padding: 2px 4px; border-radius: 3px; background: rgba(255,255,255,.92); color: #1d3b5a; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+#tab-map .mk .mk-lbl.own { border: 1px solid #2f6fb0; }
+#tab-map .mk .mk-lbl.sale { background: #dc2626; color: #fff; border: 1px solid #fff; }
+#tab-map .mk:hover .mk-lbl { transform: translateX(-50%) scale(.77); }
 #tab-map .lg-sale { display: inline-block; transform: rotate(-30deg); background: #dc2626; color: #fff; font: 900 8px/1 system-ui; padding: 2px 3px; border-radius: 2px; }
 #tab-map .lot { width: 30px; height: 30px; font-size: 20px; line-height: 26px; }
 #views .ib-count { cursor: pointer; } #views .ib-count:hover { text-decoration: underline; }
@@ -691,3 +697,7 @@ body { background: #eef2f7; }
 .mt-gdiv { display: flex; align-items: center; justify-content: center; border-left: 2px dashed #d9c9a8; margin: 6px 0; }
 .mt-gdiv span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #a08350; font-weight: 600; }
 .mt-grole { font-size: 11px; color: #7a6a4a; margin: -2px 0 4px; text-align: center; line-height: 1.25; }
+
+/* round 38: Properties rows open on click */
+#tab-properties .nm .chev { display: inline-block; width: 12px; color: #2f6fb0; font-size: 12px; margin-right: 4px; flex: none; }
+#tab-properties .cond { font-weight: 700; } .cond-new { color: #18794e; } .cond-good { color: #2f6fb0; } .cond-worn { color: #b8860b; } .cond-tired { color: #c2410c; }

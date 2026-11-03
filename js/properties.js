@@ -577,7 +577,8 @@ window.Properties = (() => {
 
       // Occupancy drifts slightly (mean-reversion toward profile midpoint)
       const profile = PROFILES[prop.sector][prop.location];
-      const drift = (profile.occupancyMid - prop.occupancy) * 0.1;
+      const mid = profile.occupancyMid - (condition(prop).cls === 'tired' ? 0.03 : 0);   // round 38: tired buildings let a little worse
+      const drift = (mid - prop.occupancy) * 0.1;
       const noise = randBetween(-profile.volatility * 0.15, profile.volatility * 0.15);
       prop.occupancy = Math.min(1.0, Math.max(0.40,
         Math.round((prop.occupancy + drift + noise) * 1000) / 1000
@@ -689,12 +690,29 @@ window.Properties = (() => {
   // UPGRADE FUNCTIONS
   // ----------------------------------------------------------
 
+  /* round 38: building condition. Years since it was built or last renovated:
+     New (under 3), Good (3-6), Worn (6-10), Tired (10+). A full cycle is about
+     10 years; the CAPEX reserve already pays for normal upkeep. A Tired building
+     drifts to a slightly lower occupancy. Renovate again once it is Worn. */
+  function wearYears(p) {
+    if (!p) return 0;
+    var y = GameState.meta.year;
+    if (p.renovatedYear) return Math.max(0, y - p.renovatedYear);
+    if (p.wearStart == null) p.wearStart = y - Math.min(8, Math.max(0, Math.round(p.age || 4)));   // nothing starts Tired
+    return Math.max(0, y - p.wearStart);
+  }
+  function condition(p) {
+    var w = wearYears(p);
+    return w < 3 ? { label: 'New', w: w, cls: 'new' } : w < 6 ? { label: 'Good', w: w, cls: 'good' } : w < 10 ? { label: 'Worn', w: w, cls: 'worn' } : { label: 'Tired', w: w, cls: 'tired' };
+  }
+  var RENOVATE_AFTER = 6;   // years: renovate again once Worn
+  function isFresh(p) { return !!(p && p.renovatedYear && GameState.meta.year - p.renovatedYear < 4); }   // renovated in the last 4 years
+
   // Check if renovation is available for a property
   function canRenovate(prop) {
     if (!prop) return { ok: false, reason: "Property not found." };
     if (typeof Staff !== "undefined" && !Staff.hasRole("asset")) return { ok: false, reason: "Requires an Asset Manager. Hire one in the Staff tab." };
-    if (prop.location === "tier1") return { ok: false, reason: "Tier 1 properties are already premium — renovation not applicable." };
-    if (prop.renovated) return { ok: false, reason: "Already renovated." };
+    if (wearYears(prop) < RENOVATE_AFTER) return { ok: false, reason: prop.renovated ? "Renovated " + wearYears(prop) + " years ago: again once it is Worn (" + RENOVATE_AFTER + " years)." : "Still in " + condition(prop).label.toLowerCase() + " condition: renovate once it is Worn." };
     if (prop.underConstruction) return { ok: false, reason: "Already under construction." };
     if (prop.repositioning) return { ok: false, reason: "Repositioning in progress." };
     if ((prop.quarterOwned || 0) < 2) return { ok: false, reason: "Must own property for at least 2 quarters before renovating." };
@@ -886,7 +904,7 @@ window.Properties = (() => {
     refreshMarket,
     maybeInjectMegaProperty,
     generateProperty,
-    canRenovate,
+    canRenovate, condition, isFresh, wearYears,   // round 38
     canReposition,
     getRepositionTargets,
     startRenovation,

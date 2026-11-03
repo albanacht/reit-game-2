@@ -18,7 +18,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await pg.evaluate(() => UI.newGame()); await wait(1200); await pg.evaluate(() => UI.closeModal());
 
   // map: bigger markers, SALE tag
-  const mk = await pg.evaluate(() => ({ sale: document.querySelectorAll('#tab-map .mk-sale').length, w: (document.querySelector('#tab-map .mk svg') || {}).getAttribute ? document.querySelector('#tab-map .mk svg').getAttribute('width') : null }));
+  const mk = await pg.evaluate(() => ({ sale: document.querySelectorAll('#tab-map .mk-sale, #tab-map .mk-lbl.sale').length, w: (document.querySelector('#tab-map .mk svg') || {}).getAttribute ? document.querySelector('#tab-map .mk svg').getAttribute('width') : null }));
   ok(mk.sale > 0, 'map: ' + mk.sale + ' SALE tags (marker width ' + mk.w + ')');
   await pg.screenshot({ path: OUT + '/f3_map.png' });
 

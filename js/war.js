@@ -102,7 +102,7 @@ window.War = (() => {
       return items;
     }
     // Tex: the seventh seat, raised again while the war runs
-    if (active() && !tex() && (w.texOffers || 0) > 0 && w.texOffers < 3 && w.texYear !== year) { w.texYear = year; items.push(texItem()); }
+    if (active() && !tex() && !(GameState.board.formerly || {}).tex && (w.texOffers || 0) > 0 && w.texOffers < 3 && w.texYear !== year) { w.texYear = year; items.push(texItem()); }
     // after the leak: Petrova against Chen
     if (w.leaked && !w.leakTalked && active()) {
       w.leakTalked = true;
@@ -205,7 +205,7 @@ window.War = (() => {
     note('Won Morrow Plaza for ' + money(price0) + '. The war began.');
     if (!ir()) say('Jenkins', 'Chief of Staff', 'This is now a press war',
       'Boss, Kessler does not lose quietly. Expect him in the papers. We need someone who talks to investors for a living: <b>a Head of Investor Relations</b> (Staff screen) halves the damage from his stories, and makes ours land harder.', FACE('jenkins'));
-    if (list && !tex()) list.push(texItem());
+    if (list && !tex() && !(GameState.board.formerly || {}).tex) list.push(texItem());
     return 'Sold to us for ' + money(price0) + '. Jack shook your hand. Kessler did not. The war has begun.';
   }
   /* Tex comes with the war (round 13b): Chen proposes a seventh seat for
@@ -218,9 +218,9 @@ window.War = (() => {
                      [lead('petrova', 'okafor'), 'If the CEO fills it with a friend, the governance people will notice.']],
       choices: [
         { label: 'Nominate your friend Tex Brennan (3 political capital)', primary: true,
-          detail: 'Texas real estate, knows Rennick\u2019s lenders in Dallas. In the war he doubles the bank squeeze and our leak, blocks two sales for the price of one, makes the rights plan and the friendly investor cheaper, and adds 20 points to beating Kessler\u2019s resistance in a takeover. As before: 1 political capital at every meeting to hold his seat, board fees +$0.3M a year, Petrova \u22121 for good. You have ' + cap() + '.',
+          detail: 'Texas real estate, knows Rennick\u2019s lenders in Dallas. In the war he doubles the bank squeeze and our leak, blocks two sales for the price of one, makes the rights plan and the friendly investor cheaper, and adds 20 points to beating Kessler\u2019s resistance in a takeover. 3-year terms (2 political capital to renew every third meeting), board fees +$0.3M a year, Petrova \u22121 for good. You have ' + cap() + '.',
           disabled: cap() < 3, why: 'Needs 3 political capital', go: () => {
-            spendPC(3);
+            spendPC(3); GameState.board.texMeetings = 0;
             Directors.addDirector('tex', 6, 'Tex Brennan (your nominee) joined the board, in a new seventh seat for the Rennick war.');
             if (window.Story && Story.onDirectorJoin) Story.onDirectorJoin('tex');
             note('Tex joined the board.');

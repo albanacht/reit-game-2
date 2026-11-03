@@ -165,7 +165,7 @@ window.IndexFund = (() => {
       ] });
     if (asks.indexOf('tex') > -1) items.push({ guest: DAHL, lines: [['guest', 'Mr Brennan. A friend of the CEO from a Dallas deal, on the committee that votes on the CEO’s pay. We ask that he step down.'], ['tex', 'Well, I never.']],
       choices: [
-        { label: 'Ask Tex to step down', detail: 'Tex leaves the board (no more political capital to hold his seat). Petrova +1.', go: () => { Directors.removeDirector('tex', 'Tex Brennan stepped down at Granite’s request.'); remember('petrova', 1, 'Tex left'); x.asks.tex = 'agreed'; return 'Tex shook your hand. "No hard feelings, partner. Mostly."'; } },
+        { label: 'Ask Tex to step down', detail: 'Tex leaves the board (no more term renewals to pay for). Petrova +1.', go: () => { Directors.removeDirector('tex', 'Tex Brennan stepped down at Granite’s request.'); remember('petrova', 1, 'Tex left'); x.asks.tex = 'agreed'; return 'Tex shook your hand. "No hard feelings, partner. Mostly."'; } },
         { label: 'Keep Tex', detail: 'Granite votes against Tex every year: reputation −10 a year. Below 30, he is out anyway.', go: () => { x.asks.tex = 'refused'; return refuse('tex', 'a friend of the CEO', '"They can vote all they like," said Tex.'); } },
       ] });
     items.push({ guest: DAHL, lines: [['guest', 'And the announcement. From this year your shareholders vote on your pay at every annual meeting. It is advisory. In practice, a board that ignores it does not stay a board for long.']] });

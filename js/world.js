@@ -299,6 +299,7 @@ window.World = (() => {
          a second one. */
       built.headline = built.title;
       built.isWorld = true;
+      if (d.holdQ != null && built.holdQ == null) built.holdQ = d.holdQ;   // round 38: the card's own hold rule reaches the UI
       return built;
     }
     return null;
@@ -1008,8 +1009,10 @@ window.World = (() => {
     {
       id: "scrip_dividend",
       validIn: ["stable", "opportunity", "overheated", "distress", "crisis"],
+      // round 38: only in a real crisis, and only when the dividend is not covered
       when: () => GameState.company.dividendPerShare > 0 && !(GameState._scripQ > 0) &&
-                  (GameState.balance.cash < 5 || (GameState.ratios.dividendCoverage || 9) < 0.9),
+                  window.Arc && Arc.phase && ["crisis", "aftershock"].indexOf(Arc.phase()) >= 0 &&
+                  (GameState.ratios.dividendCoverage || 9) < 1,
       build() {
         const cfo = window.Staff && Staff.getStaff && Staff.getStaff("cfo");
         const who = cfo ? cfo.name : "Jenkins";
@@ -1400,6 +1403,8 @@ window.World = (() => {
     const b = c && c.build();
     if (!b) { if (story) Story.S().due = null; return null; }
     b.id = c.id; b.headline = b.title; b.isWorld = true;
+    if (c.holdQ != null && b.holdQ == null) b.holdQ = c.holdQ;   // round 38: holdQ: 0 means no "put it on hold"
+    if (c.lapse != null && b.lapse == null) b.lapse = c.lapse;
     return b;
   }
 

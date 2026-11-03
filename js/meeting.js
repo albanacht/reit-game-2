@@ -131,14 +131,19 @@ window.Meeting = (() => {
       b._lastReview = res.map(r => ({ id: r.mandate.directorId, text: r.mandate.text, achieved: r.achieved, skipped: r.skipped }));
       b._lastPromises = settlePromises();
       b._lastEarned = Board.earnPoliticalCapital();
-      if (Directors.has('tex')) {                           // your nominee's seat is held up by YOUR influence
-        if ((b.politicalCapital || 0) >= 1) {
-          b.politicalCapital -= 1;
-          b._lastEarned = (b._lastEarned || []).concat(['Keeping Tex on the board (calls to the big shareholders, favours with the nominating committee): \u22121 political capital']);
-        } else {
-          Directors.repChange('tex', -15, 'you had no influence left to hold his seat');
-          b._lastEarned = (b._lastEarned || []).concat(['No political capital left to hold Tex\u2019s seat: his reputation \u221215 (below 30 and he is out)']);
-        }
+      /* round 38: Tex sits for 3-year terms. Renewal costs 2 political capital at every
+         third meeting, nothing in between. Can't pay: his term ends, no hard feelings. */
+      if (Directors.has('tex')) {
+        b.texMeetings = (b.texMeetings || 0) + 1;
+        if (b.texMeetings % 3 === 0) {
+          if ((b.politicalCapital || 0) >= 2) {
+            b.politicalCapital -= 2;
+            b._lastEarned = (b._lastEarned || []).concat(['Tex\u2019s 3-year term renewed (calls to the big shareholders, favours with the nominating committee): \u22122 political capital']);
+          } else {
+            Directors.removeDirector('tex', 'Tex Brennan\u2019s term ended. Not enough influence to renew it.');
+            b._lastEarned = (b._lastEarned || []).concat(['Tex\u2019s 3-year term ended: renewing it needs 2 political capital. He left on good terms: "Call me if you need me, partner."']);
+          }
+        } else b._lastEarned = (b._lastEarned || []).concat(['Tex\u2019s seat: renewal at ' + (b.texMeetings % 3 === 2 ? 'next year\u2019s meeting' : 'the meeting after next') + ' (2 political capital).']);
       }
       Directors.refresh();
     }
@@ -270,7 +275,7 @@ window.Meeting = (() => {
     const b = G().board, pc = b.politicalCapital || 0;
     const pool = CANDIDATES.filter(id => !dir(id) && !(b.formerly || {})[id]);
     say(CH(), pool.length ? 'The search firm has a shortlist.' : 'The seat stays empty for now.');
-    if (!pool.length && pc < 3) { pump(beatStory); return; }
+    if (!pool.length && (pc < 3 || (b.formerly || {}).tex)) { pump(beatStory); return; }   // round 38: Tex does not come back
     const join = (id, att, line) => {
       Directors.addDirector(id, att, ({ mansour: 'Salma Mansour', grace: 'Julian Grace', tex: 'Tex Brennan (your nominee)' })[id] + ' joined the board, in ' + sn(left) + '\u2019s seat.');
       if (window.Story && Story.onDirectorJoin) Story.onDirectorJoin(id);
@@ -280,9 +285,10 @@ window.Meeting = (() => {
     pump(() => actions(pool.map(id => ({ label: 'Appoint ' + ({ mansour: 'Salma Mansour', grace: 'Julian Grace' })[id], detail: PROFILE[id](), go: () => join(id, 5,
         id === 'mansour' ? 'Thank you. I\u2019ve read the rent roll. We have work to do.' : 'Thank you! I\u2019ve brought a few ideas. Twelve, actually.') })).concat([
       { label: 'Nominate your friend Tex Brennan (3 political capital)',
-        detail: 'Your friend from Texas real estate. Votes with you unless 4 others are already against. Your influence holds his seat: 1 political capital at every meeting; with none left his reputation drops 15. In a good year he moves a special pay award for you, in cash or shares, and the board votes on it. Board fees +$0.3M a year. Petrova \u22121 for good (board independence). Reputation starts at 40: one bad press story could push him out.',
-        disabled: pc < 3, why: 'Needs 3 political capital', go: () => { b.politicalCapital = pc - 3; join('tex', 6, 'Howdy, y\u2019all. Call me Tex. Everybody does.'); } },
-    ]), 'Who takes the seat?'));
+        detail: 'Your friend from Texas real estate. Votes with you unless 4 others are already against. He sits for 3-year terms: renewing costs 2 political capital every third meeting; if you can\u2019t pay, he leaves on good terms. In a good year he moves a special pay award for you, in cash or shares, and the board votes on it. Board fees +$0.3M a year. Petrova \u22121 for good (board independence). Reputation starts at 40: one bad press story could push him out.',
+        hide: (b.formerly || {}).tex,
+        disabled: pc < 3, why: 'Needs 3 political capital', go: () => { b.politicalCapital = pc - 3; b.texMeetings = 0; join('tex', 6, 'Howdy, y\u2019all. Call me Tex. Everybody does.'); } },
+    ]).filter(o => !o.hide), 'Who takes the seat?'));
   }
 
   // ---------------------------------------------------------------- 2c. the stories' agenda (round 11)
@@ -303,7 +309,9 @@ window.Meeting = (() => {
     S.guest = it.guest || null; portraits();
     (it.lines || []).forEach(l => { if (l[0] === 'note' || l[0] === 'guest' || dir(l[0])) say(l[0], l[1]); });
     if (it.note) say('note', it.note);
-    const next = () => { S.guest = null; portraits(); pump(() => (i + 1 < list.length ? pause(() => runItems(list, i + 1, done)) : runItems(list, i + 1, done))); };   // round 32: a breath between items
+    // round 32: a breath between items. Round 38: not before an announcement (no talk, no choice), it just follows.
+    const nx = list[i + 1], quiet = nx && nx.effect && !(nx.lines || []).length && !nx.guest;
+    const next = () => { S.guest = null; portraits(); pump(() => (nx && !quiet ? pause(() => runItems(list, i + 1, done)) : runItems(list, i + 1, done))); };
     if (it.effect) { pump(() => { const msg = it.effect(); if (msg) say('note', msg); Directors.refresh(); next(); }); return; }
     if (it.choices) {
       pump(() => actions(it.choices.map(ch => ({ label: ch.label, detail: ch.detail, primary: ch.primary, disabled: ch.disabled, why: ch.why,

@@ -203,6 +203,7 @@ window.UI = (function() {
     setText("pnl-interest",  "(" + fmtM(p.interestExpense) + ")");
     setText("pnl-depr",      "(" + fmtM(p.depreciation) + ")");
     setText("pnl-unusual",   fmtM(p.unusualItems));
+    var cir = el("pnl-cashint-row"); if (cir) { cir.style.display = p.cashInterest ? "" : "none"; setText("pnl-cashint", fmtM(p.cashInterest || 0)); }   // round 38
     var lir = el("pnl-loanint-row"); if (lir) { lir.style.display = p.loanInterest ? "" : "none"; setText("pnl-loanint", fmtM(p.loanInterest || 0)); }
     setText("pnl-netincome", fmtM(p.netIncome));
     setText("pnl-ffo",       fmtM(p.ffo));
@@ -763,6 +764,7 @@ window.UI = (function() {
       '</div>' +
       '<div class="feed-bottom-detail">Rental income ' + fmtM(report.netRentalIncome !== undefined ? report.netRentalIncome : (GameState.pnl ? GameState.pnl.noi : 0)) +
         ' · interest ' + fmtM(-(GameState.pnl ? GameState.pnl.interestExpense : 0)) +
+        (GameState.pnl && GameState.pnl.cashInterest ? ' · interest on cash ' + fmtM(GameState.pnl.cashInterest) : '') +   // round 38
         (GameState.pnl && GameState.pnl.loanInterest ? ' · loan interest received ' + fmtM(GameState.pnl.loanInterest) : '') +   // round 35: was missing
         ' · dividends ' + fmtM(-(GameState.pnl ? GameState.pnl.dividendsPaid : 0)) +
         (GameState.pnl && GameState.pnl.unusualItems ? ' · one-offs ' + fmtM(GameState.pnl.unusualItems) : '') +
@@ -830,10 +832,19 @@ window.UI = (function() {
       var ec = Financials.canEmergencyCut();
       ecr.style.display = ec.show ? "" : "none";
       ecr.innerHTML = ec.show ? '<button class="btn btn-sm ' + (ec.ok ? 'btn-danger' : 'btn-secondary') + '" id="btn-emergency-cut"' + (ec.ok ? '' : ' disabled title="' + (ec.why || '') + '"') + '>Emergency cut: halve the dividend (1 political capital)</button>' +
-        (ec.ok ? '<div class="action-meta">The board approves it in a crisis. Williams accepts it; he will want it back after.</div>' : '<div class="action-meta">' + (ec.why || '') + '</div>') : '';
+        (ec.ok ? '<div class="action-meta">The board approves it in a crisis. Williams \u22121, Okafor +1. Williams will want it back after.</div>' : '<div class="action-meta">' + (ec.why || '') + '</div>') : '';
+      // round 38: Williams's own lever, after the cut: pledge it back
+      var pl = window.Crisis ? Crisis.canPledge() : { show: false };
+      if (pl.show) { ecr.style.display = "";
+        ecr.innerHTML += '<div style="margin-top:6px"><button class="btn btn-sm ' + (pl.ok ? 'btn-primary' : 'btn-secondary') + '" id="btn-pledge"' + (pl.ok ? '' : ' disabled') + '>' + (pl.ok ? 'Pledge the dividend back' : 'Dividend pledged') + '</button>' +
+          '<div class="action-meta">' + (pl.ok ? 'Promise the full dividend within a year of the crisis ending. Williams +1 now; break it and he is \u22123, plus 1 political capital.' : (pl.why || '')) + '</div></div>'; }
       var ecb = el("btn-emergency-cut"); if (ecb && ec.ok) ecb.onclick = function() {
-        showModal("Emergency dividend cut", "Halve the dividend to $" + fmt(GameState.company.dividendPerShare / 2, 2) + " a share, with the board's approval.\n\nCosts 1 political capital. Williams accepts it as prudence (\u22120.5), not as a broken promise. Share price \u22126% (a normal halving: \u221218%). After the crisis, his demand will be to restore it.",
+        showModal("Emergency dividend cut", "Halve the dividend to $" + fmt(GameState.company.dividendPerShare / 2, 2) + " a share, with the board's approval.\n\nCosts 1 political capital. Williams accepts it as prudence (\u22121), not as a broken promise. Okafor +1. Share price \u22126% (a normal halving: \u221218%). After the crisis, his demand will be to restore it.",
           [{ label: "Halve the dividend", style: "btn-danger", onClick: function() { var r = Financials.emergencyCut(); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
+      };
+      var plb = el("btn-pledge"); if (plb && pl.ok) plb.onclick = function() {
+        showModal("Pledge the dividend back", "Tell the shareholders the full dividend comes back within a year of the crisis ending.\n\nWilliams +1 now. Restore it in time: Williams +0.5. Miss it: Williams \u22123 and 1 political capital.",
+          [{ label: "Make the pledge", style: "btn-primary", onClick: function() { var r = Crisis.pledge(); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
       };
     }
     var equityUsedThisYear = GameState.company.equityIssuanceYear === GameState.meta.year;
@@ -1057,7 +1068,8 @@ window.UI = (function() {
       "Effect: NOI +15% permanently | Occupancy +" + fmt(Math.min(8, (0.97 - prop.occupancy) * 100), 0) + "% on completion\n\n" +
       "Cash available: " + fmtM(GameState.balance.cash) + "\n" +
       "Current NOI: " + fmtM(prop.annualNOI) + "/yr — After: " + fmtM(prop.annualNOI * 1.15) + "/yr\n\n" +
-      "Payback: ~2.5-3 years from NOI gain + value appreciation.",
+      "Payback: ~2.5-3 years from NOI gain + value appreciation.\n" +
+      "Condition back to New. You can renovate again once it is Worn (6 years).",
       [{ label: "Start Renovation — $" + cost + "M", style: "btn-primary", onClick: function() {
         var r = Properties.startRenovation(propertyId);
         showToast(r.message, r.success ? "success" : "error");
@@ -1103,7 +1115,7 @@ window.UI = (function() {
     var p = GameState.portfolio.find(function(x) { return x.id === propertyId; }); if (!p || !Tenants.canIncent) return;
     var c = Tenants.canIncent(p); if (!c.ok) { showToast(c.why, "error"); return; }
     showModal("Offer incentives: " + p.name,
-      "The brokers find a tenant within a quarter, on a long lease at " + Math.round(c.pct * 100) + "% of the old rent" + (p.renovated ? " (renovated: full rent)" : " (renovate first and they pay 100%)") +
+      "The brokers find a tenant within a quarter, on a long lease at " + Math.round(c.pct * 100) + "% of the old rent" + (c.pct >= 1 ? " (renovated: full rent)" : Properties.canRenovate(p).ok ? " (renovate first and they pay 100%)" : "") +
       ". The rent steps up: 25%, 50%, 75%, then full.\nBroker\u2019s fee: " + fmtM(c.fee) + " (a quarter\u2019s rent).",
       [{ label: "Offer incentives: " + fmtM(c.fee), style: "btn-primary", onClick: function() { var r = Tenants.offerIncentives(p); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
   }
@@ -1132,6 +1144,7 @@ window.UI = (function() {
         showToast(prop.name + " occupancy boosted to " + fmtPct(prop.occupancy), "success");
         GameState.board.leaseUpsThisYear = (GameState.board.leaseUpsThisYear || 0) + 1;
         prop.leaseUpYear = GameState.meta.year;
+        if (window.Crisis) Crisis.credit();   // round 38: Hassan notices, in a crisis
         renderAll();
       }}]);
   }
@@ -2146,6 +2159,7 @@ window.UI = (function() {
     GameState._belt            = null;   // round 34: belt-tightening (levi.js)
     GameState._ratingHit       = null;   // round 34: a bond extension marks the rating down for a year
     GameState._funny           = null;   // round 35: the once-a-game small events (world.js)
+    GameState._crisis = null; GameState._pledge = null; GameState._restore = null;   // round 38
     GameState._eCut = null; GameState._eCutUsed = null; GameState._noBonusYear = null; GameState._covWaiver = null;   // round 37 / 36
     GameState._shock           = null;   // round 35: board grace after a shock you did not cause (directors.js)
     GameState.deals = null; GameState.agents = null; GameState.pr = null;   // round 22: deals.js, agents.js, pr.js

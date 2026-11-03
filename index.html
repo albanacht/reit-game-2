@@ -293,6 +293,7 @@
                 <div class="seg">
                   <button class="on" data-m="owner">Owner</button><button data-m="cap">Cap rate</button><button data-m="occ">Occupancy</button><button data-m="val">Value</button>
                 </div>
+                <div class="seg" style="margin-top:4px"><button class="on" id="map-labels" title="Value · yield today · occupancy on your buildings; price · yield today on those for sale">Labels: on</button></div>
                 <div class="map-legend" id="legend"></div>
               </div>
               <img src="assets/city_map.jpg" alt="Riverton" id="mapimg">
@@ -327,6 +328,7 @@
               <button class="toggle"    data-g="ti">tier</button>
               <span id="filterNote"></span>
             </div>
+            <div class="sml" style="margin:2px 0 4px;color:#5a6b7d">&#9656; Click a building to open it: lease up, renovate, sell.</div>
             <table id="tMine"></table>
             <h2 class="sec" id="s-market">On the market <span class="cnt" id="n2"></span></h2>
             <table id="tMarket"></table>
@@ -411,6 +413,7 @@
             <tr><td class="pnl-indent">G&amp;A Expense</td><td id="pnl-ga" class="text-muted">—</td></tr>
             <tr><td class="pnl-indent">Interest Expense</td><td id="pnl-interest" class="text-red">—</td></tr>
             <tr><td class="pnl-indent">Depreciation</td><td id="pnl-depr" class="text-muted">—</td></tr>
+            <tr id="pnl-cashint-row" style="display:none"><td class="pnl-indent">Interest on cash</td><td id="pnl-cashint" class="text-green">—</td></tr>
             <tr id="pnl-loanint-row" style="display:none"><td class="pnl-indent">Income from loans and stakes</td><td id="pnl-loanint" class="text-green">—</td></tr>
             <tr><td class="pnl-indent">Unusual Items</td><td id="pnl-unusual">—</td></tr>
             <tr class="pnl-divider pnl-subtotal"><td>Net Income (GAAP)</td><td id="pnl-netincome">—</td></tr>
@@ -624,6 +627,7 @@
 <script src="js/agents.js"></script>
 <script src="js/deals.js"></script>
 <script src="js/pr.js"></script>
+<script src="js/crisis.js"></script>
 <script src="js/ending.js"></script>
 <script src="js/scores.js"></script>
 <script src="js/events.js"></script>

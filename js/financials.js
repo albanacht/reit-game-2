@@ -133,6 +133,11 @@ window.Financials = (() => {
     );
   }
 
+  /* round 38: cash earns the base rate minus a point (at least 0.5%), like a
+     money-market fund. Small on purpose: idle cash stops being a total waste. */
+  function cashRate() { var b = (GameState.market && GameState.market.baseInterestRate) || 3; return Math.max(0.5, b - 1); }
+  function calcCashInterest() { var c = GameState.balance.cash || 0; return c > 0 ? fmt(c * cashRate() / 100 / 4) : 0; }
+
   // ----------------------------------------------------------
   // STEP 4 — CALCULATE DEPRECIATION
   // Non-cash charge; adds back to get FFO
@@ -173,11 +178,13 @@ window.Financials = (() => {
   function assemblePnL(noComponents, ga, interest, depreciation, capex) {
     const unusualItems = GameState.pnl.unusualItems; // already set by events.js
     const loanInterest = GameState.pnl.loanInterest || 0;   // story.js: interest received on loans to tenants
+    const cashInterest = calcCashInterest();                 // round 38: cash in a money-market fund
 
     // Net Income (GAAP)
     const netIncome = fmt(
       noComponents.noi
       + loanInterest
+      + cashInterest
       - ga
       - interest
       - depreciation
@@ -233,6 +240,7 @@ window.Financials = (() => {
       depreciation:        depreciation,
       unusualItems:        unusualItems,
       loanInterest:        loanInterest,
+      cashInterest:        cashInterest,
       netIncome:           netIncome,
       ffo:                 ffo,
       affo:                affo,
@@ -261,6 +269,7 @@ window.Financials = (() => {
     const cashFlow = fmt(
       pnl.noi
       + (pnl.loanInterest || 0)
+      + (pnl.cashInterest || 0)
       - pnl.gAndA
       - pnl.interestExpense
       + pnl.unusualItems
@@ -1188,17 +1197,18 @@ window.Financials = (() => {
 
   // Set quarterly dividend per share
   /* -- round 37: THE EMERGENCY DIVIDEND CUT ---------------------------------------
-     In a crisis (or the aftershock), with the dividend not covered by cash profit,
-     the board approves halving it: 1 political capital, once per crisis and once in
-     the aftershock. Williams accepts it as prudence (-0.5, not his red line); the
-     market dips 6% (a normal halving costs 18%). After the crisis he asks for it back. */
+     In a crisis (or the aftershock) the board approves halving it, covered or not
+     (round 38): 1 political capital, once per crisis and once in the aftershock.
+     Williams accepts it as prudence (-1, not his red line), Okafor +1; the market
+     dips 6% (a normal halving costs 18%). After the crisis he asks for it back
+     (crisis.js: the pledge, and his demand at the meeting). */
   function canEmergencyCut() {
     var G = GameState, ph = (typeof Arc !== "undefined" && Arc.phase) ? Arc.phase() : "";
     if (ph !== "crisis" && ph !== "aftershock") return { ok: false, show: false };
     var used = G._eCutUsed || {}, pr = payoutRatio();
     if (used[ph]) return { ok: false, show: true, why: "Already used in this " + (ph === "crisis" ? "crisis" : "aftershock") };
     if (!(G.company.dividendPerShare > 0.005)) return { ok: false, show: false };
-    if (pr == null || pr <= 1.0) return { ok: false, show: true, why: "Only when the dividend is not covered by cash profit (now " + (pr == null ? "?" : Math.round(pr * 100)) + "% of it)" };
+    // round 38: allowed in a crisis whether or not the dividend is covered
     if ((G.board.politicalCapital || 0) < 1) return { ok: false, show: true, why: "Needs 1 political capital" };
     return { ok: true, show: true, phase: ph };
   }
@@ -1210,9 +1220,10 @@ window.Financials = (() => {
     G.board.pressurePoints = Math.min(G.board.maxPressure, (G.board.pressurePoints || 0) + 1);
     G._eCutUsed = G._eCutUsed || {}; G._eCutUsed[c.phase] = true;
     G._eCut = { q: (G.meta.year - 1) * 4 + G.meta.quarter, from: old, to: nw, restored: false };
-    if (typeof Directors !== "undefined") Directors.remember("williams", -0.5, "the emergency dividend cut, which he approved");
+    if (typeof Directors !== "undefined") { Directors.remember("williams", -1, "the emergency dividend cut, which he approved");   // round 38: −1, and Okafor likes it
+      if (Directors.has("okafor")) Directors.remember("okafor", 1, "you protected the balance sheet in the crisis"); }
     if (typeof News !== "undefined" && News.add) News.add(G.company.name + " halves its dividend to protect its balance sheet through the downturn.", "dividend");
-    return { success: true, message: "The board approved it: the dividend is halved to $" + nw.toFixed(2) + " a share. Williams: \"Prudence, son. I expect it back when this is over.\" Share price \u22126%." };
+    return { success: true, message: "The board approved it: the dividend is halved to $" + nw.toFixed(2) + " a share. Williams: \"Prudence, son. I expect it back when this is over.\" Williams \u22121, Okafor +1. Share price \u22126%." };
   }
   function setDividend(newDividendPerShare) {
     if (typeof Revolver !== "undefined" && Revolver.dividendFrozen() &&
@@ -1527,6 +1538,7 @@ window.Financials = (() => {
     getCallInfo,
     issuePreferred,
     debtRoom,
+    cashRate,
     issuePreferredFor,
     prefChoice,
     prefPurpose,

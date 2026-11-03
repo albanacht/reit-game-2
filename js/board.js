@@ -191,12 +191,12 @@ window.Board = (() => {
     GameState.board.startBoard        = null;
     GameState.board.chair             = null;   // round 14: Williams's successor, or 'you' (tower.js)
     GameState.board.saved             = {};
-    GameState.board.texUnpaid         = null;
+    GameState.board.texUnpaid         = null; GameState.board.texMeetings = 0; GameState.board.formerly = {};   // round 38
     GameState.board._departYear       = null;
     GameState.board.activist          = null;
     GameState.board.politicalCapital  = 2;
     GameState.board.maxCapital        = 8;      // round 12: was 5 (tools/sim_capital.js: players earned ~1 a year)
-    GameState.board.galaYear          = 0;
+    GameState.board.galaYear          = 0; GameState.board.galaCount = 0;
     GameState.board.year1Safe         = true;
     GameState.board.activeMandates    = [];
     GameState.board.mandateTracking   = {};
@@ -363,7 +363,8 @@ window.Board = (() => {
         // round 37: after the crisis, the emergency cut must be undone
         var EC = G._eCut, ph37 = typeof Arc !== "undefined" && Arc.phase ? Arc.phase() : "";
         if (EC && !EC.restored && co.dividendPerShare >= EC.from - 0.005) EC.restored = true;
-        if (EC && !EC.restored && ph37 !== "crisis" && ph37 !== "aftershock")
+        // round 38: crisis.js asks for it at the meeting (restore / halfway / refuse) and tracks the promise; no second demand
+        if (EC && !EC.restored && ph37 !== "crisis" && ph37 !== "aftershock" && typeof Crisis === "undefined")
           return mk(id, "div_restore", "Restore the dividend to $" + EC.from.toFixed(2) + " a share, as we agreed in the crisis.", "dividendRestored", 1, true);
         if (typeof Directors !== "undefined" && Directors.overPaying && Directors.overPaying() >= 2)   // round 21
           return mk(id, "div_earned", "Pay the dividend from what we earn: no more than our cash profit by next year. I will not count that cut against you.", "payoutOk", 1, true);
@@ -699,14 +700,19 @@ window.Board = (() => {
     return earned;
   }
   /* Once a year: a charity gala / the mayor's fund. Money for influence. */
+  /* round 38: one gala every 2 years, and each costs more ($0.5M, $1M, $1.5M...):
+     the city's goodwill gets dearer the more often you ask for it. */
+  function galaCost() { return Math.round((0.5 * ((GameState.board.galaCount || 0) + 1)) * 10) / 10; }
+  function galaNext() { var y = GameState.board.galaYear || 0; return y ? y + 2 : 0; }
+  function galaOk() { return !galaNext() || GameState.meta.year >= galaNext(); }
   function hostGala() {
-    var b = GameState.board, cost = 0.5;
-    if (b.galaYear === GameState.meta.year) return { success: false, message: "One gala a year. Next year." };
+    var b = GameState.board, cost = galaCost();
+    if (!galaOk()) return { success: false, message: "One gala every 2 years. Next one in Year " + galaNext() + "." };
     if (b.politicalCapital >= b.maxCapital) return { success: false, message: "Your political capital is already full." };
-    b.galaYear = GameState.meta.year;
+    b.galaYear = GameState.meta.year; b.galaCount = (b.galaCount || 0) + 1;
     GameState._pendingUnusual = Math.round(((GameState._pendingUnusual || 0) - cost) * 100) / 100;
     b.politicalCapital = Math.min(b.maxCapital, b.politicalCapital + 1);
-    return { success: true, message: "The Riverton Children's Hospital gala: the mayor sat at your table. +1 political capital ($0.5M, a one-off cost)." };
+    return { success: true, message: "The Riverton Children's Hospital gala: the mayor sat at your table. +1 political capital ($" + cost.toFixed(1) + "M, a one-off cost). Next gala: Year " + galaNext() + ", $" + galaCost().toFixed(1) + "M." };
   }
 
   // ----------------------------------------------------------
@@ -945,7 +951,7 @@ window.Board = (() => {
     getBoardStatus,
     updateAttitudes,
     generateMandates,
-    hostGala,
+    hostGala, galaCost, galaNext, galaOk,
     generateDemands,
     demandFor,
     evaluateMandates,

@@ -27,13 +27,21 @@ window.PROPS = (() => {
     return o + '%<span class="bar"><i style="width:' + o + '%;background:' + c + '"></i></span>';
   }
   function nameCell(o, sub) {
-    return '<div class="nm">' + R.photoImg(o.ph) +
+    // round 38: an arrow says the row opens (actions: lease up, renovate, sell)
+    const chev = o.id ? '<span class="chev">' + (open.has(o.id) ? '&#9662;' : '&#9656;') + '</span>' : '';
+    return '<div class="nm">' + chev + R.photoImg(o.ph) +
            '<div><div class="t1">' + R.esc(o.n) + '</div>' +
            '<div class="t2">' + sub + '</div></div></div>';
   }
   const typeSub = p => R.TN[p.t] + ' &middot; ' + R.TI[p.ti] + (p.count ? ' &middot; ' + p.count : '') +
     (p.jv ? ' &middot; <b>JV ' + p.jv.mine + '% yours</b>' : '');
 
+  /* round 38: condition, from years since built or renovated */
+  function condTag(p) {
+    const raw = p._raw; if (!raw || !Properties.condition || raw.underConstruction) return '';
+    const c = Properties.condition(raw);
+    return ' &middot; <span class="cond cond-' + c.cls + '" title="' + c.w + ' years since built or renovated. New under 3, Good 3-6, Worn 6-10 (renovate again), Tired 10+ (lets a little worse)">' + c.label + '</span>';
+  }
   function statusBadge(p) {
     if (R.listedByMe(p))         return '<span class="badge b-listed">Listed ' + R.money(p.ask) + '</span>';
     if (p.status === 'renovating') return '<span class="badge b-reno">Renovating</span>';
@@ -102,9 +110,8 @@ window.PROPS = (() => {
   /* -- rows ---------------------------------------------------------------- */
   function rowMine(p) {
     return '<tr class="row' + (R.listedByMe(p) ? ' listed' : '') + '" data-id="' + p.id + '">' +
-      '<td class="l">' + nameCell(p, typeSub(p)) + '</td>' +
+      '<td class="l">' + nameCell(p, typeSub(p) + condTag(p)) + '</td>' +
       '<td>' + R.money(p.v) + '</td>' +
-      
       '<td>' + R.pct(p.cap) + '</td><td>' + R.pct(p.yNow) + '</td>' +
       '<td>' + occBar(p.occ) + '</td>' +
       '<td class="l">' + statusBadge(p) +
@@ -205,7 +212,7 @@ window.PROPS = (() => {
       }
       // round 37: an empty single-tenant building: offer incentives (or renovate first, for full rent)
       if (locked && Tenants.canIncent) { const ci = Tenants.canIncent(raw);
-        if (ci.ok) out.push(b('incent', 'Offer incentives', 'A tenant signs next quarter at ' + Math.round(ci.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + ci.fee.toFixed(1) + 'M.' + (raw.renovated ? '' : ' Renovate first for 100%.')));
+        if (ci.ok) out.push(b('incent', 'Offer incentives', 'A tenant signs next quarter at ' + Math.round(ci.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + ci.fee.toFixed(1) + 'M.' + (ci.pct >= 1 || !Properties.canRenovate(raw).ok ? '' : ' Renovate first for 100%.')));
         else if (/Asset Manager/.test(ci.why)) out.push('<button class="act mute" title="' + ci.why + '" disabled>Offer incentives</button>'); }
       if (Properties.canRenovate && Properties.canRenovate(raw).ok)
         out.push(b('renovate', 'Renovate $' + (raw.currentValue * 0.10).toFixed(1) + 'M' + (locked ? ' (then 100% rent)' : '')));

@@ -162,9 +162,19 @@ window.Journal = (() => {
     (G.portfolio || []).filter(p => p.underConstruction && (p.constructionType === 'renovation' || p.constructionType === 'repositioning')).forEach(p => {
       const ren = p.constructionType === 'renovation';
       rows.push('<div class="dr-row"><div class="dr-main"><b>' + (ren ? 'Renovating ' : 'Repositioning ') + esc(p.name) + '</b><div class="sml-note">' + p.constructionQuartersLeft + ' quarter' + (p.constructionQuartersLeft === 1 ? '' : 's') + ' left, offline meanwhile. ' +
-        (ren ? 'Reopens with rent +15%, more of it let, and it ages slower for 4 years.' : 'Reopens as ' + esc(p.targetSector || 'a new use') + '.') + '</div></div></div>');
+        (ren ? 'Reopens with rent +15%, more of it let, and in New condition.' : 'Reopens as ' + esc(p.targetSector || 'a new use') + '.') + '</div></div></div>');
     });
-    return rows.length ? '<div class="jr-sec">Building works</div>' + rows.join('') : '';
+    // round 38: everything in motion: tenants signing on incentives, rents stepping up, this year's lease-ups
+    (G.portfolio || []).forEach(p => (p.lease ? p.lease.positions : []).filter(x => x.vacant && x.incent).forEach(x => {
+      rows.push('<div class="dr-row"><div class="dr-main"><b>Signing a tenant at ' + esc(p.name) + '</b><div class="sml-note">On incentives: moves in next quarter at ' + Math.round(x.incent.pct * 100) + '% of the old rent, paying 25% of it at first and full rent within a year.</div></div></div>');
+    }));
+    (G.portfolio || []).filter(p => p.rentFactor != null && p.rentFactor < 1).forEach(p => {
+      rows.push('<div class="dr-row"><div class="dr-main"><b>New tenant at ' + esc(p.name) + '</b><div class="sml-note">Rent stepping up: ' + Math.round(p.rentFactor * 100) + '% of the full rent collected now, rising each quarter.</div></div></div>');
+    });
+    (G.portfolio || []).filter(p => p.leaseUpYear === G.meta.year).forEach(p => {
+      rows.push('<div class="dr-row"><div class="dr-main"><b>Leased up ' + esc(p.name) + '</b><div class="sml-note">This year: now ' + Math.round(p.occupancy * 100) + '% let. Next lease-up possible in Year ' + (G.meta.year + 1) + '.</div></div></div>');
+    });
+    return rows.length ? '<div class="jr-sec">Building works and leasing</div>' + rows.join('') : '';
   }
   function tenantsHTML() {
     const G = GameState, rows = [];
@@ -174,11 +184,9 @@ window.Journal = (() => {
         (t.coverage < 1 ? 'Paying you from savings: a default is a real risk.' : 'On watch: one bad year from trouble.') + '</div></div></div>');
     });
     (G.portfolio || []).forEach(p => (p.lease ? p.lease.positions : []).filter(x => x.vacant).forEach(x => {
+      if (x.incent) return;   // round 38: signing: shown under works
       rows.push('<div class="dr-row"><div class="dr-main"><b>Empty space at ' + esc(p.name) + '</b><div class="sml-note">$' + (p.annualNOI * x.share).toFixed(1) + 'M a year of rent dark. Re-letting: about ' + Math.max(1, x.relet || 1) + ' quarter' + ((x.relet || 1) === 1 ? '' : 's') + ' to go' + (window.Staff && Staff.hasRole('asset') ? '' : ' (an Asset Manager would speed it up)') + '.</div></div></div>');
     }));
-    (G.portfolio || []).filter(p => p.rentFactor != null && p.rentFactor < 1).forEach(p => {
-      rows.push('<div class="dr-row"><div class="dr-main"><b>New tenant at ' + esc(p.name) + '</b><div class="sml-note">Rent stepping up: ' + Math.round(p.rentFactor * 100) + '% of the full rent collected now, rising each quarter.</div></div></div>');
-    });
     return rows.length ? '<div class="jr-sec">Tenants to watch</div>' + rows.join('') : '';
   }
   function casesHTML() {
@@ -192,11 +200,16 @@ window.Journal = (() => {
   }
   function influenceHTML() {
     const b = (window.GameState && GameState.board) || {}, pcap = b.politicalCapital || 0, max = b.maxCapital || 8;
-    const gala = b.galaYear === GameState.meta.year;
+    const gala = window.Board && Board.galaOk ? !Board.galaOk() : b.galaYear === GameState.meta.year;   // round 38: every 2 years
     const camp = window.PR ? PR.active() : [];
     return '<div class="jr-sec">Influence</div><div class="dr-row"><div class="dr-main"><b>Political capital: ' + pcap + ' / ' + max + '</b>' +
       '<div class="sml-note">Earned at board meetings and in stories. Spent on bank favours (Finance), trades with directors, story choices, and directors working your cases.</div></div>' +
-      '<div class="dr-acts"><button class="btn btn-secondary btn-sm" id="dr-gala"' + (gala || pcap >= max ? ' disabled' : '') + '>' + (gala ? 'Gala held this year' : 'Host a charity gala: $0.5M for +1') + '</button></div></div>' +
+      '<div class="dr-acts"><button class="btn btn-secondary btn-sm" id="dr-gala"' + (gala || pcap >= max ? ' disabled' : '') + '>' + (gala ? 'Next gala: Year ' + Board.galaNext() : 'Host a charity gala: $' + Board.galaCost().toFixed(1) + 'M for +1') + '</button></div></div>' +
+      (function () {   // round 38: crisis only, once per crisis
+        const t = window.Crisis ? Crisis.canTrust() : { show: false };
+        return t.show ? '<div class="dr-row"><div class="dr-main"><b>Ask the market for trust</b><div class="sml-note">A short video to the shareholders, then every call they ask for. Share price +3% for 2 quarters, Petrova +1. Once per crisis.</div></div>' +
+          '<div class="dr-acts"><button class="btn btn-secondary btn-sm" id="dr-trust"' + (t.ok ? '' : ' disabled title="' + esc(t.why || '') + '"') + '>' + (t.ok ? 'Address the shareholders: $0.1M, 1 political capital' : esc(t.why || '')) + '</button></div></div>' : '';
+      })() +
       '<div class="dr-row"><div class="dr-main"><b>Campaigns</b><div class="sml-note">' +
       (camp.length ? camp.map(c => esc(c.name) + ' (' + (c.lift >= 0 ? '+' : '−') + Math.abs(c.lift * 100).toFixed(1) + '% on the share price, ' + (c.until - ((GameState.meta.year - 1) * 4 + GameState.meta.quarter)) + ' qtrs left)').join('; ')
                    : 'None running. Sponsorships and PR offers arrive in your inbox every year or so (more often with a Head of IR).') + '</div></div></div>';
@@ -221,6 +234,8 @@ window.Journal = (() => {
     box.querySelectorAll('[data-case]').forEach(b => b.onclick = () => Agents.openPicker(b.dataset.case, after));
     box.querySelectorAll('[data-wd]').forEach(b => b.onclick = () => { const r = Deals.withdraw(b.dataset.wd); if (window.UI) { UI.showToast(r.message, r.success ? 'success' : 'error'); UI.renderAll(); } render(); });
     box.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => Deals.openPlan(b.dataset.plan));
+    const tr = document.getElementById('dr-trust');
+    if (tr) tr.onclick = () => { const r = Crisis.trust(); if (window.UI) { UI.showToast(r.message, r.success ? 'success' : 'error'); UI.renderAll(); } render(); };
     const g = document.getElementById('dr-gala');
     if (g) g.onclick = () => { const r = Board.hostGala(); if (window.UI) { UI.showToast(r.message, r.success ? 'success' : 'error'); UI.renderAll(); } render(); };
   }

@@ -159,7 +159,10 @@ window.Levi = (() => {
     return c.sort((a, b) => Properties.stabRent(b) / b.currentValue - Properties.stabRent(a) / a.currentValue)[0] || null;
   }
   function bestListing() {
-    const G = GameState; return (G.propertyMarket || []).filter(p => p.listedByOwner && p.askingPrice > 0 && p.annualNOI > 0)
+    // round 38: a pick you can pay for (cash, credit line, borrowing room) and no more than a fifth of what we own
+    const G = GameState, R = Financials.debtRoom ? Financials.debtRoom() : { secured: 0, refinancing: 0 };
+    const cap = Math.min(Math.max(15, (G.balance.totalAssets || 200) * 0.20), Math.max(0, spendable()) + Math.max(0, R.secured - R.refinancing));
+    return (G.propertyMarket || []).filter(p => p.listedByOwner && p.askingPrice > 0 && p.annualNOI > 0 && !p.storyLock && p.askingPrice <= cap)
       .sort((a, b) => Properties.stabRent(b) / b.askingPrice - Properties.stabRent(a) / a.askingPrice)[0] || null;
   }
 
@@ -183,7 +186,7 @@ window.Levi = (() => {
   if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === CARD.id)) World.DECISIONS.push(CARD);
 
   /* round 34: after Levi's crisis (or aftershock) warning, a one-off choice: tighten belts for a year. */
-  const BELT = { id: 'levi_belt', system: true, story: true, holdQ: 1,
+  const BELT = { id: 'levi_belt', system: true, story: true, holdQ: 0,   // round 38: no "on hold": short of capital, you let it go
     build() {
       const l = L(); if (!l.beltFor) return null;
       const after = l.beltFor === 'after', G = GameState, ga = G.pnl && G.pnl.gAndA ? G.pnl.gAndA * 4 : 0;
@@ -249,7 +252,7 @@ window.Levi = (() => {
             { label: 'Not now', detail: 'Levi will notice.', apply() { l.gems.bottom = 'passed'; return 'Levi muttered something about "regime persistence".' + ignored(); } },
           ] };
       } },
-    { id: 'levi_belt2', system: true, story: true, holdQ: 1,
+    { id: 'levi_belt2', system: true, story: true, holdQ: 0,
       build() {
         const G = GameState, B = G._belt; if (!B || B.y2 || !B.y2asked) return null;
         const ga = G.pnl && G.pnl.gAndA ? G.pnl.gAndA * 4 : 3;

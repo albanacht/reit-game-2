@@ -1002,6 +1002,7 @@ window.Story = (() => {
     try { if (window.Port) Port.agenda(year, items); } catch (e) { if (window.console) console.warn('port', e); }
     try { if (window.Levi) Levi.agenda(year, items); } catch (e) { if (window.console) console.warn('levi', e); }
     try { if (window.IndexFund) IndexFund.agenda(year, items); } catch (e) { if (window.console) console.warn('index', e); }
+    try { if (window.Crisis) Crisis.agenda(year, items); } catch (e) { if (window.console) console.warn('crisis', e); }   // round 38
     return items;
   }
   function harlowAgenda(year) {
@@ -1200,6 +1201,7 @@ window.Story = (() => {
     try { if (window.Sales) Sales.processQuarter(); } catch (e) { if (window.console) console.warn('sales', e); }
     try { if (window.Deals) Deals.processQuarter(out); } catch (e) { if (window.console) console.warn('deals', e); }   // round 22
     try { if (window.PR) PR.processQuarter(out); } catch (e) { if (window.console) console.warn('pr', e); }
+    try { if (window.Crisis) Crisis.processQuarter(out); } catch (e) { if (window.console) console.warn('crisis', e); }   // round 38
     try { if (window.Pay) Pay.quarter(); } catch (e) { if (window.console) console.warn('pay', e); }
     return out;
   }
