@@ -83,14 +83,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     return r; }, choice, lobby, exposeRnd);
 
   const mc = await mayorRun('clean', false, 0);
-  ok(mc.due === 'mayor_offer' && mc.bld && mc.labels.length === 5, 'Year 12: Frank’s card, 5 choices: ' + mc.labels.map(l => l.slice(0, 28)).join(' | '));
+  ok(mc.due === 'mayor_offer' && mc.bld && mc.labels.length === 4, 'Year 12: Frank’s card, 4 choices (round 39): ' + mc.labels.map(l => l.slice(0, 28)).join(' | '));
   ok(Math.abs(mc.occ1 - 0.15) < 0.01 && Math.abs(mc.noi1 - (1 + 0.15 * -0.15)) < 0.01 && mc.end === 'clean', 'clean: +15 points let at 85% rent; investigation finds nothing. Ending: "' + mc.card + '"');
   const ms = await mayorRun('sweet', false, 0);
   ok(Math.abs(ms.noi1 - 1.03) < 0.01 && Math.abs(ms.noi2 - 1) < 0.01 && ms.end === 'sweet_exposed', 'sweetheart: rent +3% on the building, exposed: back to market (' + ms.letter + ')');
   const mk = await mayorRun('skim', false, 0);
   ok(Math.abs(mk.cash1 - 3) < 0.01 && Math.abs(mk.cash2 - (3 - 7.5)) < 0.01 && !mk.over && mk.end === 'skim_exposed', 'skim: +$3M to you; exposed: $7.5M fine, still CEO. "' + mk.card + '"');
-  const mq = await mayorRun('skim', true, 0.3);
-  ok(Math.abs(mq.cash2 - 3) < 0.01 && mq.pc === -2 && mq.end === 'skim_quiet', 'skim + lobbying (2 political capital): 20% odds, a 0.3 roll stays quiet; you keep $3M');
+  // round 39: the lobbying variant is gone (4 options at most)
   const mr = await mayorRun('refuse', false, 0);
   ok(mr.pc === 2 && mr.occ1 === 0 && /said no/.test(mr.letter) && (!mr.ren0 || mr.ren < 0.9), 'refuse: no lease; the Ledger "' + mr.letter + '": +2 political capital' + (mr.ren0 ? ', Rennick ×' + mr.ren.toFixed(2) : '') + '. "' + mr.card + '"');
 

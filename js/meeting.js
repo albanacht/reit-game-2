@@ -120,7 +120,7 @@ window.Meeting = (() => {
     g._boardMeetingOpen = true; g._pendingBoardMeeting = false;
     const m = dom(); m.classList.remove('hidden');
     document.getElementById('mt-chat').innerHTML = ''; document.getElementById('mt-actions').innerHTML = '';
-    S = { year, practice: year < 2, q: [], shown: {}, votes: {}, timer: null };
+    S = { year, practice: year < 2, last: g.meta.year >= 15, q: [], shown: {}, votes: {}, timer: null };   // round 39: last = the final meeting
     document.getElementById('mt-title').textContent = 'Board meeting · end of Year ' + year + (S.practice ? ' · practice, no vote' : '');
     order().forEach(id => { S.shown[id] = dir(id).attitude; });         // moods before the review
 
@@ -135,7 +135,11 @@ window.Meeting = (() => {
          third meeting, nothing in between. Can't pay: his term ends, no hard feelings. */
       if (Directors.has('tex')) {
         b.texMeetings = (b.texMeetings || 0) + 1;
-        if (b.texMeetings % 3 === 0) {
+        // round 39: below the reputation line he offers to resign (saving him renews the term); no renewal charge first
+        if (b.texMeetings % 3 === 0 && Directors.rep('tex') < Directors.REP_LINE) {
+          b._texRenewWithSave = true;
+          b._lastEarned = (b._lastEarned || []).concat(['Tex\u2019s 3-year term is up, and his reputation is below ' + Directors.REP_LINE + ': no renewal charge. The board will discuss his seat.']);
+        } else if (b.texMeetings % 3 === 0) {
           if ((b.politicalCapital || 0) >= 2) {
             b.politicalCapital -= 2;
             b._lastEarned = (b._lastEarned || []).concat(['Tex\u2019s 3-year term renewed (calls to the big shareholders, favours with the nominating committee): \u22122 political capital']);
@@ -239,21 +243,28 @@ window.Meeting = (() => {
   };
   function beatDeparture() {
     const b = G().board;
+    // round 39: after a Harlow bust Hassan offers to resign whatever his reputation, unless Gary's Family Groceries kept Bob's stores open
+    const HH = window.Story && Story.H ? Story.H() : {};
+    const forced = !S.practice && b._departYear !== S.year && !b._hassanForcedDone && dir('hassan') && CH() !== 'hassan' && HH.bust && HH.hassanDiscredited && HH.rescue !== 'family';
     const out = S.practice || b._departYear === S.year ? null
+      : forced ? 'hassan'
       : order().filter(id => id !== 'williams' && id !== CH() && id !== 'activist' && Directors.rep(id) < Directors.REP_LINE)[0];
     if (!out) { beatStory(); return; }
+    if (forced) b._hassanForcedDone = true;
     b._departYear = S.year; b.saved = b.saved || {};
     const c = Directors.card(out), pc = b.politicalCapital || 0, why = (c.repWhy || []).slice(0, 3).join('; ');
     const harlow = out === 'hassan' && window.Story && Story.H && Story.H().hassanDiscredited;
     say(CH(), (harlow ? 'Hassan backed Harlow from the first day, and the shareholders have not forgotten it. ' : '') +
       sn(out) + ' has offered ' + (out === 'mansour' ? 'her' : 'his') + ' resignation. The board is minded to accept it.');
-    say('note', '', '<b>' + esc(sn(out)) + '\u2019s reputation: ' + c.rep + ' / 100</b> (below ' + Directors.REP_LINE + ')' + (why ? '<div class="mt-sub">' + esc(why) + '</div>' : ''));
+    say('note', '', forced ? '<b>Hassan brought Bob Harlow to this board.</b> Harlow went bust; the shareholders want a name. Reputation ' + c.rep + ' / 100.'
+                           : '<b>' + esc(sn(out)) + '\u2019s reputation: ' + c.rep + ' / 100</b> (below ' + Directors.REP_LINE + ')' + (why ? '<div class="mt-sub">' + esc(why) + '</div>' : ''));
     pump(() => actions([
       { label: 'Save ' + sn(out) + ' (2 political capital)', primary: true,
-        detail: 'Reputation back to 35. ' + sn(out) + ' becomes your ally (relationship +2): a near-certain vote for you. Petrova \u22121, Okafor \u22121: "you protect your friends". Once only.',
+        detail: (out === 'tex' && b._texRenewWithSave ? 'This also renews his 3-year term. ' : '') + 'Reputation back to ' + Math.max(35, c.rep) + '. ' + sn(out) + ' becomes your ally (relationship +2): a near-certain vote for you. Petrova \u22121, Okafor \u22121: "you protect your friends". Once only.',
         disabled: pc < 2 || b.saved[out], why: b.saved[out] ? 'You already saved ' + sn(out) + ' once' : 'Needs 2 political capital', go: () => {
           b.politicalCapital = pc - 2; b.saved[out] = true;
-          Directors.repChange(out, 35 - Directors.rep(out), 'you saved the seat');
+          if (Directors.rep(out) < 35) Directors.repChange(out, 35 - Directors.rep(out), 'you saved the seat');
+          if (out === 'tex') b._texRenewWithSave = false;
           Directors.bond(out, 2, 'you saved the seat');
           ['petrova', 'okafor'].forEach(id => { if (id !== out && dir(id)) Directors.remember(id, -1, 'you protected ' + sn(out)); });
           say('you', 'I want ' + sn(out) + ' on this board. I\u2019ll stand behind that.');
@@ -350,6 +361,7 @@ window.Meeting = (() => {
 
   // ---------------------------------------------------------------- 3. agenda
   function beatAgenda() {
+    if (S.last && G().board.chair === 'you') { pump(beatDemands); return; }   // round 39: your last meeting as chairman: no complaints
     const unhappy = order().map(id => dir(id)).filter(d => d.attitude < 4.75).sort((a, b) => a.attitude - b.attitude)[0];
     if (!unhappy) { say(CH(), 'No complaints worth the board’s time. On to next year.'); pump(beatDemands); return; }
     const id = unhappy.id, c = Directors.card(id), b = G().board;
@@ -372,7 +384,7 @@ window.Meeting = (() => {
             Directors.remember(id, 1, 'you promised to fix: ' + c.cause);
             say(id, pick(['I will hold you to that.', 'Noted. Don’t make me remind you.'])); mood(id); S.q[S.q.length - 1].mood = dir(id).attitude; pump(beatDemands); } },
         // round 11: "Argue with the facts" changed nothing you could not already see. A trade costs something real.
-        { label: other ? 'Offer a trade: side with ' + sn(id) + ' against ' + sn(other) : 'Offer a trade', detail: other
+        ...(id === 'petrova' && /new shares/.test(c.cause) ? [] : [{ label: other ? 'Offer a trade: side with ' + sn(id) + ' against ' + sn(other) : 'Offer a trade', detail: other
             ? sn(id) + ' +1.5 now, and ' + sn(id) + '\u2019s priority comes first in next year\u2019s demands. ' + sn(other) + ' \u22121: you sold them out.'
             : 'No one on the board to trade against.', disabled: !other, why: 'No opposing director on the board', go: () => {
             say('you', sn(id) + ', you have a point. Next year your priority comes first' + (other ? ', even if ' + sn(other) + ' won\u2019t like it.' : '.'));
@@ -380,7 +392,7 @@ window.Meeting = (() => {
             Directors.remember(id, 1.5, 'you sided with him on his priority');
             Directors.remember(other, -1, 'you sold him out to ' + sn(id));
             say(id, pick(['That is all I wanted to hear.', 'Good. That is a deal.'])); say(other, pick(['Noted.', 'I see how it is.']));
-            mood(id); mood(other); S.q[S.q.length - 1].mood = dir(other).attitude; pump(beatDemands); } },
+            mood(id); mood(other); S.q[S.q.length - 1].mood = dir(other).attitude; pump(beatDemands); } }]),   // round 39: Petrova's "explain" takes the trade's place: never more than 4 options
         // round 35: shares that bought buildings are an answer Petrova accepts
         ...(id === 'petrova' && /new shares/.test(c.cause) ? [{ label: 'Explain: the money bought buildings', detail: Directors.issueInvested() ? 'True: what we bought this year is worth what the shares raised. +1.5 mood, and the new shares stop counting against you.' : 'Not true yet: the money is still mostly cash.',
           disabled: !Directors.issueInvested(), why: 'The money from the shares has not been spent on buildings yet', go: () => {
@@ -409,12 +421,57 @@ window.Meeting = (() => {
   const SAVE = ['leverage', 'int_coverage', 'no_overdraft', 'no_debt_grow', 'no_equity', 'share_price'];
   function beatDemands() {
     const b = G().board;
+    if (S.last) { beatFinal(); return; }                                 // round 39: the last meeting sets no demands
+    const one = b.chair === 'you';
     if (b._demandsYear !== S.year) {
-      Board.generateDemands({ first: S.first, promise: S.promised });     // round 11: two, tied to what is wrong
+      Board.generateDemands({ first: S.first, promise: S.promised, max: one ? 1 : 2 });     // round 11: two, tied to what is wrong
       b._demandsYear = S.year; b._demandsDone = 0;
     }
-    say(CH(), 'Now, next year. Two demands, and we will hold you to both.');
+    const n = (b.activeMandates || []).length;
+    say(CH(), one ? (n ? 'You set the agenda now, so one demand from the board this year. We will hold you to it.' : 'No demands from the board this year.')
+                  : 'Now, next year. Two demands, and we will hold you to both.');
     pump(() => nextDemand());
+  }
+  /* -- round 39: the last meeting (the start of Year 15) ------------------------------
+     There is no meeting after it, so no demands: each director says one last thing.
+     As executive chairman you are not voted on; the board pays tribute instead. */
+  const FINAL = {
+    okafor:   'One more year. Don\u2019t borrow anything you can\u2019t repay by Christmas.',
+    petrova:  'Finish clean. The shareholders remember the last chapter.',
+    chen:     'If you see a bargain, take it. Your successor will thank you.',
+    williams: 'One last year, son. Keep the dividend where it is and I will sleep fine.',
+    hassan:   'Keep the buildings full. That is the whole job, in the end.',
+    mansour:  'I will be checking the rent roll every week until the end. Habit.',
+    grace:    'One last initiative? No? Fine. Next CEO, then.',
+    activist: 'One year left. Make it the year the share price finally catches up.',
+    tex:      'Last lap, partner. Don\u2019t trip on the way to the finish.',
+    voss:     'Mr Kessler sends his regards. He always does.',
+  };
+  const TRIBUTE = {
+    okafor:   'I disagreed with half of what you did. The balance sheet disagrees with me.',
+    petrova:  'The governance people will write about this board for years. Not kindly. Congratulations.',
+    chen:     'Fifteen years. I have worked for worse. Mostly for worse.',
+    williams: 'I always said you had it in you, son.',
+    hassan:   'You kept the lights on and the tenants in. Thank you.',
+    mansour:  'Every building let, near enough. I would sign that rent roll.',
+    grace:    'I have prepared a short speech. Twelve pages. I will email it.',
+    activist: 'My fund made money. I never thought I would say this in this room: well done.',
+    tex:      'Told y\u2019all.',
+    voss:     'Mr Kessler asked me to say nothing. So: nothing.',
+  };
+  function beatFinal() {
+    const b = G().board;
+    b.activeMandates = []; b._demandsYear = S.year; b._demandsDone = 0;
+    const chair = b.chair === 'you';
+    say('note', '', '<b>The last meeting.</b> The game ends after Year 15, so the board sets no demands this year.' + (chair ? ' You chair it: no vote.' : ''));
+    order().forEach(id => { const t = chair ? TRIBUTE[id] : FINAL[id]; if (t) say(id, t); });
+    if (chair) {
+      say('you', 'Thank you. Let\u2019s make the last year count. Meeting closed.');
+      pump(() => payCommittee(() => actions(leave('Back to work'))));
+      return;
+    }
+    say(CH(), 'Now, the vote. Each of us in turn.');
+    pump(() => vote(0, 0));
   }
   function nextDemand() {
     const b = G().board, list = b.activeMandates || [], i = b._demandsDone || 0;

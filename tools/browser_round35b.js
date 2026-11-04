@@ -38,7 +38,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // A. the chairman's call
   let s = await setup(false);
-  ok(s.due === 'story_harlow_after' && s.dc && s.labels.length >= 5, 'bust: "' + s.title + '" [' + s.labels.map(x => x.slice(0, 38)).join(' | ') + ']');
+  ok(s.due === 'story_harlow_after' && s.dc && s.labels.length === 4, 'bust: "' + s.title + '" [' + s.labels.map(x => x.slice(0, 38)).join(' | ') + ']');
   ok(/of your cash profit goes with it/.test(s.loanLine), 'the loan card said: "' + s.loanLine + '"');
   let m = await pickApply(/makes a call/);
   let a = await pg.evaluate(() => { const G = GameState, p = G.portfolio.find(x => x.id === 'ind_hdc'); return { hassan: Directors.has('hassan'), mansour: Directors.has('mansour'), tenant: p.lease.positions[0].t, rent: p.annualNOI, old: Story.H().oldRent, inst: (Story.H().instal || []).length }; });
@@ -70,14 +70,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   m = await pg.evaluate(() => { const k = World.DECISIONS.find(x => x.id === 'story_family_nora').build(); const r = k.choices[0].apply(); Story.S().due = null; return { r, nb: GameState._noBonusYear === GameState.meta.year }; });
   ok(m.nb, 'quieted with a food drive; your bonus is waived this year: "' + m.r.slice(0, 80) + '"');
 
-  // C2. the turnaround firm: safe (round 36: it no longer fails, even on the unluckiest roll)
+  // C2. round 39: the turnaround firm and the quick sale are gone (4 options at most)
   s = await setup(false);
-  await pg.evaluate(() => { window.__rnd = Math.random; Math.random = () => 0.01; });
-  m = await pickApply(/turnaround firm/);
-  await pg.evaluate(() => { Math.random = window.__rnd; });
-  await q(5);
-  c = await pg.evaluate(() => ({ stake: Story.otherAssets(), rescue: Story.H().rescue, active: GameState.tenants.harlow_grocers.status, rf: GameState.portfolio.find(x => x.id === 'ind_hdc').rentFactor }));
-  ok(c.stake > 0 && c.rescue === 'turnaround' && c.active === 'active' && (c.rf == null || c.rf === 1), 'turnaround firm, a year on: Harlow trading, paying rent, our stake worth $' + c.stake + 'M');
+  ok(!s.labels.some(l => /turnaround firm|Sell the centre/.test(l)), 'no turnaround firm, no quick sale: [' + s.labels.map(x => x.slice(0, 30)).join(' | ') + ']');
 
   // F. the yacht: if you made Bob sell it, the endings remember
   const y = await pg.evaluate(() => { const H = Story.H(), card = () => (Ending.cards().find(x => /Bob Harlow/.test(x.label)) || {});

@@ -210,7 +210,7 @@ window.Mayor = (() => {
                     ['Market rent for those floors', 'about ' + money(rentY) + ' a year'],
                     ['Clean (budget rate)', money(rentY * CLEAN) + ' a year, 15 years, no risk'],
                     ['Sweetheart (+20%)', money(rentY * SWEET) + ' a year, $0.5M to his campaign; found ' + tenths(o) + ': rent cut, price −4%'],
-                    ['His cousin’s fit-out', 'market rent; the company overpays ' + money(MARKUP) + ', ' + money(SKIM) + ' comes to you; found ' + tenths(o) + ' (' + tenths(oL) + ' if you lobby): you pay a ' + money(SKIM * FINE_X) + ' fine'],
+                    ['His cousin’s fit-out', 'market rent; the company overpays ' + money(MARKUP) + ', ' + money(SKIM) + ' comes to you; found ' + tenths(o) + ': you pay a ' + money(SKIM * FINE_X) + ' fine'],
                     ['Your own money', money(me().cash)]]) +
               (schemed ? '<div class="dv-nums">Nora already has a file on you and Frank from the Port Logistics business: the odds of being found are higher.</div>' : '') +
               '<div class="dv-nums">Jenkins: "The budget rate is clean. Refusing is clean. The other two are what investigations are made of."</div>' +
@@ -222,9 +222,6 @@ window.Mayor = (() => {
             apply() { return decide('sweet'); } },
           { label: 'Give the fit-out to his cousin: ' + money(SKIM) + ' to you', detail: 'Market rent. The company overpays ' + money(MARKUP) + ' this quarter. Found ' + tenths(o) + ': a ' + money(SKIM * FINE_X) + ' fine from your own money, price −3%. You keep your job.',
             apply() { return decide('skim', false); } },
-          { label: 'The fit-out, and lobby to keep it quiet (' + LOBBY_PC + ' political capital)', detail: 'Same deal, found only ' + tenths(oL) + '. You have ' + cap() + '.',
-            check: () => cap() >= LOBBY_PC, checkMsg: 'Needs ' + LOBBY_PC + ' political capital',
-            apply() { return decide('skim', true); } },
           { label: 'Refuse', detail: 'The floors stay empty for now. Okafor and Petrova +0.5. ' + (rennick() ? 'Frank will take his floors to Kessler.' : 'Frank will go elsewhere.'),
             apply() { return decide('refuse'); } },
         ] };

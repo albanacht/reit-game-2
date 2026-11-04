@@ -701,3 +701,7 @@ body { background: #eef2f7; }
 /* round 38: Properties rows open on click */
 #tab-properties .nm .chev { display: inline-block; width: 12px; color: #2f6fb0; font-size: 12px; margin-right: 4px; flex: none; }
 #tab-properties .cond { font-weight: 700; } .cond-new { color: #18794e; } .cond-good { color: #2f6fb0; } .cond-worn { color: #b8860b; } .cond-tired { color: #c2410c; }
+
+/* round 39: 'put it on hold' is a small link, not a fifth option */
+.decision-hold-sm { margin: 6px 2px 0; padding: 6px 8px; font-size: 12.5px; color: #2f6fb0; cursor: pointer; border: 1px dashed #b8c8da; border-radius: 6px; background: transparent; }
+.decision-hold-sm:hover { background: #eef4fb; }

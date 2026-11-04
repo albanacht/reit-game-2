@@ -412,7 +412,8 @@ window.Board = (() => {
     var b = GameState.board, out = [], used = {};
     var order = (b.directors || []).slice().sort(function(a, c) { return a.attitude - c.attitude; }).map(function(d) { return d.id; });
     if (opts && opts.first) order = [opts.first].concat(order.filter(function(x) { return x !== opts.first; }));
-    for (var i = 0; i < order.length && out.length < 2; i++) {
+    var n = opts && opts.max != null ? opts.max : 2;   // round 39: as executive chairman you set the agenda: one demand
+    for (var i = 0; i < order.length && out.length < n; i++) {
       var m = demandFor(order[i]);
       if (!m || used[m.metric]) continue;
       if (opts && opts.first === order[i] && opts.promise) m.promise = true;

@@ -277,7 +277,7 @@ window.Gary = (() => {
     if (out) out.push({ good: false, text: 'The Ledger: "The CEO\u2019s scrap yard". Share price −4%.' });
   }
   const yardEnding = () => { const y = Y(); return y.stage === 'done' && (GameState.portfolio || []).some(p => p.id === YARD_ID) ? (y.exposed ? 'exposed' : 'quiet') : y.stage === 'done' ? 'quiet' : null; };
-  CARDS.push({ id: 'gary_yard', system: true, story: true, holdQ: 2,
+  CARDS.push({ id: 'gary_yard', system: true, story: true, holdQ: 0,   // round 39: take it or leave it, 4 options
     build() {
       const y = Y(); if (y.stage !== 'offer') return null;
       const V = y.value, row = pct => [money(V * (1 + pct)) + ' (+' + Math.round(pct * 100) + '%)', 'you pocket ' + money(V * pct / 2) + '; the board says yes about ' + Math.round(yardOdds(pct, false) * 100) + '% (' + Math.round(yardOdds(pct, true) * 100) + '% if you lobby); Nora finds it ' + Math.round(YARD_LEAK[pct] * 100) + '%'];
@@ -298,7 +298,7 @@ window.Gary = (() => {
         body: '"Remember the old scrap yard by the river? Riverside Salvage. The family company still owns it, you and me, half each. Your REIT buys industrial, right? It is called <i>industrial outdoor storage</i> now, the hottest thing in real estate. Salvage leases it back, we take the cash. I had it valued at ' + money(V) + '. A <i>nice</i> price, though."' +
               nums([['Value', money(V) + ', let back at about 8% for 10 years']].concat([0.05, 0.15, 0.30].map(row))) +
               '<div class="dv-nums">Jenkins: "A related-party sale. Legal if it is disclosed and the independent directors approve it. You leave the room while they vote."</div>',
-        choices: [opt(0.05, false), opt(0.15, false), opt(0.15, true), opt(0.30, false), opt(0.30, true),
+        choices: [opt(0.05, false), opt(0.15, false), opt(0.30, true),
           { label: 'No: keep the family out of the company', detail: 'Petrova +0.5. Gary sulks until Thanksgiving.', apply() { Y().stage = 'refused'; remember('petrova', 0.5, 'you kept your family\u2019s yard out of the company'); return 'You said no. Gary said "fine" in the voice that means it is not.'; } }] };
     } });
   if (window.World && World.DECISIONS && !World.DECISIONS.some(d => d.id === 'gary_yard')) World.DECISIONS.push(CARDS[CARDS.length - 1]);

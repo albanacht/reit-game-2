@@ -18,7 +18,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     G.meta.year = 9; G.balance.cash = 200; const r0 = Math.random; Math.random = () => 0.1; Story.S().due = null; Gary.processQuarter([]); Math.random = r0;
     const y = Gary.Y(), due = Story.S().due, c = World.systemDecision();
     return { stage: y.stage, due, value: y.value, labels: c.choices.map(x => x.label), body: c.body.replace(/<[^>]+>/g, ' ').slice(0, 220), odds: [Gary.yardOdds(0.05), Gary.yardOdds(0.15), Gary.yardOdds(0.15, true), Gary.yardOdds(0.30), Gary.yardOdds(0.30, true)].map(x => Math.round(x * 100)) }; });
-  ok(a.stage === 'offer' && a.due === 'gary_yard' && a.labels.length === 6, 'Year 9: Gary’s offer (' + a.value + 'M): ' + a.labels.join(' | '));
+  ok(a.stage === 'offer' && a.due === 'gary_yard' && a.labels.length === 4,   /* round 39: 4 options */ 'Year 9: Gary’s offer (' + a.value + 'M): ' + a.labels.join(' | '));
   ok(!a.labels.some(l => /\+0%|at value/.test(l)) && a.odds[2] > a.odds[1] && a.odds[0] > a.odds[3], 'premiums +5/15/30 only; board odds ' + a.odds.join('/') + '% (lobbying helps)');
   console.log('      ' + a.body);
   const s = await pg.evaluate(() => { const G = GameState, w0 = Pay.wealth().total, pc0 = G.board.politicalCapital = 5, c = World.systemDecision();

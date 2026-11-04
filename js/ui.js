@@ -1718,9 +1718,9 @@ window.UI = (function() {
     });
     if (blocked && evt.isWorld && !evt._heldItem && evt === GameState._pendingDecision && evt.holdQ !== 0) {
       var hq = evt.holdQ || 2, lc = evt.choices[lapseIndex(evt)];
-      html += '<div class="decision-choice decision-hold" onclick="UI.holdDecision()">' +
-        '<div class="choice-label">Put it on hold: find the money first</div>' +
-        '<div class="choice-detail">It waits ' + hq + ' quarter' + (hq > 1 ? 's' : '') + ' in your inbox and does not block Advance. Raise cash (borrow, sell shares or a building), then decide. If you don\u2019t: ' + (lc ? lc.label : 'it lapses') + '.</div></div>';
+      // round 39: a small link under the choices, not a fifth option
+      html += '<div class="decision-hold decision-hold-sm" onclick="UI.holdDecision()" title="It waits in your inbox and does not block Advance. If you don\u2019t decide: ' + (lc ? String(lc.label).replace(/"/g, '&quot;') : 'it lapses') + '.">' +
+        '\u23F8 Not now: put it on hold for ' + hq + ' quarter' + (hq > 1 ? 's' : '') + ' and find the money</div>';
     }
 
     html += '</div>' +

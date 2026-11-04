@@ -850,7 +850,7 @@ window.Story = (() => {
     h.ramp = { start: tq(), free: free, full: o.rent, name: o.name, step: 1 }; h.stage = 'ramp'; h.offer = null;
   }
   CARDS.push({
-    id: 'story_harlow_after', system: true, story: true,
+    id: 'story_harlow_after', system: true, story: true, holdQ: 0,   // round 39: decided now, 4 options at most
     build() {
       const h = H(), B = h.bust, p = dc(), G = GameState; if (!B || h.stage !== 'aftermath') return null;
       const mine = !!(p && dcMine()), old = h.oldRent || (p ? p.annualNOI : LEASE), owed = B.owed || 0;
@@ -910,11 +910,8 @@ window.Story = (() => {
           else { h.stage = 'done'; h.result = h.rescue; const T = HT(); if (T) { T.status = 'active'; T.coverage = 1.4; if (gary) T.name = 'Family Groceries'; } }
           return gary ? 'Gary has the keys. The signs say FAMILY GROCERIES. He has ordered aprons with his face on them.' : 'The turnaround firm moved in on Monday. Bob was offered a consultancy. He declined.';
         } });
-      ch.push(take(true), take(false));
+      ch.push(take(true));   // round 39: never more than 4 options: the turnaround firm and the quick sale are gone (sell from Properties if you must)
       if (mine) {
-        const sale = fmt(p.currentValue * 0.75);
-        ch.push({ label: 'Sell the centre as it stands, for about ' + money(sale), detail: 'An empty specialist warehouse sells about 25% under its value. The story ends here.',
-          apply() { const r = Properties.sellProperty(p.id); if (!r || !r.success) return 'The sale fell through.'; G.balance.cash = fmt(G.balance.cash - (r.salePrice || 0) + sale); h.stage = 'done'; h.result = 'bust_sold'; return 'Sold the Harlow centre for ' + money(sale) + '.'; } });
         ch.push({ label: 'Market it ourselves', detail: (AM() ? 'Your Asset Manager: about 2 to 3 quarters.' : 'About 4 to 6 quarters without an Asset Manager.') + ' About 70% of Harlow’s rent. The loan: what has been recovered (25%).',
           apply() { h.stage = 'relet'; h.at = tq() + (AM() ? rint(2, 3) : rint(4, 6)); return 'The centre is on the leasing market.'; } });
       } else ch.push({ label: 'Write it off and move on', detail: 'The 25% already recovered is all we get.', apply() { h.stage = 'done'; h.result = 'bust'; return 'Written off. Okafor has filed the papers under "lessons".'; } });
