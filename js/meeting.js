@@ -48,13 +48,16 @@ window.Meeting = (() => {
     return m;
   }
 
+  /* round 40: as executive chairman you sit at the head of the table (no photo of you exists: a silhouette) */
+  const YOU_FACE = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#d9e4ef"/><circle cx="50" cy="38" r="18" fill="#7f93a8"/><path d="M14 100 C16 72 32 62 50 62 C68 62 84 72 86 100 Z" fill="#7f93a8"/></svg>');
   function portraits() {
     const box = document.getElementById('mt-portraits'); if (!box) return;
+    const chairYou = G().board.chair === 'you';
     // round 32: every guest of the year sits at the table from the start; the one on the agenda now is lit
     const gs = (S.guests || []).slice(); if (S.guest && !gs.some(g => g.name === S.guest.name)) gs.push(S.guest);
     // round 35: guests sit apart, behind a divider, with their role under the name
-    box.style.gridTemplateColumns = 'repeat(' + order().length + ', 1fr)' + (gs.length ? ' 34px repeat(' + gs.length + ', 1fr)' : '');
-    box.innerHTML = order().map(id => {
+    box.style.gridTemplateColumns = 'repeat(' + (order().length + (chairYou ? 1 : 0)) + ', 1fr)' + (gs.length ? ' 34px repeat(' + gs.length + ', 1fr)' : '');
+    box.innerHTML = (chairYou ? '<div class="mt-p you' + (S.speaking === 'you' ? ' talking' : '') + '"><img src="' + YOU_FACE + '" alt=""><div class="mt-pn">You</div><div class="mt-mood mt-chairyou">Chairman &amp; CEO</div></div>' : '') + order().map(id => {
       const a = S.shown[id] != null ? S.shown[id] : dir(id).attitude, L = Directors.level(a);
       const v = S.votes[id];
       return '<div class="mt-p' + (S.speaking === id ? ' talking' : '') + '" id="mtp-' + id + '">' +
@@ -160,7 +163,8 @@ window.Meeting = (() => {
   // ---------------------------------------------------------------- 1. open
   function beatOpen() {
     const y = Directors.ytd(), rows = Directors.scorecard();
-    say(CH(), pick(['Let’s begin. Year ' + S.year + ' in numbers.', 'Good morning. The numbers first, then the questions.']));
+    if (G().board.chair === 'you') say('you', pick(['Good morning, everyone. I\u2019ll chair today. Year ' + S.year + ' in numbers, then your questions.', 'Thank you all for coming. Let\u2019s begin: Year ' + S.year + ' in numbers.']));   // round 40: you chair it
+    else say(CH(), pick(['Let’s begin. Year ' + S.year + ' in numbers.', 'Good morning. The numbers first, then the questions.']));
     // round 32: the room knows when the economy turns
     const ph = window.Arc && Arc.phase ? Arc.phase() : null;
     if (ph === 'crisis' || ph === 'aftershock') say(CH(), CH() === 'williams' ? 'Son, we are in a crisis. Nobody expects records this year. I expect us to be standing next year: cash, covenants, no surprises.' : 'We are in a crisis. Keep us afloat this year: cash, covenants, no surprises.');

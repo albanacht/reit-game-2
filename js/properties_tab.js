@@ -205,10 +205,10 @@ window.PROPS = (() => {
                ', ' + raw.constructionQuartersLeft + ' qtr left</span>');
     } else {
       const locked = window.Tenants && Tenants.isLocked && Tenants.isLocked(raw);
-      if (!locked && raw.occupancy < 0.90 && window.Staff && Staff.hasRole && Staff.hasRole('asset')) {
+      if (!locked && (raw.occupancy < 0.90 || (Tenants.vacantSpace && Tenants.vacantSpace(raw))) && window.Staff && Staff.hasRole && Staff.hasRole('asset')) {   // round 40: or a tenant's empty space
         out.push(raw.leaseUpYear === GameState.meta.year
           ? '<span class="sml">Leased up this year</span>'
-          : b('lease', 'Lease up', 'Pay brokers and incentives to fill space now'));
+          : b('lease', 'Lease up', Tenants.vacantSpace && Tenants.vacantSpace(raw) ? 'Fill the empty tenant space first: a new tenant signs next quarter' : 'Pay brokers and incentives to fill space now'));
       }
       // round 37: an empty single-tenant building: offer incentives (or renovate first, for full rent)
       if (locked && Tenants.canIncent) { const ci = Tenants.canIncent(raw);

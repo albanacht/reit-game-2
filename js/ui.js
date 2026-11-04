@@ -1123,13 +1123,34 @@ window.UI = (function() {
     var prop = GameState.portfolio.find(function(p) { return p.id === propertyId; });
     if (!prop) return;
     if (typeof Tenants !== "undefined" && Tenants.isLocked(prop)) { showToast("A single-tenant building is either let or empty. Your Asset Manager re-lets it when the tenant leaves.", "info"); return; }
-    if (prop.occupancy >= 0.90) { showToast("Occupancy already above 90% — no lease up needed.", "info"); return; }
+    // round 40: a tenant's empty space is filled first: the brokers sign a replacement for next quarter
+    var gap = typeof Tenants !== "undefined" && Tenants.vacantSpace ? Tenants.vacantSpace(prop) : null;
+    if (prop.occupancy >= 0.90 && !gap) { showToast("Occupancy already above 90% — no lease up needed.", "info"); return; }
     // Once per property per year
     if (prop.leaseUpYear === GameState.meta.year) {
       showToast("Already leased up " + prop.name + " this year. Wait until next year.", "error"); return;
     }
     var cost = Math.round(prop.annualNOI * 0.12 * 10) / 10;
     var boost = prop.occupancy < 0.65 ? 0.08 : prop.occupancy < 0.75 ? 0.06 : prop.occupancy < 0.85 ? 0.05 : 0.03;
+    if (gap) {
+      showModal("Lease Up: " + prop.name,
+        "Empty space: " + gap.name + "'s old space, " + Math.round(gap.share * 100) + "% of the building (" + fmtM(prop.annualNOI * gap.share) + " a year of rent).\n" +
+        "The brokers fill it first: a new tenant signs next quarter (instead of in " + gap.relet + " quarters).\n" +
+        "Cost: $" + cost + "M (12% of annual NOI)\n" +
+        "Cash plus credit line: " + fmtM(((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash)),
+        [{ label: "Lease Up — $" + cost + "M", style: "btn-primary", onClick: function() {
+          if (((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash) < cost) { showToast("Not enough money: cash plus credit line is below $" + cost + "M.", "error"); return; }
+          GameState.balance.cash = Math.round((GameState.balance.cash - cost) * 100) / 100;
+          if (Financials.noteSpend) Financials.noteSpend("leasing", cost);
+          gap.pos.relet = 1;                                  // tenants.js re-lets it at the next quarter
+          showToast(prop.name + ": the brokers have a tenant for the empty space. They move in next quarter.", "success");
+          GameState.board.leaseUpsThisYear = (GameState.board.leaseUpsThisYear || 0) + 1;
+          prop.leaseUpYear = GameState.meta.year;
+          if (window.Crisis) Crisis.credit();
+          renderAll();
+        }}]);
+      return;
+    }
     showModal("Lease Up: " + prop.name,
       "Current occupancy: " + fmtPct(prop.occupancy) + "\n" +
       "Expected boost: +" + fmt(boost * 100, 0) + "% immediately\n" +

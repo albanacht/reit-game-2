@@ -394,6 +394,14 @@ window.Tenants = (() => {
     if (window.Crisis) Crisis.credit();   // round 38
     return { success: true, message: p.name + ': the brokers have a tenant. They sign next quarter at ' + Math.round(c.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + c.fee.toFixed(1) + 'M.' };
   }
-  return { canIncent, offerIncentives, K, init, attachLease, isLocked, processQuarter, buildingsOf, shareOfMyRent,
+  /* round 40: a named tenant's empty space in a multi-tenant building (Lease up fills it first) */
+  function vacantSpace(p) {
+    if (!p || !p.lease || isLocked(p) || p.lease.type !== 'multi') return null;
+    const pos = p.lease.positions.find(x => x.vacant && x.relet > 1 && x.relet < 900);
+    if (!pos) return null;
+    const t = GameState.tenants[pos.t];
+    return { pos, share: pos.share, relet: pos.relet, name: t ? t.name : 'A tenant' };
+  }
+  return { canIncent, offerIncentives, vacantSpace, K, init, attachLease, isLocked, processQuarter, buildingsOf, shareOfMyRent,
            myTopTenants, myWeakest, rowsFor, countLabel, forceDefault, leave, release, normalize };
 })();
