@@ -16,7 +16,7 @@
 window.Scores = (() => {
 
   const BIN = '6ad88dd6ac6210605a45383e';   // "SCORES 2.0", public to read
-  const KEY = null;                          // the Access Key VALUE (starts with $2a$10$...), needed to post
+  const KEY = '$2a$10$OuhOso53.f6YBigNLXEjiOJWl2.zN2tV5sAC1AomFiynI62X2B4Se';   // Access Key: Read + Update on this bin only (round 40)
   const MAX = 200, SHOW = 10;
   let testOn = false;                                   // tools/browser_round28.js: fetch stubbed
   const on = () => !!BIN || testOn;                     // the board can be read
