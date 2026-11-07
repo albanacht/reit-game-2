@@ -118,6 +118,8 @@ window.Pay = (() => {
         { label: 'Waive it', detail: 'You give it back to the shareholders. Petrova +1, Williams +0.5.',
           go: () => { if (window.Directors) { Directors.remember('petrova', 1, 'you waived your bonus'); Directors.remember('williams', 0.5, 'you waived your bonus'); } c.log.push({ y: year, bonus: 0, waived: total }); return 'Waived. Petrova will mention it to the shareholders.'; } },
       ] : null });
+    // round 41: where you stand, right after the bonus
+    items.push({ lines: [], effect: () => { const w = wealth(); return 'Your wealth now: $' + w.total.toFixed(1) + 'M' + (w.unvestedValue > 0 ? ', plus $' + w.unvestedValue.toFixed(1) + 'M of shares not vested yet' : '') + '.'; } });
     // round 14: in the index, the shareholders vote on your pay (listing.js)
     if (window.IndexFund && IndexFund.sayOnPayItem) { const sop = IndexFund.sayOnPayItem(year, items); if (sop) items.push(sop); }
     // 3. the contract: Years 1, 4, 7, 10, 13

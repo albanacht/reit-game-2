@@ -25,7 +25,7 @@ window.Scores = (() => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const money = n => '$' + (+n || 0).toFixed(1) + 'M';
   const pctA = n => (n >= 0 ? '+' : '−') + Math.abs((n || 0) * 100).toFixed(1) + '%';
-  let cache = null;
+  let cache = null, posting = false;
 
   async function fetchAll() {
     if (!on()) return [];
@@ -49,6 +49,8 @@ window.Scores = (() => {
   async function post(name) {
     if (!on() || !canPost()) return { success: false, message: 'Posting opens soon. The board is read only for now.' };
     if (GameState._scorePosted) return { success: false, message: 'This run is already on the board.' };
+    if (posting) return { success: false, message: 'Posting…' };   // round 41: auto-post: never twice at once
+    posting = true;
     try {
       const list = await fetchAll(), e = entry(name);
       const all = list.concat([e]).sort((a, b) => b.wealth - a.wealth).slice(0, MAX);
@@ -59,6 +61,7 @@ window.Scores = (() => {
       if (window.Telemetry) Telemetry.once('score-posted');
       return { success: true, rank, of: all.length, message: rank ? 'On the board: #' + rank + ' of ' + all.length + '.' : 'Posted. Not in the top ' + MAX + ' this time.' };
     } catch (err) { return { success: false, message: 'Could not reach the leaderboard. Check your connection.' }; }
+    finally { posting = false; }
   }
 
   function tableHTML(list, mine) {
@@ -71,7 +74,7 @@ window.Scores = (() => {
   async function renderTitle() {
     const box = document.getElementById('lb2-title'); if (!box) return;
     if (!on()) { box.innerHTML = '<details class="lb2-d"><summary>Leaderboard</summary><div class="lb2-empty">Opens soon: finish a run, and your wealth goes on the board.</div></details>'; return; }
-    box.innerHTML = '<details class="lb2-d"><summary>Leaderboard: the richest CEOs</summary><div class="lb2-body">Loading…</div></details>';
+    box.innerHTML = '<details class="lb2-d" open><summary>Leaderboard: the richest CEOs</summary><div class="lb2-body">Loading…</div></details>';   // round 41: open
     const list = await fetchAll(); const b = box.querySelector('.lb2-body'); if (b) b.innerHTML = tableHTML(list);
   }
   /* Game over screen: post, then see where you stand. */
@@ -79,13 +82,20 @@ window.Scores = (() => {
     const box = document.getElementById('lb2-gameover'); if (!box) return;
     if (!on()) { box.innerHTML = ''; return; }
     const e = entry();
-    box.innerHTML = '<div class="lb2-post"><div>Your score: <b>' + money(e.wealth) + '</b> of your own · shareholders ' + pctA(e.tsrA) + ' a year · ' + esc(e.endingTitle) + '</div>' +
+    box.innerHTML = '<div class="lb2-post">' +   // round 41: the score itself is the headline above
       (!canPost() ? '<div class="lb2-msg">Posting scores opens soon.</div>' : GameState._scorePosted ? '<div class="lb2-msg">Already on the board.</div>' :
        '<div class="lb2-row"><input id="lb2-name" maxlength="24" value="' + esc(GameState.player.name || '') + '" placeholder="Your name"><button id="lb2-go" class="btn btn-primary">Post to the leaderboard</button></div>') +
       '<div class="lb2-msg" id="lb2-msg"></div><div id="lb2-table"></div></div>';
+    const rankEl = () => document.getElementById('gw-rank');
+    const send = async name => { const r = await post(name), m = document.getElementById('lb2-msg'), t = document.getElementById('lb2-table');
+      if (m) m.textContent = r.message; if (t) t.innerHTML = tableHTML(cache || [], r.success ? entry(name) : null);
+      if (r.success && rankEl()) rankEl().textContent = '#' + r.rank + ' on the leaderboard, of ' + r.of;
+      return r; };
     const go = document.getElementById('lb2-go');
-    if (go) go.onclick = async () => { go.disabled = true; const r = await post((document.getElementById('lb2-name') || {}).value);
-      document.getElementById('lb2-msg').textContent = r.message; document.getElementById('lb2-table').innerHTML = tableHTML(cache || [], r.success ? e : null); if (!r.success) go.disabled = false; };
+    if (go) go.onclick = async () => { go.disabled = true; const r = await send((document.getElementById('lb2-name') || {}).value); if (!r.success) go.disabled = false; else { const row = go.parentNode; if (row) row.remove(); } };
+    // round 41: posted automatically under the name from the start screen; only the default "CEO" asks for a name first
+    const nm = (GameState.player.name || '').trim();
+    if (canPost() && !GameState._scorePosted && nm && nm !== 'CEO') { const row = go && go.parentNode; if (row) row.remove(); const m = document.getElementById('lb2-msg'); if (m) m.textContent = 'Posting your score…'; send(nm); return; }
     fetchAll().then(list => { const t = document.getElementById('lb2-table'); if (t && !t.innerHTML) t.innerHTML = tableHTML(list); });
   }
 

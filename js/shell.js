@@ -321,7 +321,13 @@ window.REIT = (() => {
     const nm = document.getElementById('tb-co');
     if (nm) nm.textContent = (co.name || 'My REIT').toUpperCase();
     const sub = document.getElementById('tb-sub');
-    if (sub) sub.textContent = 'Riverton';
+    // round 41: the score, always in sight: your own wealth under the company's name
+    if (sub) {
+      const w = window.Pay && Pay.wealth ? Pay.wealth() : null;
+      if (w) { sub.textContent = 'You: $' + w.total.toFixed(1) + 'M'; sub.classList.add('tb-you');
+        sub.title = 'Your own money: salary, bonuses, vested shares and their dividends.' + (w.unvestedValue > 0 ? ' Unvested shares ($' + w.unvestedValue.toFixed(1) + 'M) are lost if you are fired.' : '') + ' This is your score at the end of Year 15.'; }
+      else sub.textContent = 'Riverton';
+    }
     const dt = document.getElementById('tb-date');
     if (dt) dt.innerHTML = 'Year ' + Math.min(15, t.year || 1) + ' <b>Q' + (t.quarter || 1) + '</b><span>of 15</span>';
 

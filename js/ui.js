@@ -2138,8 +2138,15 @@ window.UI = (function() {
     var _w = (typeof Pay !== "undefined") ? Pay.wealth() : null;
     var _p0 = GameState._p0 || 10, _divs = (GameState.history || []).reduce(function(a, h) { return a + (h.dividendPerShare || 0); }, 0);
     var _tsr = (GameState.company.sharePrice + _divs) / _p0 - 1;
-    setText("gameover-reason", GameState.meta.gameOverReason + (_w ? "\n\nYour shareholders: total return " + (_tsr >= 0 ? "+" : "") + Math.round(_tsr * 100) + "% over your tenure. You: $" + _w.total.toFixed(1) + "M of your own" +
-      (_w.forfeited ? " ($" + _w.forfeited.toFixed(1) + "M of unvested shares left behind)" : "") + "." : ""));
+    // round 41: the score leads: your wealth, your rank (filled in when the score posts), the shareholders beside it
+    var gw = el("gameover-wealth");
+    if (gw && _w) {
+      var _e = (typeof Scores !== "undefined" && Scores.entry) ? Scores.entry() : null, _pa = function(v) { return (v >= 0 ? "+" : "\u2212") + Math.abs(v * 100).toFixed(1) + "%"; };
+      gw.innerHTML = '<div class="gw-k">YOUR WEALTH</div><div class="gw-v">$' + _w.total.toFixed(1) + 'M</div><div class="gw-rank" id="gw-rank"></div>' +
+        '<div class="gw-sh">Your shareholders: ' + (_tsr >= 0 ? "+" : "\u2212") + Math.abs(Math.round(_tsr * 100)) + '% in total' + (_e ? ' (' + _pa(_e.tsrA) + ' a year' + (_e.rivalsA != null ? '; the rivals ' + _pa(_e.rivalsA) : '') + ')' : '') + '</div>';
+    }
+    // round 41: wealth and shareholders are in the headline now; the letter keeps the reason, and what you left behind
+    setText("gameover-reason", GameState.meta.gameOverReason + (_w && _w.forfeited ? "\n\nUnvested shares left behind: $" + _w.forfeited.toFixed(1) + "M." : ""));
     setText("gameover-quarters", "Survived " + GameState.meta.totalQuarters + " quarters (" + GameState.meta.year + " years)");
     setText("gameover-ffo",      fmtPS(GameState.ratios.ffoPerShare));
     setText("gameover-occ",      fmtPct(GameState.ratios.occupancyPortfolio));
@@ -2289,6 +2296,11 @@ window.UI = (function() {
         "Welcome aboard. Year 1 is yours to learn the job: the board does not vote on you until next year. From then on we vote every year.<br><br>" +
         "What I look for: buildings that earn more than they cost to finance, no nasty surprises with cash, and, from Year 2, a dividend that rises.<br><br>Williams",
         "assets/faces/williams.jpg");
+      // round 41: the goal, said plainly, by Jenkins
+      if (typeof Inbox !== "undefined" && Inbox.message) Inbox.message("Jenkins", "Chief of Staff", "How you are scored",
+        "Boss, one thing nobody tells new CEOs: <strong>your score is your own wealth</strong> at the end of Year 15. Salary, bonuses, and the shares the board grants you (with their dividends). It is in gold under the company's name, top left.<br><br>" +
+        "The shareholders' return sits beside it on the leaderboard. They don't always move together.<br><br>" +
+        "One warning: shares that have not vested yet are lost if the board fires you.", "assets/faces/jenkins.jpg");
       renderAll();
       // 2.0: Jenkins's first notes wait in the inbox behind the letter, so
       // they arrive however the letter is closed.

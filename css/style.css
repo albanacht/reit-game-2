@@ -780,3 +780,10 @@ input::placeholder { color:var(--text-muted); }
 @media (max-width:640px) {
   select { font-size:16px; }
 }
+
+/* round 41: the score leads the game-over screen */
+.go-wealth { text-align: center; margin: 4px 0 2px; }
+.go-wealth .gw-k { font-size: 13px; letter-spacing: 2px; color: var(--text-muted); font-weight: 800; }
+.go-wealth .gw-v { font-size: 44px; font-weight: 900; color: #fbbf24; line-height: 1.1; }
+.go-wealth .gw-rank { font-size: 15px; font-weight: 700; color: var(--text); min-height: 20px; }
+.go-wealth .gw-sh { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
