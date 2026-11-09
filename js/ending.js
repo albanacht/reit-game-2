@@ -335,7 +335,7 @@ window.Ending = (() => {
         (i > 0 ? '<button class="en-back">Back</button>' : '') +
         (last && window.Telemetry ? '<button class="en-back en-fb">Rate the game</button>' : '') +
         '<button class="en-next">' + (last ? 'The scores' : 'Next') + '</button>' +
-        '</div></div></div>';   // round 34: no skip. The ending is the reward; it is 8 cards.
+        '</div><div class="en-ai">Pictures generated with AI.</div></div></div>';   // round 34: no skip. Round 42: AI disclosure.
       o.classList.remove('hidden'); wireImg(o);
       const fin = () => { o.classList.add('hidden'); if (done) done(); };
       o.querySelector('.en-next').onclick = () => { if (last) fin(); else { i++; render(); } };

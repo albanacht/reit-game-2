@@ -56,45 +56,69 @@ window.UI = (function() {
   // ----------------------------------------------------------
   // JENKINS TUTORIAL — Year 1 quarterly guidance (optional)
   // ----------------------------------------------------------
+  /* round 42: Jenkins teaches the why, with the player's own numbers. One idea per
+     message: a REIT makes money on the gap (buildings earn more than the money
+     costs), and every step is a way to widen that gap or a risk to it. */
+  function jn() {   // the live numbers Jenkins quotes
+    var G = GameState, px = G.company.sharePrice || 1, nav = G.ratios.navPerShare || 0;
+    var ps = (G.portfolio || []).filter(function(p) { return p.currentValue > 0 && !p.underConstruction; });
+    var cap = ps.length ? ps.reduce(function(a, p) { return a + p.annualNOI; }, 0) / ps.reduce(function(a, p) { return a + p.currentValue; }, 0) * 100 : 7;
+    var r7 = typeof Financials !== "undefined" && Financials.getCurrentBorrowingRateForTerm ? Financials.getCurrentBorrowingRateForTerm(7) : 5;
+    return { cap: cap.toFixed(1), r7: r7.toFixed(1), gap: (cap - r7).toFixed(1), dy: ((G.company.dividendPerShare || 0) * 4 / px * 100).toFixed(1), pn: nav > 0 ? Math.round(px / nav * 100) : 100 };
+  }
   var TUTORIAL_SCRIPT = {
     "1-1": [
       {
         title: "Step 1: Borrow", task: "borrow",
-        body: "Welcome aboard, boss. First we need cash to grow.<br><br>" +
-              "Open <strong>Finance</strong>. Under <strong>Borrow</strong>, enter <strong>$50M</strong> for <strong>7 years</strong>, the longest bonds we can sell. Rates are low, so lock in long."
+        body: function() { var n = jn(); return "Welcome aboard, boss. One idea runs this business: <strong>we make money on the gap</strong>. Our buildings earn about <strong>" + n.cap + "%</strong> a year; new 7-year bonds cost us about <strong>" + n.r7 + "%</strong>. Every dollar borrowed and put into buildings earns the difference.<br><br>" +
+              "Open <strong>Finance</strong>. Under <strong>Borrow</strong>, enter <strong>$50M</strong> for <strong>7 years</strong>. Long, so nothing falls due when times turn bad."; }
       },
       {
         title: "Step 2: A little equity", task: "equity",
-        body: "Still on <strong>Finance</strong>, under <strong>Issue shares</strong>, sell about <strong>2M shares</strong>.<br><br>" +
-              "Don't make a habit of it. It dilutes the owners, and <strong>Director Petrova</strong> hates dilution."
+        body: function() { var n = jn(); return "The other way to raise money: sell new company shares. <strong>The money goes to the company, not to you.</strong> Our shares cost us about <strong>" + n.dy + "%</strong> a year in dividends; buildings earn " + n.cap + "%. Cheap money.<br><br>" +
+              "The catch: only while the share price is near what our buildings are worth (NAV, now " + n.pn + "%). Below that we sell the company cheap, and <strong>Petrova</strong> notices.<br><br>" +
+              "Still on <strong>Finance</strong>, under <strong>Issue company shares</strong>, sell about <strong>2M</strong>."; }
       }
     ],
     "1-2": [
       {
         title: "Step 3: Buy a building", task: "buy",
-        body: "Put the cash to work. Open <strong>Properties</strong>, find one <strong>for sale</strong> and press <strong>Buy</strong>.<br><br>" +
-              "Higher <strong>cap rate</strong> means more income for the price, but the highest yields are usually the riskiest. Click a row to see who pays the rent."
+        body: function() { var n = jn(); return "Now put the money to work. The <strong>cap rate</strong> is what a building earns a year on its price. Pick one well above what money costs us (about " + n.r7 + "%): that's the gap.<br><br>" +
+              "Higher isn't always better: the highest yields are usually the riskiest (weak tenants, empty floors). Open <strong>Properties</strong>, find one <strong>for sale</strong>, press <strong>Buy</strong>. Click a row to see who pays the rent."; }
       }
     ],
     "1-3": [
       {
+        title: "Read the results: cash profit",
+        body: "Each quarter's results end with <strong>cash profit</strong> (AFFO): rent, minus interest, overheads and upkeep. That's what we really earned.<br><br>" +
+              "The <strong>dividend must come out of it</strong>. Pay more than we earn and we're borrowing to pay shareholders. The board watches that line more than any other."
+      },
+      {
         title: "Step 4: Hire a CFO", task: "cfo",
-        body: "Open <strong>Staff</strong> and hire a <strong>CFO</strong>. A CFO unlocks <strong>unsecured notes</strong> once secured bonds hit the covenant (Okafor will hate them), and an emergency private loan.<br><br>" +
-              "Later: an Asset Manager lifts occupancy, an Acquisitions Lead finds better deals."
+        body: "Open <strong>Staff</strong> and hire a <strong>CFO</strong>. Why: our lenders stop us at 60% of assets. A CFO can raise <strong>unsecured notes</strong> beyond that, dearer money for when a great deal comes along (Okafor will hate them).<br><br>" +
+              "Later: an Asset Manager keeps buildings full, an Acquisitions Lead finds cheaper deals."
       }
     ],
     "1-4": [
       {
         title: "The board",
-        body: "From next year the <strong>board votes</strong> on whether you keep your job. Five directors, each wants one thing. <strong>Chairman Williams</strong> matters most: he wants a <strong>rising dividend</strong> every year.<br><br>" +
-              "Strong results earn <strong>political capital</strong>, which you spend to win board fights and handle tough events."
+        body: "From next year the <strong>board votes</strong> on whether you keep your job. Each director judges one thing. <strong>Chairman Williams</strong> matters most: he wants a <strong>rising dividend</strong>, paid from profit.<br><br>" +
+              "Good results earn <strong>political capital</strong>, which you spend to win board fights and handle tough events. I'll sit in on the first meeting and take the minutes.<br><br>When you're ready, press <strong>Advance quarter</strong>."
+      }
+    ],
+    // round 42: the goodbye
+    "2-1": [
+      {
+        title: "You know the basics, boss",
+        body: "That's the tutorial done. The whole game in three lines:<br>1. Buildings must earn more than the money costs.<br>2. Pay the dividend from cash profit, not from debt.<br>3. Never let a bond fall due in a storm.<br><br>" +
+              "I'll let you run it. When something new comes up, I'll write."
       }
     ],
   };
 
   function maybeShowTutorial() {
     if (!GameState._tutorialEnabled) return false;
-    if (GameState.meta.year !== 1) return false;
+    if (GameState.meta.year > 2) return false;   // round 42: Year 1, and the goodbye at the start of Year 2
     var key = GameState.meta.year + "-" + GameState.meta.quarter;
     var entry = TUTORIAL_SCRIPT[key];
     if (!entry) return false;
@@ -113,11 +137,11 @@ window.UI = (function() {
     var moreLabel = (i < steps.length - 1) ? "Next" : "Got it";
     // 2.0: tutorial steps are inbox messages that tick themselves off
     if (typeof Inbox !== "undefined" && step.task) {
-      Inbox.message("Jenkins", "Chief of Staff", step.title, step.body, null, step.task);
+      Inbox.message("Jenkins", "Chief of Staff", step.title, typeof step.body === "function" ? step.body() : step.body, null, step.task);
       showJenkinsSequence(steps, i + 1);
       return;
     }
-    showJenkinsPopup(step.title, step.body, moreLabel, function() {
+    showJenkinsPopup(step.title, typeof step.body === "function" ? step.body() : step.body, moreLabel, function() {
       showJenkinsSequence(steps, i + 1);
     });
   }
@@ -1064,12 +1088,11 @@ window.UI = (function() {
     var cost = fmt(prop.currentValue * 0.10, 1);
     showModal("Renovate: " + prop.name,
       "Cost: $" + cost + "M (10% of value)\n" +
-      "Duration: 1 quarter offline (zero NOI)\n" +
-      "Effect: NOI +15% permanently | Occupancy +" + fmt(Math.min(8, (0.97 - prop.occupancy) * 100), 0) + "% on completion\n\n" +
-      "Cash available: " + fmtM(GameState.balance.cash) + "\n" +
-      "Current NOI: " + fmtM(prop.annualNOI) + "/yr — After: " + fmtM(prop.annualNOI * 1.15) + "/yr\n\n" +
-      "Payback: ~2.5-3 years from NOI gain + value appreciation.\n" +
-      "Condition back to New. You can renovate again once it is Worn (6 years).",
+      "Works: 2 quarters, the tenants stay. Rent \u221210% while they run (disruption).\n" +
+      "After: condition New. Rents rise 10% over the next year as leases roll" + (prop.occupancy < 0.97 ? "; empty space lets faster (about +" + fmt(Math.min(8, (0.97 - prop.occupancy) * 100), 0) + " points)" : "") + ".\n" +
+      "Rent now: " + fmtM(prop.annualNOI) + "/yr, then about " + fmtM(prop.annualNOI * 1.104) + "/yr.\n\n" +
+      "Return: about " + fmt(prop.annualNOI * 0.104 / Math.max(0.1, prop.currentValue * 0.10) * 100, 1) + "% a year on the cost. Worth it when that beats what money costs you (" + (typeof Market !== "undefined" ? fmt(Market.getCurrentBorrowingRate(), 1) + "%" : "your bond rate") + ").\n" +
+      "Cash plus credit line: " + fmtM((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash),
       [{ label: "Start Renovation — $" + cost + "M", style: "btn-primary", onClick: function() {
         var r = Properties.startRenovation(propertyId);
         showToast(r.message, r.success ? "success" : "error");
@@ -1202,14 +1225,35 @@ window.UI = (function() {
       buttons);
   }
 
+  /* round 42: the "?" buttons. Three short lines, with the player's own numbers. */
+  function explain(k) {
+    var G = GameState, px = G.company.sharePrice || 1, d4 = (G.company.dividendPerShare || 0) * 4, dy = d4 / px * 100;
+    var nav = G.ratios.navPerShare || 0, pn = nav > 0 ? Math.round(px / nav * 100) : null;
+    var rate = typeof Market !== "undefined" && Market.getCurrentBorrowingRate ? Market.getCurrentBorrowingRate() : null;
+    var caps = (G.portfolio || []).filter(function(p) { return p.currentValue > 0 && !p.underConstruction; }), cap = caps.length ? caps.reduce(function(a, p) { return a + p.annualNOI; }, 0) / caps.reduce(function(a, p) { return a + p.currentValue; }, 0) * 100 : null;
+    var T = {
+      borrow: ["Borrowing", "We make money on the gap: buildings earn more than the money costs." +
+        (cap != null && rate != null ? "\n\nOur buildings earn about <b>" + cap.toFixed(1) + "%</b>. New bonds cost about <b>" + rate.toFixed(1) + "%</b>." : "") +
+        "\n\nBonds must be repaid when they fall due. Borrow long (7 years) so nothing falls due in a storm. Above 60% of assets, the lenders stop you."],
+      shares: ["Issue company shares", "The company sells new shares to investors. <b>The money goes to the company, not to you.</b> Your own money is top left, in gold." +
+        "\n\nOur shares cost us about <b>" + dy.toFixed(1) + "%</b> a year in dividends; buildings earn about <b>" + (cap != null ? cap.toFixed(1) : "7") + "%</b>. Selling shares to buy buildings pays." +
+        "\n\nThe catch: only while the share price is near what our buildings are worth (NAV" + (pn ? ": now <b>" + pn + "%</b>" : "") + "). Below that you sell the company cheap, and Petrova notices."],
+      dividend: ["The dividend", "What we pay shareholders each quarter, per share. Williams wants it to rise every year." +
+        "\n\nIt must come out of <b>cash profit</b> (AFFO). Pay more than we earn and we are borrowing to pay it." +
+        "\n\nNow: $" + fmt(G.company.dividendPerShare || 0, 2) + " a quarter, a " + dy.toFixed(1) + "% yield on the share price."]
+    };
+    var t = T[k]; if (!t) return;
+    showModal(t[0], t[1], []);
+  }
+
   function handleIssueEquity() {
     var sharesEl = el("input-equity-shares");
     var shares = sharesEl ? parseFloat(sharesEl.value) : NaN;
     if (isNaN(shares) || shares <= 0) { showToast("Enter valid shares", "error"); return; }
     var ip = GameState.company.sharePrice * 0.95;
-    showModal("Issue Equity",
+    showModal("Issue company shares",
       "Shares: " + fmt(shares, 1) + "M  |  Price: " + fmtPS(ip) + " (5% disc)\n" +
-      "Proceeds: " + fmtM(shares * ip) + "  |  Dilution: " + fmt(shares / GameState.company.sharesOutstanding * 100, 1) + "%",
+      "Proceeds: " + fmtM(shares * ip) + " to the company  |  Dilution: " + fmt(shares / GameState.company.sharesOutstanding * 100, 1) + "%",
       [{ label: "Issue Shares", style: "btn-primary", onClick: function() {
         var r = Financials.issueEquity(shares);
         showToast(r.message, r.success ? "success" : "error");
@@ -2172,6 +2216,7 @@ window.UI = (function() {
     var playerName = (ni && ni.value.trim()) ? ni.value.trim() : "CEO";
     var reitName   = (ri && ri.value.trim()) ? ri.value.trim() : "My";
 
+    if (window.PROPS && PROPS.reset) PROPS.reset();   // round 42
     GameState.player.name     = playerName;
     GameState.player.reitName = reitName;
     GameState.company.name    = reitName + " REIT";
@@ -2459,6 +2504,8 @@ window.UI = (function() {
     newGame:             newGame,
     renderAll:           renderAll,
     showModal:           showModal,
+    explain:             explain,
+    maybeShowTutorial:   maybeShowTutorial,
     closeModal:          closeModal,
     showToast:           showToast,
     showGameOver:        showGameOver,

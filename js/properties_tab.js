@@ -214,8 +214,10 @@ window.PROPS = (() => {
       if (locked && Tenants.canIncent) { const ci = Tenants.canIncent(raw);
         if (ci.ok) out.push(b('incent', 'Offer incentives', 'A tenant signs next quarter at ' + Math.round(ci.pct * 100) + '% of the old rent, stepping up over a year. Broker\u2019s fee $' + ci.fee.toFixed(1) + 'M.' + (ci.pct >= 1 || !Properties.canRenovate(raw).ok ? '' : ' Renovate first for 100%.')));
         else if (/Asset Manager/.test(ci.why)) out.push('<button class="act mute" title="' + ci.why + '" disabled>Offer incentives</button>'); }
-      if (Properties.canRenovate && Properties.canRenovate(raw).ok)
-        out.push(b('renovate', 'Renovate $' + (raw.currentValue * 0.10).toFixed(1) + 'M' + (locked ? ' (then 100% rent)' : '')));
+      // round 42: always shown; greyed with a short reason when it can't be done yet
+      if (Properties.canRenovate) { const cr = Properties.canRenovate(raw);
+        out.push(cr.ok ? b('renovate', 'Renovate $' + (raw.currentValue * 0.10).toFixed(1) + 'M' + (locked ? ' (then 100% rent)' : ''), 'Two quarters of works with the tenants in (rent \u221210%), then rents +10% over a year. Condition back to New.')
+                       : '<button class="act mute" disabled title="' + R.esc(cr.reason || '') + '">\uD83D\uDD12 Renovate: ' + R.esc(cr.short || cr.reason || 'not now') + '</button>'); }
       if (Properties.canReposition && Properties.canReposition(raw).ok)
         out.push(b('reposition', 'Reposition $' + (raw.currentValue * 0.15).toFixed(1) + 'M'));
     }
@@ -286,9 +288,10 @@ window.PROPS = (() => {
     if (filter === 'low')    m = m.filter(p => p.occ < 85);
     if (filter === 'listed') m = m.filter(R.listedByMe);
 
-    document.getElementById('filterNote').textContent =
-      filter === 'low'    ? 'Filtered: occupancy below 85% — click the chip again to clear' :
-      filter === 'listed' ? 'Filtered: currently listed — click the chip again to clear' : '';
+    // round 42: a filter is loud, and one click clears it (a playtester lost his buildings to a forgotten filter)
+    const fn = document.getElementById('filterNote');
+    fn.innerHTML = filter ? '<span class="flt-chip">Showing only: ' + (filter === 'low' ? 'occupancy below 85%' : 'listed for sale') + ' (' + m.length + ' of ' + mine().length + ') <button id="flt-clear">\u2715 Show all</button></span>' : '';
+    const fc = document.getElementById('flt-clear'); if (fc) fc.onclick = () => { filter = null; render(); };
 
     document.getElementById('tMine').innerHTML =
       head(COLS_MINE) + '<tbody class="body">' + groupRows(m, rowMine, 7) + '</tbody>';
@@ -391,5 +394,6 @@ window.PROPS = (() => {
     if (tr && tr.scrollIntoView) tr.scrollIntoView({ block: 'center' });
   }
 
-  return { init, render, focus };
+  function reset() { filter = null; open.clear(); }   // round 42: a new game starts unfiltered
+  return { init, render, focus, reset };
 })();

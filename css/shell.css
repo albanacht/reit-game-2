@@ -709,3 +709,22 @@ body { background: #eef2f7; }
 
 /* round 41: your wealth under the company name */
 #topbar .tb-sub.tb-you { color: #fbbf24; font-weight: 700; cursor: help; }
+
+/* round 42: a small '?' that explains on click (never on hover) */
+.why-q { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: 4px; border-radius: 50%; border: 1px solid #8fa3b8; background: transparent; color: #4b6480; font: 800 11px/1 system-ui, sans-serif; cursor: pointer; padding: 0; vertical-align: 1px; }
+.why-q:hover { background: #2f6fb0; color: #fff; border-color: #2f6fb0; }
+#tab-properties .flt-chip { display: inline-flex; gap: 8px; align-items: center; background: #fff4d6; border: 1px solid #e0b84a; color: #6b4e00; font-weight: 700; padding: 3px 4px 3px 10px; border-radius: 14px; margin-left: 10px; }
+#tab-properties .flt-chip button { border: 0; background: #e0b84a; color: #3a2a00; font-weight: 800; border-radius: 10px; padding: 2px 8px; cursor: pointer; }
+
+/* round 42: meeting speed */
+#meeting .mt-speed { display: inline-flex; gap: 2px; margin-left: auto; margin-right: 10px; background: #0b1a28; border-radius: 6px; padding: 2px; }
+#meeting .mt-speed button { background: transparent; color: #9db3c8; border: 0; border-radius: 4px; padding: 4px 8px; font: 700 11.5px/1 system-ui, sans-serif; cursor: pointer; }
+#meeting .mt-speed button.on { background: #2f6fb0; color: #fff; }
+#meeting .mt-jen { display: flex; gap: 10px; align-items: flex-start; background: #fff8e1; border: 1px solid #f0d58a; border-radius: 8px; padding: 8px 10px; color: #4a3b10; text-align: left; }
+#meeting .mt-jen img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+#ending-overlay .en-ai { font-size: 10.5px; color: rgba(160,175,190,.75); margin-top: 6px; text-align: right; }
+
+/* round 42: simple line icons on the tabs */
+#topbar .tb-tab .tb-ic { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+@media (max-width: 1365px) { #topbar .tb-tab .tb-ic { display: none; } }   /* round 42: narrow screens keep Advance in view */
+@media (max-width: 1365px) { #topbar .tb-tab { padding: 0 5px; font-size: 12.5px; } #topbar { gap: 7px; } #topbar .tb-hud { gap: 7px !important; } }   /* round 42: 1280 px screens fit the whole bar */

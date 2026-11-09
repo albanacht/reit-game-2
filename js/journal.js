@@ -159,6 +159,9 @@ window.Journal = (() => {
   /* round 31: building works (renovation, repositioning) and tenants to watch */
   function worksHTML() {
     const G = GameState, rows = [];
+    (G.portfolio || []).filter(p => p.reno).forEach(p => {   // round 42: renovations with the tenants in
+      rows.push('<div class="dr-row"><div class="dr-main"><b>Renovating ' + esc(p.name) + '</b><div class="sml-note">' + p.reno.left + ' quarter' + (p.reno.left === 1 ? '' : 's') + ' of works left, tenants in, rent \u221210% meanwhile. Then New, and rents +10% over a year.</div></div></div>');
+    });
     (G.portfolio || []).filter(p => p.underConstruction && (p.constructionType === 'renovation' || p.constructionType === 'repositioning')).forEach(p => {
       const ren = p.constructionType === 'renovation';
       rows.push('<div class="dr-row"><div class="dr-main"><b>' + (ren ? 'Renovating ' : 'Repositioning ') + esc(p.name) + '</b><div class="sml-note">' + p.constructionQuartersLeft + ' quarter' + (p.constructionQuartersLeft === 1 ? '' : 's') + ' left, offline meanwhile. ' +

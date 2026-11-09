@@ -63,7 +63,10 @@ window.MAP = (() => {
     card.style.top = Math.max(2, ly) + 'px';
     card.style.display = 'block';
   }
-  const hide = () => card.style.display = 'none';
+  // round 42: cards open after the mouse rests on a marker (0.45 s), never on a quick pass
+  let hoverT = null;
+  const later = fn => { clearTimeout(hoverT); hoverT = setTimeout(fn, 450); };
+  const hide = () => { clearTimeout(hoverT); card.style.display = 'none'; };
 
   function showProperty(p, anchor) {
     const o = OWN()[p.o] || OWN().none;
@@ -146,7 +149,7 @@ window.MAP = (() => {
       el.style.top  = p.y + '%';
       el.dataset.id = p.id;
       el.innerHTML = glyph(p);
-      el.onmouseenter = () => showProperty(p, el);
+      el.onmouseenter = () => later(() => showProperty(p, el));
       el.onmouseleave = hide;
       // round 5: a rival's building opens the rival's profile
       /* 2.0 round 9: the map is the home screen, so a click acts: a rival's
@@ -173,7 +176,7 @@ window.MAP = (() => {
       el.style.top  = l.y + '%';
       el.dataset.id = l.id;
       el.textContent = '+';
-      el.onmouseenter = () => showLot(l, el);
+      el.onmouseenter = () => later(() => showLot(l, el));
       el.onmouseleave = hide;
       el.onclick = () => { hide(); if (window.Deals) Deals.openLot(l.id); else showLot(l, el); };
       if (window.Deals && Deals.reserved(l)) el.classList.add('lot-locked');

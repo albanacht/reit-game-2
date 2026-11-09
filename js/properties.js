@@ -709,14 +709,24 @@ window.Properties = (() => {
   function isFresh(p) { return !!(p && p.renovatedYear && GameState.meta.year - p.renovatedYear < 4); }   // renovated in the last 4 years
 
   // Check if renovation is available for a property
+  /* round 42: renovation with the tenants in. Any Worn or Tired building, at any
+     occupancy. Two quarters of works at 10% less rent (disruption, discounts); then
+     the building is New, rents rise 10% in steps over four quarters as leases roll,
+     and empty space lets faster (about 8 points). Single-tenant: only while empty
+     (the next tenant then pays full rent). Cost: 10% of value. */
   function canRenovate(prop) {
     if (!prop) return { ok: false, reason: "Property not found." };
-    if (typeof Staff !== "undefined" && !Staff.hasRole("asset")) return { ok: false, reason: "Requires an Asset Manager. Hire one in the Staff tab." };
-    if (wearYears(prop) < RENOVATE_AFTER) return { ok: false, reason: prop.renovated ? "Renovated " + wearYears(prop) + " years ago: again once it is Worn (" + RENOVATE_AFTER + " years)." : "Still in " + condition(prop).label.toLowerCase() + " condition: renovate once it is Worn." };
-    if (prop.underConstruction) return { ok: false, reason: "Already under construction." };
-    if (prop.repositioning) return { ok: false, reason: "Repositioning in progress." };
-    if ((prop.quarterOwned || 0) < 2) return { ok: false, reason: "Must own property for at least 2 quarters before renovating." };
-    if (prop.occupancy >= 0.90) return { ok: false, reason: "Occupancy already above 90% — renovation would not improve returns sufficiently." };
+    if (typeof Staff !== "undefined" && !Staff.hasRole("asset")) return { ok: false, reason: "Needs an Asset Manager (Staff)." , short: "needs an Asset Manager" };
+    if (prop.reno) return { ok: false, reason: "Works in progress: " + prop.reno.left + " quarter" + (prop.reno.left === 1 ? "" : "s") + " left.", short: "works in progress" };
+    if (prop.underConstruction) return { ok: false, reason: "Already under construction.", short: "under works" };
+    if (prop.repositioning) return { ok: false, reason: "Repositioning in progress.", short: "under works" };
+    if ((prop.quarterOwned || 0) < 2) return { ok: false, reason: "Own it for 2 quarters first.", short: "own it 2 quarters first" };
+    if (typeof Tenants !== "undefined" && Tenants.isLocked(prop)) {
+      var pos = prop.lease && prop.lease.positions[0];
+      if (pos && !pos.vacant) return { ok: false, reason: "Single tenant: renovate when the space is empty.", short: "when the tenant leaves" };
+    }
+    var w = wearYears(prop);
+    if (w < RENOVATE_AFTER) return { ok: false, reason: "Renovate once it is Worn: in " + (RENOVATE_AFTER - w) + " year" + (RENOVATE_AFTER - w === 1 ? "" : "s") + " (Year " + (GameState.meta.year + RENOVATE_AFTER - w) + ").", short: "from Year " + (GameState.meta.year + RENOVATE_AFTER - w) + " (when Worn)" };
     return { ok: true };
   }
 
@@ -762,26 +772,30 @@ window.Properties = (() => {
     var prop = GameState.portfolio.find(function(p) { return p.id === propId; });
     var check = canRenovate(prop);
     if (!check.ok) return { success: false, message: check.reason };
-
     var cost = Math.round(prop.currentValue * 0.10 * 10) / 10;
     if (((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash) < cost) {   // round 18: cash plus the credit line
       return { success: false, message: "Not enough money. Need $" + cost + "M (cash plus credit line)." };
     }
-
     GameState.balance.cash = Math.round((GameState.balance.cash - cost) * 100) / 100;
     if (typeof Financials !== "undefined" && Financials.noteSpend) Financials.noteSpend("projects", cost);   // round 28
-    prop.underConstruction = true;
-    prop.renovating        = true;
-    prop.constructionQuartersLeft = 1;
-    prop.constructionType  = "renovation";
-    prop.preConstructionOccupancy = prop.occupancy;
-    prop.occupancy         = 0; // offline
-
-    return {
-      success: true,
-      message: prop.name + " renovation started. $" + cost + "M spent. Property offline for 1 quarter.",
-      cost: cost
-    };
+    prop.reno = { left: 2, cost: cost };   // round 42: the tenants stay; rent −10% while the works run
+    return { success: true, message: prop.name + ": renovation started ($" + cost + "M). Two quarters of works with the tenants in (rent −10%), then rents rise 10% over a year.", cost: cost };
+  }
+  /* round 42: each quarter: works count down; then the rent steps up 4 times */
+  function processRenovations() {
+    GameState.portfolio.forEach(function(prop) {
+      if (prop.renoRamp > 0) { prop.annualNOI = Math.round(prop.annualNOI * 1.025 * 100) / 100; prop.renoRamp--; if (!prop.renoRamp) delete prop.renoRamp; }
+      if (!prop.reno) return;
+      prop.reno.left--;
+      if (prop.reno.left > 0) return;
+      delete prop.reno;
+      prop.renovated = true; prop.renovatedYear = GameState.meta.year;
+      var locked = typeof Tenants !== "undefined" && Tenants.isLocked(prop);
+      if (!locked) { prop.renoRamp = 4; if (prop.occupancy < 0.97) prop.occupancy = Math.min(0.97, Math.round((prop.occupancy + 0.08) * 1000) / 1000); }
+      GameState.eventLog.push({ quarter: GameState.meta.quarter, year: GameState.meta.year, headline: "Renovation complete",
+        body: prop.name + " is renovated: condition New." + (locked ? " The next tenant pays full rent." : " Rents rise 10% over the next year."),
+        events: [{ headline: prop.name + " renovated", body: locked ? "Ready for a tenant at full rent." : "Condition New, rents +10% over a year.", impact: "" }] });
+    });
   }
 
   function startRepositioning(propId, targetSector) {
@@ -817,6 +831,7 @@ window.Properties = (() => {
   }
 
   function processConstructionProgress() {
+    processRenovations();   // round 42
     GameState.portfolio.forEach(function(prop) {
       if (!prop.underConstruction) return;
 

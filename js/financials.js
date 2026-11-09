@@ -56,7 +56,7 @@ window.Financials = (() => {
       //
       // Quarterly clean NOI at full occupancy:
       // rentFactor: a new tenant's rent-free quarters and step-ups (story.js)
-      const fullNOIq = prop.annualNOI * (prop.rentFactor != null ? prop.rentFactor : 1) / 4;
+      const fullNOIq = prop.annualNOI * (prop.rentFactor != null ? prop.rentFactor : 1) * (prop.reno ? 0.9 : 1) / 4;   // round 42: works in progress, rent −10%
 
       // Gross it up for display: if opex is OPEX_RATIO of gross rent, then
       // NOI (at full occ) = grossRent * (1 - OPEX_RATIO). So gross rent is:

@@ -561,6 +561,7 @@ window.Directors = (() => {
     if (id === 'tex' && !own) return false;                // your nominee (meeting.js: unless 4 are already against, or unpaid)
     const d = (GameState.board.directors || []).find(x => x.id === id);
     if (id === 'tex') return !!d && d.attitude < 3;          // unpaid: his own way, no scorecard of his own
+    if (d && d.attitude < 1.75) return true;                 // round 42: Furious votes against, whatever the scorecard
     return !!d && d.attitude < 3 && scorecard().some(r => r.id === id && r.ok === false);
   }
 

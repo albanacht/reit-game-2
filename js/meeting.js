@@ -40,11 +40,15 @@ window.Meeting = (() => {
     if (m) return m;
     m = document.createElement('div');
     m.id = 'meeting'; m.className = 'hidden';
-    m.innerHTML = '<div class="mt-box"><div class="mt-head"><span id="mt-title"></span><button class="mt-skip" id="mt-skip" title="Show everything now">Skip ▸▸</button></div>' +
+    m.innerHTML = '<div class="mt-box"><div class="mt-head"><span id="mt-title"></span><span class="mt-speed" id="mt-speed">' +
+        ['normal', 'fast', 'instant'].map(k => '<button data-sp="' + k + '">' + k[0].toUpperCase() + k.slice(1) + '</button>').join('') + '</span>' +
+        '<button class="mt-skip" id="mt-skip" title="Show this part now">Skip ▸▸</button></div>' +
       '<div class="mt-portraits" id="mt-portraits"></div><div class="mt-chat" id="mt-chat"></div><div class="mt-actions" id="mt-actions"></div></div>';
     document.body.appendChild(m);
     m.querySelector('#mt-chat').addEventListener('click', flush);
     m.querySelector('#mt-skip').addEventListener('click', flush);
+    m.querySelectorAll('#mt-speed button').forEach(b => b.addEventListener('click', () => { setSpeed(b.dataset.sp); if (speed === 'instant') flush(); }));
+    markSpeed();
     return m;
   }
 
@@ -69,6 +73,16 @@ window.Meeting = (() => {
         (g.role ? '<div class="mt-grole">' + esc(g.role) + '</div>' : '') + '<div class="mt-mood mt-guest">' + (on ? 'Speaking' : 'Waiting') + '</div></div>'; }).join('');
   }
 
+  /* round 42: a readable pace. Each line stays in view in proportion to its length
+     (about 22 characters a second, like normal reading), then the next one types.
+     Normal / Fast / Instant, remembered in the browser. Click the chat or Skip for the
+     rest of this part at once. */
+  let speed = (() => { try { return localStorage.getItem('reitMeetSpeed') || 'normal'; } catch (e) { return 'normal'; } })();
+  const SPEED = { normal: 1, fast: 0.45, instant: 0 };
+  function setSpeed(k) { speed = SPEED[k] != null ? k : 'normal'; try { localStorage.setItem('reitMeetSpeed', speed); } catch (e) {} markSpeed(); }
+  function markSpeed() { document.querySelectorAll('#mt-speed button').forEach(b => b.classList.toggle('on', b.dataset.sp === speed)); }
+  const plain = it => String(it.text || '') + String(it.html || '').replace(/<[^>]+>/g, ' ');
+  const readMs = it => !it ? 0 : Math.min(6000, 350 + plain(it).replace(/\s+/g, ' ').trim().length * 45);
   /* The chat: lines queue up, each appears after a short "typing" pause. */
   function say(who, text, html) { S.q.push({ who, text, html, g: who === 'guest' ? S.guest : null }); }
   function pump(then) {
@@ -84,7 +98,9 @@ window.Meeting = (() => {
       typing.textContent = (it.who === 'you' ? 'You are' : it.who === 'note' ? '' : (it.g ? it.g.name : sn(it.who)) + ' is') + (it.who === 'note' ? '' : ' typing…');
       if (it.who !== 'note') chat.appendChild(typing);
       chat.scrollTop = chat.scrollHeight;
-      S.timer = setTimeout(() => { typing.remove(); if (!S) return; show(S.q.shift()); next(); }, S.fast ? 0 : (it.who === 'note' ? 150 : 650));
+      const f = SPEED[speed] != null ? SPEED[speed] : 1;
+      const wait = S.fast || !f ? 0 : f * ((it.who === 'note' ? 150 : 450) + readMs(S.lastShown) + (it.drama ? 900 : 0));   // read the last line, then the next types (a vote waits a beat longer)
+      S.timer = setTimeout(() => { typing.remove(); if (!S) return; const sh = S.q.shift(); show(sh); S.lastShown = sh; next(); }, wait);
     };
     next();
   }
@@ -95,6 +111,7 @@ window.Meeting = (() => {
     else el.className = 'mt-line' + (it.g ? ' guest' : ''),
       el.innerHTML = '<img src="' + (it.g ? it.g.face : Directors.face(it.who)) + '" alt=""><div><div class="mt-who">' + esc(it.g ? it.g.name + ', ' + it.g.role : nm(it.who)) + '</div><div class="mt-bub">' + (it.html || esc(it.text)) + '</div></div>';
     if (it.mood) { S.shown[it.who] = it.mood; }
+    if (it.vote) S.votes[it.who] = it.vote;   // round 42: the stamp lands with the words
     chat.appendChild(el); chat.scrollTop = chat.scrollHeight;
     portraits();
   }
@@ -113,9 +130,12 @@ window.Meeting = (() => {
       '<b>' + esc(a.label) + '</b>' + (a.detail ? '<span>' + esc(a.detail) + '</span>' : '') + (a.disabled && a.why ? '<span class="mt-why">\u{1F512} ' + esc(a.why) + '</span>' : '') + '</button>').join('') + '</div>';
     box.querySelectorAll('.mt-btn').forEach(b => b.onclick = () => { if (b.disabled) return; box.innerHTML = ''; list[+b.dataset.i].go(); });
   }
+  /* round 42: Jenkins takes the minutes at the first two meetings and explains, briefly */
+  const jOn = () => G().tutorialOff !== true && G()._tutorialEnabled !== false;
+  const jnote = t => { if (jOn()) say('note', '', '<div class="mt-jen"><img src="assets/faces/jenkins.jpg" alt=""><div><b>Jenkins, taking the minutes:</b> ' + t + '</div></div>'); };
   const mood = id => { Directors.refresh(); S.shown[id] = dir(id).attitude; portraits(); };
   /* round 32: the meeting reads in chunks. After each block of talk, you press Continue. */
-  function pause(next, label) { if (!S) return; actions([{ label: label || 'Continue', primary: true, go: next }]); }
+  function pause(next, label) { if (!S) return; actions([{ label: label || 'Continue', primary: true, go: () => { S.lastShown = null; next(); } }]); }
 
   // ---------------------------------------------------------------- open
   function open() {
@@ -177,6 +197,7 @@ window.Meeting = (() => {
       : pick(['We returned ' + pct(y.you) + '. ' + (y.bench === 'rivals' ? 'The rivals averaged ' : 'The sector did ') + pct(y.sector) + '. Investors noticed the gap.', pct(y.you) + ' against ' + pct(y.sector) + (y.bench === 'rivals' ? ' for our rivals' : ' for the sector') + '. That is the number I hear about.']));
     const sp = priceSpark(); if (sp) say('note', '', sp);
     (G().board._lastEarned || []).forEach(e => say('note', e));
+    if (S.practice) jnote('That table is the scorecard. Each line is what one director judges you on: \u2713 you deliver, \u2717 you don\u2019t. Their mood follows it.');
     pump(() => pause(beatPersonal));
   }
   const pct = v => (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(1) + '%';
@@ -222,11 +243,12 @@ window.Meeting = (() => {
   function beatReview() {
     const rev = G().board._lastReview || [], pro = G().board._lastPromises || [];
     if (!rev.length && !pro.length) { beatDeparture(); return; }
-    rev.forEach(r => {
-      if (r.skipped) return;
-      say(r.id, r.achieved ? pick(['You met my demand: ' + r.text + ' Good.', r.text.replace(/\.$/, '') + ': done. Thank you.'])
-                           : pick(['I asked for this: ' + r.text + ' You missed it.', r.text.replace(/\.$/, '') + ': not done. I remember these things.']));
-      S.q[S.q.length - 1].mood = dir(r.id) ? dir(r.id).attitude : null;
+    // round 42: one small table for last year's demands; only a director whose demand you missed speaks
+    const shownRev = rev.filter(r => !r.skipped && dir(r.id));
+    if (shownRev.length) say('note', '', '<b>Last year\u2019s demands</b><table class="mt-sc">' + shownRev.map(r => '<tr><td>' + esc(r.text) + '</td><td class="who">' + esc(sn(r.id)) + '</td><td>' + (r.achieved ? '<span class="ok">\u2713</span>' : '<span class="no">\u2717</span>') + '</td></tr>').join('') + '</table>');
+    shownRev.filter(r => !r.achieved).forEach(r => {
+      say(r.id, pick(['You missed it. I remember these things.', 'Not done. I asked once; I won\u2019t ask nicely again.']));
+      S.q[S.q.length - 1].mood = dir(r.id).attitude;
     });
     pro.forEach(p => {
       if (!dir(p.id)) return;
@@ -432,6 +454,7 @@ window.Meeting = (() => {
       b._demandsYear = S.year; b._demandsDone = 0;
     }
     const n = (b.activeMandates || []).length;
+    if (S.practice) jnote('Now the demands for next year. <b>Accept</b> is safe. <b>Push back</b> costs 1 political capital and may ease the target. <b>Refuse</b> costs their goodwill. Every demand you meet earns political capital.');
     say(CH(), one ? (n ? 'You set the agenda now, so one demand from the board this year. We will hold you to it.' : 'No demands from the board this year.')
                   : 'Now, next year. Two demands, and we will hold you to both.');
     pump(() => nextDemand());
@@ -494,7 +517,7 @@ window.Meeting = (() => {
       const ally = { williams: 'petrova', petrova: 'williams' }[id];
       const done = r => { m.response = r; b._demandsDone = i + 1; Directors.refresh(); S.q.length && (S.q[S.q.length - 1].mood = dir(id).attitude); pump(nextDemand); };
       actions([
-        { label: 'Accept', detail: (binary ? '' : 'Target ' + N.sign + ' ' + N.target + '. ') + (m.promise ? 'Your promise. Met: +3.5 mood, +1 capital. Missed: −4 mood.' : 'Met: +2.5 mood, +1 capital. Missed: −3 mood.'), primary: true, go: () => { say('you', 'Agreed.'); say(id, 'Good.'); done('accept'); } },
+        { label: 'Accept', detail: (binary ? '' : 'Target ' + N.sign + ' ' + N.target + '. ') + (m.promise ? 'Your promise. Met: +3.5 mood, +1 capital. Missed: −4 mood.' : 'Met: +2.5 mood, +1 capital. Missed: −3 mood.'), primary: true, go: () => { done('accept'); } },   // round 42: the choice says it; no "Agreed" / "Good"
         { label: 'Push back (1 capital)', detail: binary
               ? (isBinaryReal(m) ? 'Ask them to drop it. ' : 'Ask for no target this year. ') + odds + '% chance' + (backed ? ' (Okafor backs you: ' + (crisisNow ? 'we are in a crisis' : 'debt is ' + Math.round(d2a * 100) + '%') + ')' : '') + '. If they say no: −0.5 mood and it stays.'
               : 'Ask for ' + N.sign + ' ' + N.eased + ' instead of ' + N.target + '. ' + odds + '% chance. Eased and met: +1 mood, +1 capital; missed: −1.5. If they say no: −0.5 mood, target stays.',
@@ -521,11 +544,13 @@ window.Meeting = (() => {
       (m.response === 'reject' ? ' <i>(refused)</i>' : '') + '</div>').join('') + '<div class="mt-sub">They are on the Board tab, with progress, all year.</div>');
     if (S.practice) {
       say(CH(), 'That’s Year 1. From next year this board votes on you. Use the year well.');
+      jnote('Next year they vote. A director votes against you when he is unhappy and his own line is \u2717, or when he is Furious. Lose the vote once: probation. Twice: you\u2019re out.');
       pump(() => payCommittee(() => actions([{ label: 'Back to work', primary: true, go: close }])));
       return;
     }
-    say(CH(), 'Now, the vote. Each of us in turn.');
-    pump(() => vote(0, 0));
+    say(CH(), 'Now, the vote.');
+    if (S.year === 2) jnote('Watch the mood under each portrait. Unhappy with a \u2717 on the scorecard, or Furious: that\u2019s a vote against you. Most of the room against you means probation.');
+    pump(() => pause(() => vote(0, 0), 'Call the vote'));
   }
 
   // ---------------------------------------------------------------- 5. the vote
@@ -547,11 +572,10 @@ window.Meeting = (() => {
       return;
     }
     const a = dir(id).attitude, no = id === 'tex' ? against >= 4 : Directors.votesAgainst(id);
-    S.votes[id] = no ? 'AGAINST' : 'FOR';
     const c = Directors.card(id);
     say(id, no ? pick(['Against. ' + cap(c.cause) + '.', 'I can’t support this. ' + cap(c.cause) + '.'])
-               : pick(['For.', 'I back the CEO.', 'For. ' + (a >= 7.5 ? 'A good year.' : 'For now.')]));
-    S.q[S.q.length - 1].mood = a;
+               : (a >= 7.5 ? pick(['For. A good year.', 'For.']) : a < 3 ? 'For. Just.' : 'For.'));
+    Object.assign(S.q[S.q.length - 1], { mood: a, vote: no ? 'AGAINST' : 'FOR', drama: true });   // round 42: a beat, then the words and the stamp together
     pump(() => vote(i + 1, against + (no ? 1 : 0)));
   }
 

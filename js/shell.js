@@ -96,7 +96,7 @@ window.REIT = (() => {
       basis:  p.purchasePrice,
       held:   p.quarterOwned,
       yoc:    (p.purchasePrice > 0) ? Math.round(noi / p.purchasePrice * 1000) / 10 : null,
-      status: p.constructionType === 'land' ? 'land' : p.constructionType === 'development' ? 'building' : p.underConstruction ? (p.renovating ? 'renovating' : 'leaseup') : 'active',
+      status: p.reno ? 'renovating' : p.constructionType === 'land' ? 'land' : p.constructionType === 'development' ? 'building' : p.underConstruction ? (p.renovating ? 'renovating' : 'leaseup') : 'active',
       story:  p.story || '',
       traits: p.traits || [],
       count:  window.Tenants ? Tenants.countLabel(p) : '',

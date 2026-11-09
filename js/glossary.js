@@ -62,6 +62,7 @@ window.Glossary = (() => {
     // capital actions
     'borrow': 'Take a loan. Cheap money grows you; too much makes every shock dangerous.',
     'issue shares': 'Sell new shares for cash. No interest, but every existing share now owns a smaller slice.',
+    'issue company shares': 'The company sells new shares to investors. The money goes to the company, not to you; every existing share now owns a smaller slice.',
     'buy back shares': 'Spend cash buying your own shares. Fewer shares, so each owns more profit.',
     'dividend': 'Cash you pay shareholders every quarter. The board watches it closely; cutting it hurts.',
 
@@ -114,6 +115,44 @@ window.Glossary = (() => {
     });
   }
 
+  /* round 42: jargon inside sentences (inbox letters, the meeting, dialogs). The first
+     time a term appears in a block it gets a dotted underline; hover shows one line. */
+  const PROSE = [
+    [/\bcap rates?\b/i, 'Cap rate: what a building earns in a year (rent after running costs) divided by its price. 7% means $7 a year for every $100.'],
+    [/\bAFFO\b|\bcash profit\b/i, 'Cash profit (AFFO): rent minus interest, head office and upkeep. What the company really earned. The dividend should come out of it.'],
+    [/\bNAV\b/, 'NAV: what all our buildings are worth, minus all our debt, per share. If the share price is below it, the market values us cheap.'],
+    [/\bNOI\b/, 'NOI: a building\u2019s rent after its running costs (maintenance, tax, insurance).'],
+    [/\bcovenants?\b/i, 'Covenant: a promise to our lenders, for example debt below 60% of assets. Break it and they can stop lending or demand money back.'],
+    [/\bcredit line\b/i, 'Credit line: an overdraft from the bank. Cash below zero is drawn from it. Flexible, but dearer than bonds.'],
+    [/\bunsecured notes\b/i, 'Unsecured notes: bonds with no buildings pledged behind them. Dearer, and the board dislikes them.'],
+    [/\bdilut(?:es|ion|ive)\b/i, 'Dilution: new shares mean each existing share owns a smaller slice of the company and its profit.'],
+    [/\bpolitical capital\b/i, 'Political capital: your influence with the board, the bank and the city. Earned with good results, spent to win fights.'],
+    [/\boccupancy\b/i, 'Occupancy: the share of a building\u2019s space that is let and paying rent.'],
+    [/\bdividend cover\b|\bnot covered\b/i, 'Covered: the dividend is paid out of cash profit. Not covered means we pay more than we earn.'],
+    [/\bbonds?\b/i, 'Bond: a loan from investors at a fixed rate, repaid in full on a set date. Have the money ready, or refinance before it falls due.'],
+  ];
+  const PROSE_SEL = '.ib-body, #mt-chat .mt-bub, #mt-chat .mt-note, #modal-body';
+  function prose(root) {
+    (root || document).querySelectorAll(PROSE_SEL).forEach(blk => {
+      const sig = blk.textContent.length + ':' + blk.textContent.slice(0, 40);   // a reused box (the dialog) gets a fresh pass when its text changes
+      if (blk.dataset.gl === sig) return; blk.dataset.gl = sig;
+      const used = {};
+      const walk = document.createTreeWalker(blk, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentNode.closest('button, input, select, textarea, a, .gl, [data-tip]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+      const nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+      nodes.forEach(n => {
+        for (let i = 0; i < PROSE.length; i++) {
+          if (used[i]) continue;
+          const m = PROSE[i][0].exec(n.nodeValue); if (!m) continue;
+          used[i] = true;
+          const after = n.splitText(m.index); after.nodeValue.length > m[0].length && after.splitText(m[0].length);
+          const sp = document.createElement('span'); sp.className = 'gl has-tip'; sp.dataset.tip = PROSE[i][1]; sp.textContent = after.nodeValue.slice(0, m[0].length);
+          after.parentNode.replaceChild(sp, after);
+          break;   // one term per text node is plenty
+        }
+      });
+    });
+  }
+
   // one floating tooltip for the whole page (never clipped by panels)
   let box = null;
   function show(el, x, y) {
@@ -125,9 +164,14 @@ window.Glossary = (() => {
     box.style.top = (y + h + 24 > window.innerHeight ? y - h - 10 : y + 16) + 'px';
   }
   const hide = () => { if (box) box.style.display = 'none'; };
+  // round 42: never instant: the tip shows after the mouse rests on a term for 0.6 s
+  let tmr = null, cur = null, lx = 0, ly = 0;
+  document.addEventListener('mousemove', e => { lx = e.clientX; ly = e.clientY; }, { passive: true });
   document.addEventListener('mouseover', e => {
     const el = e.target.closest && e.target.closest('[data-tip]');
-    if (el) show(el, e.clientX, e.clientY); else hide();
+    if (el === cur) return;
+    cur = el; clearTimeout(tmr); hide();
+    if (el) tmr = setTimeout(() => { if (cur === el) show(el, lx, ly); }, 600);
   });
   document.addEventListener('scroll', hide, true);
 
@@ -135,8 +179,8 @@ window.Glossary = (() => {
   let queued = false;
   new MutationObserver(() => {
     if (queued) return; queued = true;
-    requestAnimationFrame(() => { queued = false; tag(document); });
+    requestAnimationFrame(() => { queued = false; tag(document); try { prose(document); } catch (e) {} });
   }).observe(document.documentElement, { childList: true, subtree: true });
 
-  return { tag, lookup, TERMS: T };
+  return { tag, lookup, prose, TERMS: T };
 })();

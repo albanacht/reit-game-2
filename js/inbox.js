@@ -70,17 +70,17 @@ window.Inbox = (() => {
               note: G => 'Your Asset Manager starts work: a little more of every building let each quarter, and lease up and renovation are open.' },
     leaseup: { done: G => (G.portfolio || []).some(p => p.leaseUpYear),
               note: G => 'Leased up. Occupancy is ' + Math.round((G.ratios.occupancyPortfolio || 0) * 100) + '% across the portfolio; the extra rent shows next quarter.' },
-    renovate: { done: G => (G.portfolio || []).some(p => p.renovated || p.renovating),
-              note: G => 'Renovation under way. One quarter offline, then more rent, and the building is New again.' },
+    renovate: { done: G => (G.portfolio || []).some(p => p.renovated || p.renovating || p.reno),
+              note: G => 'Renovation under way. Two quarters of works with the tenants in, then rents rise and the building is New again.' },
   };
   /* round 24: after the CFO, Jenkins moves on to the buildings, one step at a time */
   const NEXT = {
     cfo: { task: 'asset', title: 'Step 5: Hire an Asset Manager',
-      body: 'Buildings age, boss: rent drifts down about 1% a year and tenants leave. An <strong>Asset Manager</strong> keeps them full (a little more let every quarter) and unlocks <strong>lease up</strong>, <strong>renovation</strong> and <strong>repositioning</strong>.<br><br>Open <strong>Staff</strong> and hire one.' },
+      body: 'Why: an empty floor is the gap shrinking. Buildings age, rents drift down about 1% a year, tenants leave. An <strong>Asset Manager</strong> keeps them full (a little more let every quarter) and unlocks <strong>lease up</strong> and <strong>renovation</strong>.<br><br>Open <strong>Staff</strong> and hire one.' },
     asset: { task: 'leaseup', title: 'Step 6: Lease up a building',
-      body: 'On <strong>Properties</strong>, open a building below 90% let and press <strong>Lease up</strong>. It costs 12% of that building\u2019s yearly rent (brokers, free months) and fills 3 to 8 points at once, more the emptier it is.<br><br><strong>Best between 65% and 85% let</strong>: there it pays for itself in about two years. Above 85% it barely pays. Once a year per building.' },
+      body: 'Why: rent we don\u2019t collect is money we still pay interest on. On <strong>Properties</strong>, click a building below 90% let to open it, and press <strong>Lease up</strong>. It costs 12% of that building\u2019s yearly rent (brokers, free months) and fills 3 to 8 points at once.<br><br><strong>Best between 65% and 85% let</strong>: there it pays for itself in about two years. Once a year per building.' },
     leaseup: { task: 'renovate', title: 'Step 7: Renovate one',
-      body: 'Every building shows its <strong>condition</strong> on Properties: New, Good, <strong>Worn</strong>, Tired. Renovate a <strong>Worn</strong> one below 90% let.<br><br>It costs 10% of its value and a quarter offline. In return: <strong>rent +15%</strong>, 8 more points let, and it is New again. About 6 years later it is Worn, and you can renovate again. Tired buildings let a little worse.' },
+      body: 'Why: tired buildings lose tenants and rent. Every building shows its <strong>condition</strong> on Properties (New, Good, <strong>Worn</strong>, Tired). Click a <strong>Worn</strong> one to open it and press <strong>Renovate</strong>.<br><br>It costs 10% of its value. The tenants stay; two quarters of works at 10% less rent, then <strong>rents +10%</strong> over a year and it\u2019s New again. Worth it when that beats what money costs us.' },
   };
   function taskDone(id) { const t = TASKS[id]; return !!(t && window.GameState && t.done(GameState)); }
   function checkTasks() {
@@ -93,6 +93,11 @@ window.Inbox = (() => {
       if (asked) add({ kind: 'message', from: 'Jenkins', role: 'Chief of Staff', face: JENKINS,
                        title: '\u2713 Done: ' + ({ borrow: 'you borrowed', equity: 'you sold shares', buy: 'you bought a building', cfo: 'you hired a CFO', asset: 'you hired an Asset Manager', leaseup: 'you leased up a building', renovate: 'you renovated' })[id],
                        body: TASKS[id].note(G), read: false });
+      // round 42: everything asked this quarter is done: say how to move on
+      const open = S().items.filter(i => i.task && !G._tutDone[i.task]).length;
+      const qk = G.meta.year + '-' + G.meta.quarter;
+      if (asked && !open && !NEXT[id] && G.meta.year === 1 && G._advHint !== qk) { G._advHint = qk;
+        add({ kind: 'message', from: 'Jenkins', role: 'Chief of Staff', face: JENKINS, title: 'That\u2019s everything for this quarter', body: 'Nicely done, boss. Press <strong>Advance quarter</strong> (top right) when you\u2019re ready. The results come in, and so does my next note.', read: false }); }
       const nx = NEXT[id];
       if (asked && nx && G._tutorialEnabled !== false && !S().items.some(i => i.task === nx.task)) {
         add({ kind: 'message', from: 'Jenkins', role: 'Chief of Staff', face: JENKINS, title: nx.title, body: nx.body, task: nx.task, read: false });

@@ -72,7 +72,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await pg.evaluate(() => { const L = Story.H().loan; L.missed = 1; });
   ok(await toMeeting(), 'Year 4 meeting');
   const s4 = await through((p, b) => /keep or call/.test(p) ? 0 : 0);
-  ok(s4.some(x => /keep or call/.test(x)), 'the yearly review: keep or call the loan');
+  ok(s4.some(x => /keep or call/.test(x)), 'the yearly review: keep or call the loan'); if (!s4.some(x => /keep or call/.test(x))) console.log('      ' + s4.join(' // ').slice(0, 900));
   await pg.evaluate(() => { const t = GameState.tenants.harlow_grocers; t.coverage = 2.4; t.base = 2.4; });
   ok(await toMeeting(), 'Year 5 meeting: the loan falls due here');
   await pg.evaluate(() => { window.__r = Math.random; Math.random = () => 0.01; });

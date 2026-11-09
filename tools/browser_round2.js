@@ -36,7 +36,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await pg.evaluate(() => showView('finance')); await wait(300);
   const tagged = await pg.evaluate(() => document.querySelectorAll('[data-tip]').length);
   const affo = await pg.$('.pnl-table td.has-tip');
-  if (affo) { const bx = await affo.boundingBox(); await pg.mouse.move(bx.x + 10, bx.y + 6); await wait(200); }
+  if (affo) { const bx = await affo.boundingBox(); await pg.mouse.move(bx.x + 10, bx.y + 6); await wait(800); }   // round 42: tips wait 0.6 s
   const tip = await pg.evaluate(() => { const t = document.getElementById('tipbox'); return t && t.style.display === 'block' ? t.textContent : ''; });
   console.log('     terms with tooltips on Finance: ' + tagged + ' | hover shows: "' + tip.slice(0, 60) + '"');
   ok(tagged >= 25 && tip.length > 10, 'tooltips on terms, shown on hover');

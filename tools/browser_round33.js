@@ -30,7 +30,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const it = Levi.agenda(2, []); r.challenge = it.length && /z-test/.test(JSON.stringify(it[0].lines));
     return r; });
   ok(!lv.q2 && lv.q3 === 'levi_offer' && lv.stage === 'letter', 'Levi: nothing in Y2 Q2; Petrova’s letter in Y2 Q3 ("' + lv.title + '")');
-  ok(lv.hired === 'hired' && lv.challenge, 'hired from the inbox; his first challenge comes at the Year 2 meeting');
+  ok(lv.hired === 'hired', 'hired from the inbox (round 37: no challenges; his one awkward line is random)');
   const lv2 = await pg.evaluate(() => { Levi.debug({ stage: 'wait' }); const a = Levi.agenda(2, []).length; const b = Levi.agenda(3, []); return { a, b: b.length && b[0].guest && b[0].guest.name }; });
   ok(lv2.a === 0 && /Levi/.test(lv2.b || ''), 'the meeting is only a fallback: not at the Year 2 meeting, yes at Year 3 if the letter never came');
 
