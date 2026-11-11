@@ -45,7 +45,16 @@ window.Meeting = (() => {
         '<button class="mt-skip" id="mt-skip" title="Show this part now">Skip ▸▸</button></div>' +
       '<div class="mt-portraits" id="mt-portraits"></div><div class="mt-chat" id="mt-chat"></div><div class="mt-actions" id="mt-actions"></div></div>';
     document.body.appendChild(m);
-    m.querySelector('#mt-chat').addEventListener('click', flush);
+    m.querySelector('#mt-chat').addEventListener('click', nextNow);   // round 43: a click (or Space) shows the next line now
+    document.addEventListener('keydown', e => {
+      if (e.code !== 'Space' && e.key !== ' ') return;
+      const mm = document.getElementById('meeting'); if (!mm || mm.classList.contains('hidden') || !S) return;
+      if (/INPUT|TEXTAREA|SELECT/.test((e.target && e.target.tagName) || '')) return;
+      e.preventDefault();
+      if (S.q.length || S.timer) { nextNow(); return; }
+      const btns = [...document.querySelectorAll('#mt-actions .mt-btn')].filter(b => !b.disabled);
+      if (btns.length === 1) btns[0].click();          // Space on a lone Continue moves on
+    });
     m.querySelector('#mt-skip').addEventListener('click', flush);
     m.querySelectorAll('#mt-speed button').forEach(b => b.addEventListener('click', () => { setSpeed(b.dataset.sp); if (speed === 'instant') flush(); }));
     markSpeed();
@@ -77,7 +86,7 @@ window.Meeting = (() => {
      (about 22 characters a second, like normal reading), then the next one types.
      Normal / Fast / Instant, remembered in the browser. Click the chat or Skip for the
      rest of this part at once. */
-  let speed = (() => { try { return localStorage.getItem('reitMeetSpeed') || 'normal'; } catch (e) { return 'normal'; } })();
+  let speed = (() => { try { return localStorage.getItem('reitMeetSpeed') || 'fast'; } catch (e) { return 'fast'; } })();   // round 43: Fast by default
   const SPEED = { normal: 1, fast: 0.45, instant: 0 };
   function setSpeed(k) { speed = SPEED[k] != null ? k : 'normal'; try { localStorage.setItem('reitMeetSpeed', speed); } catch (e) {} markSpeed(); }
   function markSpeed() { document.querySelectorAll('#mt-speed button').forEach(b => b.classList.toggle('on', b.dataset.sp === speed)); }
@@ -114,6 +123,15 @@ window.Meeting = (() => {
     if (it.vote) S.votes[it.who] = it.vote;   // round 42: the stamp lands with the words
     chat.appendChild(el); chat.scrollTop = chat.scrollHeight;
     portraits();
+  }
+  /* round 43: show the next waiting line at once, then carry on at the chosen pace */
+  function nextNow() {
+    if (!S) return;
+    if (!S.q.length) return;
+    if (S.timer) { clearTimeout(S.timer); S.timer = null; }
+    document.querySelectorAll('#mt-chat .mt-typing').forEach(t => t.remove());
+    const sh = S.q.shift(); show(sh); S.lastShown = sh;
+    pump();
   }
   function flush() {
     if (!S) return;
@@ -398,14 +416,17 @@ window.Meeting = (() => {
       say(id, id === 'williams'
         ? 'I own ' + stk.n.toLocaleString() + ' shares of this company, son. They are down ' + down + '% since I bought them. I expect them to go up from here, and I expect a hefty dividend. That is what the shareholders elected us for.'
         : 'I own ' + stk.n.toLocaleString() + ' shares of this company. They are down ' + down + '% since I bought them. I would like to see them go up, and so would every other shareholder.');
-    } else
+    } else if (c.causeKind === 'memory')   // round 43: something you did, not a number: no "explain the tower"
+      say(id, pick(['I haven\u2019t forgotten ' + c.cause.replace(/\.$/, '') + '. I want your word it won\u2019t happen again.', 'Before we move on: ' + c.cause.replace(/\.$/, '') + '. That cannot happen again.']));
+    else
     say(id, pick(['Before we move on. ' + cap(c.cause) + '. I want to hear what you will do about it.', cap(c.cause) + '. Explain that to me.']));
+    const mem = c.causeKind === 'memory';
     pump(() => {
       const pc = b.politicalCapital || 0, dodged = (b.deflected || {})[id];
       const promiseD = Board.demandFor(id), other = OPPOSE[id] && dir(OPPOSE[id]) ? OPPOSE[id] : null;
       actions([
-        { label: 'Promise to fix it', detail: '+1 mood now, and the fix becomes ' + sn(id) + '\u2019s demand for next year' + (promiseD ? ' ("' + promiseD.text.replace(/\.$/, '') + '")' : '') + '. Kept: +3.5 mood. Broken: −4.', primary: true, go: () => {
-            say('you', 'You have my word: this will be fixed by next year’s meeting.');
+        { label: mem ? 'Promise: no more surprises like that' : 'Promise to fix it', detail: '+1 mood now, and ' + (mem ? sn(id) + '\u2019s priority' : 'the fix') + ' becomes ' + sn(id) + '\u2019s demand for next year' + (promiseD ? ' ("' + promiseD.text.replace(/\.$/, '') + '")' : '') + '. Kept: +3.5 mood. Broken: −4.', primary: true, go: () => {
+            say('you', mem ? 'You have my word: nothing like that again without this board behind it.' : 'You have my word: this will be fixed by next year’s meeting.');
             S.first = id; S.promised = true;
             Directors.remember(id, 1, 'you promised to fix: ' + c.cause);
             say(id, pick(['I will hold you to that.', 'Noted. Don’t make me remind you.'])); mood(id); S.q[S.q.length - 1].mood = dir(id).attitude; pump(beatDemands); } },
@@ -587,7 +608,7 @@ window.Meeting = (() => {
       if (b.probation) b.probation = null;
       pump(() => payCommittee(() => texMotion(() => actions(leave('Back to work')))));
     } else if (!b.probation) {
-      b.probation = { since: S.year };
+      b.probation = { since: S.year }; if (window.Nerd) Nerd.noteProbation();   /* round 43 */
       say(CH(), against + ' to ' + forN + ' against. You keep the job for one more year, on probation. Lose next year’s vote and you are out.');
       pump(() => payCommittee(() => texMotion(() => actions(leave('Back to work, on probation')))));
     } else {
@@ -688,5 +709,5 @@ window.Meeting = (() => {
     if (window.UI && UI.renderAll) UI.renderAll();
   }
 
-  return { open, close, flush };
+  return { open, close, flush, nextNow };
 })();

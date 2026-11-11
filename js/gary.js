@@ -135,7 +135,8 @@ window.Gary = (() => {
     });
     let dist = [1]; per.forEach(p => { const n = new Array(dist.length + 1).fill(0); dist.forEach((v, k) => { n[k + 1] += v * p; n[k] += v * (1 - p); }); dist = n; });
     const need = Math.floor(per.length / 2) + 1;
-    return { p: dist.slice(need).reduce((a, b) => a + b, 0), n: per.length };
+    const gr = window.IndexFund && IndexFund.included && IndexFund.included() ? 0.20 : 0;   // round 43: Granite leans on the independent directors against family deals
+    return { p: clamp(dist.slice(need).reduce((a, b) => a + b, 0) - gr, 0.02, 0.98), n: per.length, granite: !!gr };
   }
   function voteItem() {
     const g = S(), o = voteOdds(), fee = fmt(rentY() * FEE), extra = fmt(rentY() * (FEE - LOW));
@@ -146,7 +147,7 @@ window.Gary = (() => {
       choices: [
         { label: 'Leave the room and let them vote (about ' + Math.round(o.p * 10) + ' in 10 it passes)', primary: true, detail: 'The independent directors decide. Okafor and Petrova are sceptical; Williams does not mind if the dividend is fine.',
           go: () => {
-            if (rnd() < o.p) { g.stage = 'run'; g.runQ = tq(); note('The board approved the Lakeside contract.'); remember('petrova', -0.5, 'the Lakeside contract'); return 'You come back in. Approved. Lakeside manages our buildings from next quarter; your 40% starts paying.'; }
+            if (rnd() < o.p) { g.stage = 'run'; g.runQ = tq(); note('The board approved the Lakeside contract.'); if (window.IndexFund && IndexFund.family) IndexFund.family('lakeside'); remember('petrova', -0.5, 'the Lakeside contract'); return 'You come back in. Approved. Lakeside manages our buildings from next quarter; your 40% starts paying.'; }
             g.stage = 'voted_down'; g.stake = 0; me().cash = fmt(me().cash + PRICE); g.lakeOff = true; note('The board said no to Lakeside.');
             return 'You come back in. Rejected. Gary buys your stake back at what you paid. He says the board "is not family".'; } },
         { label: 'Call around first (1 political capital), then leave the room: about ' + Math.round(voteOdds(true).p * 10) + ' in 10', detail: 'A word with each director before the vote. You have ' + ((GameState.board && GameState.board.politicalCapital) || 0) + '.',
@@ -241,7 +242,8 @@ window.Gary = (() => {
   function yardOdds(pct, lobby) {
     const ds = (GameState.board.directors || []).filter(d => d.id !== 'tex' && d.id !== 'voss');
     const avg = ds.length ? ds.reduce((a, d) => a + d.attitude, 0) / ds.length : 5;
-    return clamp(YARD_OK[pct] + clamp((avg - 5) * 0.03, -0.15, 0.15) + (lobby ? 0.25 : 0), 0.05, 0.97);
+    const gr = window.IndexFund && IndexFund.included && IndexFund.included() ? 0.20 : 0;   // round 43: Granite opposes family deals
+    return clamp(YARD_OK[pct] + clamp((avg - 5) * 0.03, -0.15, 0.15) + (lobby ? 0.25 : 0) - gr, 0.05, 0.97);
   }
   function yardQuarter(out) {
     const y = Y(), G = GameState, s = Story.S(), now = tq();
@@ -252,6 +254,7 @@ window.Gary = (() => {
     if (y.stage === 'done' && !y.exposed && now > y.q && now <= y.q + 8 && rnd() < YARD_LEAK[y.pct] / 8) yardLeak(out);
   }
   function yardBuy(pct) {
+    if (window.IndexFund && IndexFund.family) IndexFund.family('yard');   // round 43
     const y = Y(), G = GameState, V = y.value, P = fmt(V * (1 + pct));
     const M = { id: YARD_ID, n: 'Riverside Salvage Yard', t: 'industrial', ti: 'suburban', z: 'southside', o: 'you', x: 44, y: 90, v: V, cap: 8, occ: 100,
                 ph: 'industrial_riverside_salvage', noi: fmt(V * 0.08), story: 'The family scrap yard by the river, sold to the REIT by you and Gary. Let back to Riverside Salvage for 10 years.' };

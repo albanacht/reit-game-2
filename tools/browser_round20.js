@@ -24,7 +24,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ok(c.n <= 1 && !c.target, 'no more challenges at the meetings (' + c.n + ' awkward line)');
   // the crisis forecast
   const f = await pg.evaluate(() => { const ph = Arc.phase; const now = (GameState.meta.year - 1) * 4 + GameState.meta.quarter; Arc.phase = t => (t || now) >= now + 2 ? 'crisis' : 'cheap'; const out = []; Levi.processQuarter(out); Arc.phase = ph; UI.renderAll();
-    return ((document.getElementById('inbox-list') || {}).textContent.match(/A regime change[^]{0,160}/) || [''])[0]; });
+    const it = (GameState.inbox.items || []).find(i => /A regime change/.test(i.title)); return it ? it.title + ': ' + it.body.replace(/<[^>]+>/g, '') : '';   /* round 43: letters show their gist; read the body */ });
   ok(/crisis within two quarters/.test(f), 'his forecast in the inbox: "' + f.slice(0, 150) + '"');
   // staff card
   await pg.evaluate(() => { showView('staff'); UI.renderAll(); }); await wait(300);

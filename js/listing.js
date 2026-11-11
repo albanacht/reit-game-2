@@ -83,6 +83,7 @@ window.IndexFund = (() => {
   // quarter's here, so that is the quarter we record.
   // ============================================================================
   function processQuarter(out) {
+    try { letter(); } catch (e) {}   // round 43
     const x = X(), G = GameState;
     if (G.meta.totalQuarters < 1) return;
     x.ni.push(fmt((G.pnl.netIncome || 0) - (x.writes || 0))); x.writes = 0;
@@ -173,6 +174,29 @@ window.IndexFund = (() => {
   }
 
   // ============================================================================
+  /* round 43: Granite and family. Every related-party deal while we are in the index
+     draws a letter from Dahl and costs 15 points on the next pay votes. */
+  const FAM = { yard: 'the sale of your family\u2019s scrap yard to the company', lakeside: 'the property-management contract with your brother-in-law\u2019s firm', sebastian: 'the chairman\u2019s nephew as Chief Vision Officer' };
+  function family(kind) {
+    const x = X(); if (!included() || !FAM[kind]) return;
+    x.family = x.family || {}; if (x.family[kind]) return; x.family[kind] = GameState.meta.year;
+    say(DAHL.name, DAHL.role, 'Granite on ' + FAM[kind].replace(/^the /, ''),
+      'We have read the disclosure: ' + FAM[kind] + '. Related-party deals are exactly what index investors cannot walk away from, so we vote against them where we can.<br><br>' +
+      '<b>Granite will vote against your pay at every say-on-pay vote while this stands (\u221215 points).</b> We will also make our view known to the independent directors.', DAHL.face);
+  }
+  /* round 43: once a year, Dahl writes what Granite voted against, so the pressure is visible */
+  function letter() {
+    const x = X(); if (!included() || GameState.meta.quarter !== 1 || x.letterYear === GameState.meta.year) return;
+    const tg = (x.targets || []).filter(t => has(t.id)), fam = Object.keys(x.family || {});
+    if (!tg.length && !fam.length && !x.ignored) return;
+    x.letterYear = GameState.meta.year;
+    say(DAHL.name, DAHL.role, 'Granite\u2019s votes this year',
+      'For the record, how Granite voted its 15% at this year\u2019s shareholders\u2019 meeting:<br>' +
+      tg.map(t => '\u2022 Against ' + Directors.name(t.id).replace(/^(Chairman|Chair|Director) /, '') + ' (' + t.why + '): reputation \u221210 a year. Below 30, the board drops them.').join('<br>') + (tg.length ? '<br>' : '') +
+      fam.map(k => '\u2022 Against your pay while ' + FAM[k] + ' stands (\u221215 at the vote).').join('<br>') + (fam.length ? '<br>' : '') +
+      (x.ignored ? '\u2022 Your board ignored last year\u2019s failed pay vote. It will not be allowed to again.' : ''), DAHL.face);
+  }
+
   // SAY ON PAY (pay.js asks for this item after the bonus)
   // ============================================================================
   function sayOnPayItem(year, items) {
@@ -192,6 +216,7 @@ window.IndexFund = (() => {
       if (GameState.board.probation) { p -= 10; why.push('probation'); }
       if (x.ignored) { p -= 10; why.push('last year’s vote was ignored'); }
       if (window.Gary && Gary.flagged()) { p -= 15; why.push('the Lakeside contract'); }
+      Object.keys(x.family || {}).filter(k => !(k === 'lakeside' && window.Gary && Gary.flagged())).forEach(k => { p -= 15; why.push(FAM[k].replace(/^the /, '')); });   // round 43
       p = Math.round(clamp(p + (rnd() - 0.5) * 16, 20, 98));
       if (x.sopForce != null) p = x.sopForce;                 // tests
       x.sop = x.sop || []; x.sop.push({ y: year, p });
@@ -201,7 +226,8 @@ window.IndexFund = (() => {
                                         [lead('petrova', Directors.chair()), 'We have to answer this.']],
         choices: [
           { label: 'Cut your pay by a quarter', primary: true, detail: 'Bonus target and share grants −25% from now on. Petrova +1. Granite is satisfied.', go: () => { c.cut = fmt((c.cut || 1) * 0.75); x.ignored = false; remember('petrova', 1, 'you took the pay cut'); return 'Your bonus target and share grants are cut by a quarter.'; } },
-          { label: 'Ignore the vote', detail: 'Your pay stays. Granite votes against the chair every year (reputation −10), next year’s vote starts 10 points lower. Petrova −1.5.', go: () => { x.ignored = true; remember('petrova', -1.5, 'you ignored the pay vote'); if (!x.targets.some(t => t.why === 'ignoring the pay vote')) x.targets.push({ id: Directors.chair(), why: 'ignoring the pay vote', year: year }); return 'The board noted the vote. Nothing changes.'; } },
+          { label: 'Ignore the vote', detail: 'Your pay stays. Granite votes against the chair every year (reputation −10), next year’s vote starts 10 points lower. Petrova −1.5.',
+            disabled: !!x.ignored, why: 'You ignored it last year: the board will not let you again',   /* round 43: twice is not allowed */ go: () => { x.ignored = true; remember('petrova', -1.5, 'you ignored the pay vote'); if (!x.targets.some(t => t.why === 'ignoring the pay vote')) x.targets.push({ id: Directors.chair(), why: 'ignoring the pay vote', year: year }); return 'The board noted the vote. Nothing changes.'; } },
         ] });
       return 'Say on pay: only ' + p + '% for. The vote fails.';
     } };
@@ -211,5 +237,5 @@ window.IndexFund = (() => {
   function ending() { const x = X(); return x.stage === 'in' ? 'in' : x.dropped ? 'dropped' : x.told ? 'never' : 'none'; }
   function debug(o) { Object.assign(X(), o || {}); return X(); }
 
-  return { X, tests, included, premium, writeDown, processQuarter, clockRows, agenda, sayOnPayItem, ending, debug, SIZE, INDEX };
+  return { family, X, tests, included, premium, writeDown, processQuarter, clockRows, agenda, sayOnPayItem, ending, debug, SIZE, INDEX };
 })();

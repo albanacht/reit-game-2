@@ -214,6 +214,7 @@ window.Tenants = (() => {
     });
     GameState._defaults = (GameState._defaults || 0) + 1;
     if (!where.length) return null;           // rivals' problem, not yours (yet)
+    GameState._myDefaults = (GameState._myDefaults || 0) + 1;   /* round 43: lessons.js */
     return bad(`${t.name} filed for bankruptcy. It vacated ${where.join(" and ")} — ${fmt(myRent)}M/yr of your rent gone.`);
   }
 
@@ -236,6 +237,9 @@ window.Tenants = (() => {
      NAMED tenant; multi-tenant space folds into "other tenants". */
   function relet(p, pos) {
     pos.vacant = false;
+    // round 43: in a crisis new tenants sign at about 10% less rent (on the space they take)
+    const ph = typeof Arc !== 'undefined' && Arc.phase ? Arc.phase() : '';
+    if ((ph === 'crisis' || ph === 'aftershock') && !pos.incent) p.annualNOI = fmt(p.annualNOI * (1 - 0.10 * (pos.share || 1)));
     const years = rint(K.newLeaseYears[0], K.newLeaseYears[1]);
     if (p.lease.type === "single" || (p.lease.type === "residential" && p.lease.mgmt === "operator")) {
       const t = newTenant(p);

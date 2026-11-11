@@ -726,5 +726,65 @@ body { background: #eef2f7; }
 
 /* round 42: simple line icons on the tabs */
 #topbar .tb-tab .tb-ic { width: 15px; height: 15px; margin-right: 5px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
-@media (max-width: 1365px) { #topbar .tb-tab .tb-ic { display: none; } }   /* round 42: narrow screens keep Advance in view */
 @media (max-width: 1365px) { #topbar .tb-tab { padding: 0 5px; font-size: 12.5px; } #topbar { gap: 7px; } #topbar .tb-hud { gap: 7px !important; } }   /* round 42: 1280 px screens fit the whole bar */
+
+/* round 43: the quarterly results card */
+#views .ib-summary.rc .ib-sum-v small { font-size: 10px; font-weight: 700; color: var(--text-muted); margin-left: 4px; }
+#views .rc-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0 6px; }
+#views .rc-t { background: #fff; border: 1px solid #dfe6ee; border-radius: 6px; padding: 6px 7px; border-top: 3px solid #18794e; }
+#views .rc-t.bad { border-top-color: #c2410c; }
+#views .rc-k { font-size: 9.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: #62748a; }
+#views .rc-v { font-size: 17px; font-weight: 900; color: #1d3b5a; font-variant-numeric: tabular-nums; }
+#views .rc-ch { font-size: 10.5px; font-weight: 700; color: #7a8796; }
+#views .rc-ch.up { color: #18794e; } #views .rc-ch.down { color: #c2410c; }
+#views .rc-big { font-size: 12px; font-weight: 700; padding: 5px 8px; border-radius: 5px; margin: 4px 0; }
+#views .rc-big.bad { background: #fde8e1; color: #9a2f0a; } #views .rc-big.good { background: #e3f4ea; color: #12613d; }
+#views .rc-jen { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: #34495e; margin: 6px 0 2px; }
+#views .rc-jen img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex: none; }
+#views .rc-more { font-size: 11.5px; color: #2f6fb0; cursor: pointer; font-weight: 700; margin-top: 4px; }
+#views .rc-detail { margin-top: 6px; border-top: 1px dashed #d3dce6; padding-top: 6px; }
+
+/* round 43: the inbox drawer on every tab but the Map */
+#views #ib-drawer { position: fixed; top: 64px; right: 0; bottom: 8px; z-index: 60; pointer-events: none; }
+#views #ib-drawer.hidden { display: none; }
+#views #ibd-handle { pointer-events: auto; position: absolute; right: 0; top: 40px; transform-origin: right top; transform: rotate(-90deg) translateY(-100%);
+  background: #1d3f63; color: #fff; border: 0; border-radius: 6px 6px 0 0; padding: 7px 14px; font: 800 12px/1 system-ui, sans-serif; letter-spacing: .5px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+#views #ibd-handle b { background: #e69500; color: #fff; border-radius: 9px; padding: 1px 6px; margin-left: 4px; }
+#views #ib-drawer .ibd-box { pointer-events: auto; position: absolute; right: 0; top: 0; bottom: 0; width: 380px; overflow: auto; background: #f4f7fa; box-shadow: -4px 0 14px rgba(0,0,0,.18); transform: translateX(100%); transition: transform .18s ease; }
+body.ib-open #views #ib-drawer .ibd-box { transform: translateX(0); }
+body.ib-open #views #ibd-handle { right: 380px; }
+#views #ib-drawer .inbox { margin: 0; min-height: 100%; }
+
+/* round 43: staff seats */
+#views .seats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 6px; }
+#views .seat { background: #fff; border: 1px solid #dbe3ec; border-radius: 10px; padding: 10px; text-align: center; display: flex; flex-direction: column; gap: 3px; }
+#views .seat img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: 0 auto 4px; border: 3px solid #e6edf4; }
+#views .seat.filled img { border-color: #2f6fb0; }
+#views .seat.empty { border-style: dashed; cursor: pointer; background: #f8fafc; }
+#views .seat.empty:hover, #views .seat.on { border-color: #2f6fb0; box-shadow: 0 0 0 2px rgba(47,111,176,.15); }
+#views .seat-role { font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #2f6fb0; }
+#views .seat-name { font-weight: 800; font-size: 13.5px; color: #1d3b5a; }
+#views .seat-un { font-size: 11px; color: #62748a; line-height: 1.35; flex: 1; }
+#views .seat-tr { font-size: 11px; font-weight: 700; }
+#views .seat-foot { display: flex; justify-content: center; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; color: #34495e; margin-top: 4px; }
+@media (max-width: 1100px) { #views .seats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+#views .ib-msg .ib-gist { font-size: 12.5px; color: #4a5a6c; line-height: 1.4; }
+#views .ib-msg .ib-gist .ib-more-k { color: #2f6fb0; font-weight: 700; font-size: 11px; white-space: nowrap; }
+
+/* round 43: stats for nerds */
+#views details.nerd { margin: 14px 0 6px; }
+#views details.nerd > summary { cursor: pointer; padding: 10px 14px; font-weight: 800; color: #62748a; letter-spacing: .5px; font-size: 12px; text-transform: uppercase; list-style: none; }
+#views details.nerd[open] > summary { color: #1d3b5a; }
+.nd-sec { margin: 10px 0 4px; } .nd-sec b { display: block; font-size: 13px; color: #1d3b5a; } .nd-sec span { font-size: 11.5px; color: #62748a; }
+.nd-legend { font-size: 11.5px; color: #34495e; margin-top: 2px; } .nd-empty { font-size: 12px; color: #7a8796; padding: 6px 0; }
+.nd-t { width: 100%; border-collapse: collapse; font-size: 12px; } .nd-t th { text-align: left; font-size: 10px; text-transform: uppercase; color: #62748a; padding: 4px 6px; border-bottom: 1px solid #dfe6ee; }
+.nd-t td { padding: 4px 6px; border-bottom: 1px solid #eef2f6; } .nd-t td.up { color: #18794e; font-weight: 700; } .nd-t td.down { color: #c2410c; font-weight: 700; }
+.nd-t tr.nd-best td { background: #eef9f2; } .nd-t tr.nd-worst td { background: #fdf0ec; }
+.nd-tot { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; } .nd-tot div { background: #f4f7fa; border-radius: 6px; padding: 6px 8px; } .nd-tot span { display: block; font-size: 10px; text-transform: uppercase; color: #62748a; font-weight: 700; } .nd-tot b { font-size: 14px; color: #1d3b5a; }
+#nerd-career .nd-career { max-width: 560px; margin: 8px auto; text-align: left; } #nerd-career .nd-tot div { background: rgba(255,255,255,.06); } #nerd-career .nd-tot b, #nerd-career .nd-sec b { color: #e8eef5; } #nerd-career .nd-tot span { color: #9db3c8; }
+
+/* round 43: the top bar fits itself (shell.js fitBar): steps that apply only while it overflows */
+#topbar.fit1 .hud.hud-rc { display: none; }
+#topbar.fit2 .tb-tab .tb-ic { display: none; }
+#topbar.fit3 .tb-tab { padding: 0 5px; font-size: 12.5px; } #topbar.fit3 { gap: 7px; } #topbar.fit3 .tb-hud { gap: 7px !important; }
+#topbar.fit4 .hud.opt { display: none; }

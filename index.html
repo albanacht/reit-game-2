@@ -93,6 +93,7 @@
     </div>
     <div id="postmortem"></div>
     <div id="lb2-gameover"></div>
+    <div id="nerd-career"></div>
     <button id="btn-new-game" class="btn btn-primary btn-lg">Try Again</button>
     <button class="btn btn-secondary btn-lg" onclick="Telemetry.openFeedback()">Rate the game</button>
   </div>
@@ -279,6 +280,7 @@
   </div>
 
   <main id="views">
+    <div id="ib-drawer" class="hidden"><button id="ibd-handle">Inbox</button><div class="ibd-box"></div></div>
 
     <section class="view" id="view-map">
       <div class="home">
@@ -505,6 +507,8 @@
         <div class="chart-wrap"><div class="chart-h"><b>What you own, by value</b><span>Share of your portfolio in each property type. Too much in one type is a risk.</span></div><canvas id="chart-portfolio"></canvas></div>
         <div class="chart-wrap chart-wide"><div class="chart-h"><b>When your debt falls due</b><span>Each bar is a bond you must repay or refinance. Red = due within a year.</span></div><canvas id="chart-debt-maturity"></canvas></div>
       </div>
+      <!-- round 43: folded away; normal players never need it -->
+      <details class="nerd panel" id="nerd-stats" ontoggle="if (this.open && window.Nerd) Nerd.render()"><summary>Stats for nerds ▸</summary><div id="nerd-body" class="panel-body"></div></details>
     </section>
 
     <section class="view hidden" id="view-board">
@@ -629,6 +633,8 @@
 <script src="js/deals.js"></script>
 <script src="js/pr.js"></script>
 <script src="js/crisis.js"></script>
+<script src="js/lessons.js"></script>
+<script src="js/nerd.js"></script>
 <script src="js/ending.js"></script>
 <script src="js/scores.js"></script>
 <script src="js/events.js"></script>
@@ -666,12 +672,36 @@
     if (name === "stories" && window.Journal) Journal.render();
     // charts measure their canvas, which is 0px wide while its view is hidden
     if (name === "finance" && window.Charts && Charts.renderAll) Charts.renderAll();
+    if (name === "finance" && window.Nerd) Nerd.render();
+    inboxDock(name);
     window.scrollTo(0, 0);
   }
+  /* round 43: the inbox on every tab. On the Map it sits in its column; elsewhere it
+     lives in a drawer on the right edge ("Inbox (3)"), closed until you open it. */
+  function inboxDock(name) {
+    var ib = document.getElementById("inbox"), rail = document.querySelector("#view-map .home-rail"), dr = document.getElementById("ib-drawer");
+    if (!ib || !rail || !dr) return;
+    if (name === "map") { if (ib.parentNode !== rail) rail.appendChild(ib); dr.classList.add("hidden"); document.body.classList.remove("ib-open"); }
+    else { var box = dr.querySelector(".ibd-box"); if (ib.parentNode !== box) box.appendChild(ib); dr.classList.remove("hidden"); }
+    var n = document.querySelector('.tb-tab[data-view="map"] .tb-badge');
+    var h = document.getElementById("ibd-handle"); if (h) h.innerHTML = "Inbox" + (n ? " <b>" + n.textContent + "</b>" : "");
+  }
+  document.addEventListener("click", function (e) {
+    var h = e.target.closest && e.target.closest("#ibd-handle"); if (!h) return;
+    document.body.classList.toggle("ib-open");
+  });
   function switchTab(tabId) {
     showView(tabId === "tab-market" || tabId === "tab-portfolio" ? "properties" : tabId.replace("tab-", ""));
   }
   document.querySelectorAll(".tb-tab").forEach(b => b.onclick = () => showView(b.dataset.view));
+  /* round 43: the top bar fits the screen. While the Advance button runs off the edge,
+     drop the least useful thing: Retained last qtr, then tab icons, then spacing, then optional numbers. */
+  function fitBar() {
+    var tb = document.getElementById("topbar"), adv = document.getElementById("btn-advance-quarter"); if (!tb || !adv) return;
+    tb.classList.remove("fit1", "fit2", "fit3", "fit4");
+    for (var k = 1; k <= 4 && adv.getBoundingClientRect().right > window.innerWidth - 4; k++) tb.classList.add("fit" + k);
+  }
+  window.addEventListener("resize", fitBar); window.fitBar = fitBar; setTimeout(fitBar, 0);
 
   // Boot the 2.0 view layer only once every module above has loaded.
   if (window.REIT && REIT.init) REIT.init();

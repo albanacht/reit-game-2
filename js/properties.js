@@ -455,6 +455,7 @@ window.Properties = (() => {
     const gain = Math.round((netProceeds - prop.purchasePrice) * 10) / 10;
 
     GameState.balance.cash = Math.round((GameState.balance.cash + netProceeds) * 10) / 10;
+    if (typeof Nerd !== "undefined") { try { Nerd.sold(prop, salePrice); } catch (e) {} }   /* round 43: deal history */
     var buyer = handOver(prop, "rival", salePrice);       // your sales feed your competitors
     if (typeof Directors !== "undefined" && Directors.noteSale) Directors.noteSale(salePrice);   // round 21: Chen and Hassan watch the portfolio shrink
 
@@ -559,6 +560,19 @@ window.Properties = (() => {
     }
   }
 
+  /* round 43: a crisis empties floors. In the crisis and the aftershock the occupancy
+     a building drifts toward falls (offices and shops 8 points, warehouses 5, flats 4;
+     the collapsing sector 15), and it slides there by about 2 points a quarter.
+     It all comes back after. */
+  function crisisDrop(p) {
+    if (typeof Arc === "undefined" || !Arc.phase) return 0;
+    const ph = Arc.phase(); if (ph !== "crisis" && ph !== "aftershock") return 0;
+    const a = GameState.arc || {}, sev = ph === "aftershock" ? (a.afterSev || 0.4) / (a.sev || 0.8) : 1;
+    const v = Arc.liveVariant ? Arc.liveVariant() : a.variant;
+    const base = { office: 0.08, retail: 0.08, industrial: 0.05, multifamily: 0.04 }[p.sector] || 0.06;
+    return (v === "sector_collapse" && p.sector === (a.sector || "office") ? 0.15 : base) * sev;
+  }
+
   // ----------------------------------------------------------
   // QUARTERLY UPDATE — age properties, shift occupancy slightly
   // Called once per quarter advance
@@ -577,11 +591,12 @@ window.Properties = (() => {
 
       // Occupancy drifts slightly (mean-reversion toward profile midpoint)
       const profile = PROFILES[prop.sector][prop.location];
-      const mid = profile.occupancyMid - (condition(prop).cls === 'tired' ? 0.03 : 0);   // round 38: tired buildings let a little worse
+      const mid = profile.occupancyMid - (condition(prop).cls === 'tired' && prop.sector !== 'industrial' ? 0.03 : 0) - crisisDrop(prop);   // round 38: tired buildings let a little worse (round 43: warehouses don't care); round 43: a crisis empties floors
       const drift = (mid - prop.occupancy) * 0.1;
       const noise = randBetween(-profile.volatility * 0.15, profile.volatility * 0.15);
+      const push = crisisDrop(prop) > 0 && prop.occupancy > mid ? -Math.min(0.02, prop.occupancy - mid) : 0;   // round 43: in a crisis it slides, not drifts
       prop.occupancy = Math.min(1.0, Math.max(0.40,
-        Math.round((prop.occupancy + drift + noise) * 1000) / 1000
+        Math.round((prop.occupancy + drift + noise + push) * 1000) / 1000
       ));
     });
 
@@ -589,7 +604,7 @@ window.Properties = (() => {
     (GameState.cityRivals || []).forEach(prop => {
       if (prop.underConstruction || (typeof Tenants !== "undefined" && Tenants.isLocked(prop))) return;
       const profile = PROFILES[prop.sector][prop.location];
-      const drift = (profile.occupancyMid - prop.occupancy) * 0.1;
+      const drift = (profile.occupancyMid - crisisDrop(prop) - prop.occupancy) * 0.1;
       const noise = randBetween(-profile.volatility * 0.15, profile.volatility * 0.15);
       prop.occupancy = Math.min(1.0, Math.max(0.40, Math.round((prop.occupancy + drift + noise) * 1000) / 1000));
     });
@@ -784,14 +799,15 @@ window.Properties = (() => {
   /* round 42: each quarter: works count down; then the rent steps up 4 times */
   function processRenovations() {
     GameState.portfolio.forEach(function(prop) {
-      if (prop.renoRamp > 0) { prop.annualNOI = Math.round(prop.annualNOI * 1.025 * 100) / 100; prop.renoRamp--; if (!prop.renoRamp) delete prop.renoRamp; }
+      if (prop.renoRamp > 0) { prop.annualNOI = Math.round(prop.annualNOI * (prop.renoStep || 1.025) * 100) / 100; prop.renoRamp--; if (!prop.renoRamp) { delete prop.renoRamp; delete prop.renoStep; } }
       if (!prop.reno) return;
       prop.reno.left--;
       if (prop.reno.left > 0) return;
       delete prop.reno;
       prop.renovated = true; prop.renovatedYear = GameState.meta.year;
       var locked = typeof Tenants !== "undefined" && Tenants.isLocked(prop);
-      if (!locked) { prop.renoRamp = 4; if (prop.occupancy < 0.97) prop.occupancy = Math.min(0.97, Math.round((prop.occupancy + 0.08) * 1000) / 1000); }
+      if (!locked) { prop.renoRamp = 4; prop.renoStep = prop.sector === "industrial" ? 1.01 : 1.025;   // round 43: warehouses +4% (roof and docks, not lobbies), others +10%
+        if (prop.occupancy < 0.97) prop.occupancy = Math.min(0.97, Math.round((prop.occupancy + 0.08) * 1000) / 1000); }
       GameState.eventLog.push({ quarter: GameState.meta.quarter, year: GameState.meta.year, headline: "Renovation complete",
         body: prop.name + " is renovated: condition New." + (locked ? " The next tenant pays full rent." : " Rents rise 10% over the next year."),
         events: [{ headline: prop.name + " renovated", body: locked ? "Ready for a tenant at full rent." : "Condition New, rents +10% over a year.", impact: "" }] });

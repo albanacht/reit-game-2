@@ -1199,6 +1199,7 @@ window.Story = (() => {
     try { if (window.Deals) Deals.processQuarter(out); } catch (e) { if (window.console) console.warn('deals', e); }   // round 22
     try { if (window.PR) PR.processQuarter(out); } catch (e) { if (window.console) console.warn('pr', e); }
     try { if (window.Crisis) Crisis.processQuarter(out); } catch (e) { if (window.console) console.warn('crisis', e); }   // round 38
+    try { if (window.Lessons) Lessons.processQuarter(out); } catch (e) { if (window.console) console.warn('lessons', e); }   // round 43
     try { if (window.Pay) Pay.quarter(); } catch (e) { if (window.console) console.warn('pay', e); }
     return out;
   }

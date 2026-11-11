@@ -116,6 +116,21 @@ window.Crisis = (() => {
       ] });
   }
 
+  /* -- round 43: restore it yourself, from the Dividend panel -------------------- */
+  function canRestore() {
+    const G = GameState, e = G._eCut;
+    if (!e || e.restored === true || e.restored === 'refused' || inCrisis() || div() >= e.from - 0.005) return { show: false };
+    if (frozen()) return { show: true, ok: false, why: 'Your bank has frozen dividend increases', from: e.from };
+    return { show: true, ok: true, from: e.from };
+  }
+  function restoreNow() {
+    const c = canRestore(), G = GameState; if (!c.ok) return { success: false, message: c.why || 'Not now.' };
+    G.company.dividendPerShare = c.from; G._eCut.restored = true; G._pledge = null; G._restore = null;
+    remember('williams', 1, 'you restored the dividend');
+    say(G.company.name + ' restores its full dividend after the downturn.');
+    return { success: true, message: 'The dividend is back to $' + c.from.toFixed(2) + ' a share. Williams: "That is what I wanted to hear." Williams +1.' };
+  }
+
   /* -- each quarter: promises kept or broken ----------------------------------- */
   function processQuarter(out) {
     const G = GameState, now = tq();
@@ -135,5 +150,5 @@ window.Crisis = (() => {
     return out;
   }
 
-  return { credit, canPledge, pledge, canTrust, trust, agenda, processQuarter, inCrisis };
+  return { credit, canPledge, pledge, canTrust, trust, agenda, processQuarter, inCrisis, canRestore, restoreNow };
 })();

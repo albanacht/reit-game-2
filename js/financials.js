@@ -750,6 +750,7 @@ window.Financials = (() => {
       portfolioSize:      GameState.portfolio.length,
       pressurePoints:     GameState.board.pressurePoints,
     });
+    if (typeof Nerd !== "undefined") { try { Nerd.record(); } catch (e) { if (window.console) console.warn("nerd", e); } }   // round 43: stats for nerds
   }
 
   // ----------------------------------------------------------

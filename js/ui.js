@@ -357,76 +357,57 @@ window.UI = (function() {
   }
 
   // STAFF ROSTER + TALENT MARKET
+  /* round 43: staff as five seats (Football Manager style, simpler). A filled seat
+     shows the person; an empty one a grey head and "Hire". Clicking a seat shows
+     that role's candidates underneath. */
+  var _staffRole = null;
+  var EMPTY_HEAD = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e3e9ef"/><circle cx="50" cy="38" r="18" fill="#b6c3d1"/><path d="M14 100 C16 72 32 62 50 62 C68 62 84 72 86 100 Z" fill="#b6c3d1"/></svg>');
+  var SEAT_ORDER = ["cfo", "asset", "acquisitions", "operations", "ir"];
+  function selectStaffRole(r) { _staffRole = _staffRole === r ? null : r; renderStaff(); }
   function renderStaff() {
     var roster = el("staff-roster");
     var market = el("talent-market");
     if (!roster || !market) return;
-
-    // Roster of hired staff — court-style cards with portrait
-    var rh = "";
-    GameState.staff.forEach(function(s) {
-      var traitClass = Staff.traitColor(s);
-      var traitTxt   = Staff.traitLabel(s);
-      var traitDesc  = Staff.traitDesc(s);
-      rh += '<div class="staff-row">' +
-        '<img class="staff-portrait" src="assets/staff/' + (s.portrait || "s01.jpg") + '" alt="' + s.name + '">' +
-        '<div class="staff-info">' +
-          '<div class="staff-name-row"><span class="staff-name">' + s.name + '</span><span class="staff-stars">' + (s.stars || "") + '</span></div>' +
-          '<div class="staff-title">' + s.title + '</div>' +
-          '<div class="staff-trait ' + traitClass + '">' + traitTxt + (traitDesc ? ' — <span class="text-muted">' + traitDesc + '</span>' : '') + '</div>' +
-        '</div>' +
-        '<div class="staff-right">' +
-          '<div class="staff-cost">$' + fmt(s.salary, 2) + 'M/q</div>' +
-          '<button class="btn btn-sm btn-danger" onclick="UI.fireStaff(\'' + s.roleId + '\')">Fire</button>' +
-        '</div>' +
-        '</div>';
-    });
-
-
-    if (typeof Levi !== "undefined" && Levi.staffHTML) rh = Levi.staffHTML() + rh;   // round 20: the strategy advisor
-    if (rh === "") {
-      roster.innerHTML = '<p class="text-muted" style="font-size:12px">No staff hired yet. Browse the talent market below.</p>';
-    } else {
-      roster.innerHTML = rh;
-    }
-
-    // Talent market — grouped by role, 3 candidates each
     var tm = GameState._talentMarket || [];
+    var roles = SEAT_ORDER.filter(function(r) { return Staff.ROLES[r]; }).concat(Object.keys(Staff.ROLES).filter(function(r) { return SEAT_ORDER.indexOf(r) < 0; }));
+    var seats = roles.map(function(r) {
+      var R = Staff.ROLES[r], s = Staff.getStaff(r), n = tm.filter(function(c) { return c.roleId === r; }).length, on = _staffRole === r;
+      if (s) {
+        var traitTxt = Staff.traitLabel(s), traitDesc = Staff.traitDesc(s);
+        return '<div class="seat filled' + (on ? ' on' : '') + '">' +
+          '<img src="assets/staff/' + (s.portrait || "s01.jpg") + '" alt="">' +
+          '<div class="seat-role">' + R.title + '</div><div class="seat-name">' + s.name + ' <span class="staff-stars">' + (s.stars || "") + '</span></div>' +
+          '<div class="seat-un">' + R.unlocks + '</div>' +
+          '<div class="seat-tr ' + Staff.traitColor(s) + '" title="' + (traitDesc || '').replace(/"/g, '&quot;') + '">' + traitTxt + '</div>' +
+          '<div class="seat-foot"><span>$' + fmt(s.salary, 2) + 'M/q</span><button class="btn btn-sm btn-danger" onclick="UI.fireStaff(\'' + s.roleId + '\')">Fire</button></div></div>';
+      }
+      return '<div class="seat empty' + (on ? ' on' : '') + '" onclick="UI.selectStaffRole(\'' + r + '\')">' +
+        '<img src="' + EMPTY_HEAD + '" alt="">' +
+        '<div class="seat-role">' + R.title + '</div><div class="seat-name text-muted">Empty seat</div>' +
+        '<div class="seat-un">' + R.unlocks + '</div>' +
+        '<div class="seat-foot"><button class="btn btn-sm ' + (n ? 'btn-primary' : 'btn-secondary') + '"' + (n ? '' : ' disabled') + '>' + (n ? 'Hire: ' + n + ' candidate' + (n > 1 ? 's' : '') : 'No candidates this year') + '</button></div></div>';
+    }).join('');
+    var lv = (typeof Levi !== "undefined" && Levi.staffHTML) ? Levi.staffHTML() : "";   // round 20: the strategy advisor
+    roster.innerHTML = lv + '<div class="seats">' + seats + '</div>';
+
+    // the candidates for the chosen seat (or the first empty seat with candidates)
     var header = el("talent-market-header");
-    if (tm.length === 0) {
+    var pickR = _staffRole && !Staff.getStaff(_staffRole) ? _staffRole : (roles.filter(function(r) { return !Staff.getStaff(r) && tm.some(function(c) { return c.roleId === r; }); })[0] || null);
+    var list = tm.map(function(c, i) { return { c: c, i: i }; }).filter(function(e) { return e.c.roleId === pickR; });
+    if (!pickR || !list.length) {
       if (header) header.style.display = "none";
       var allFilled = Object.keys(Staff.ROLES).every(function(r) { return Staff.isRoleFilled(r); });
-      market.innerHTML = allFilled
-        ? '<p class="text-muted" style="font-size:12px">✓ Your executive team is complete — every role is filled. Fire someone to open a search, or new candidates appear next year for any vacancy.</p>'
-        : '<p class="text-muted" style="font-size:12px">No candidates available. New ones appear next year.</p>';
+      market.innerHTML = allFilled ? '<p class="text-muted" style="font-size:12px">Every seat is filled. Fire someone to open a search.</p>' : '<p class="text-muted" style="font-size:12px">Click an empty seat to see its candidates. New candidates appear each year.</p>';
       return;
     }
-    if (header) header.style.display = "";
-    // Group candidates by role, preserving global index for hire()
-    var byRole = {};
-    tm.forEach(function(c, i) {
-      (byRole[c.roleId] = byRole[c.roleId] || []).push({ c: c, i: i });
-    });
-    var mh = "";
-    Object.keys(byRole).forEach(function(roleId) {
-      var role = Staff.ROLES[roleId];
-      mh += '<div class="talent-role-header">' + role.title + ' <span class="text-muted">— ' + role.unlocks + '</span></div>';
-      byRole[roleId].forEach(function(entry) {
-        var c = entry.c, i = entry.i;
-        mh += '<div class="candidate-card">' +
-          '<img class="candidate-portrait" src="assets/staff/' + (c.portrait || "s01.jpg") + '" alt="' + c.name + '">' +
-          '<div class="candidate-body">' +
-            '<div class="candidate-head">' +
-              '<span class="candidate-title">' + c.name + ' <span class="staff-stars">' + (c.stars || "") + '</span></span>' +
-              '<span class="candidate-salary">$' + fmt(c.salary, 2) + 'M/q</span>' +
-            '</div>' +
-            '<div class="candidate-hint">"' + c.hint + '"</div>' +
-            '<button class="btn btn-sm btn-primary" onclick="UI.hireStaff(' + i + ')">Hire — $' + fmt(c.salary,2) + 'M/q</button>' +
-          '</div>' +
-          '</div>';
-      });
-    });
-    market.innerHTML = mh;
+    if (header) { header.style.display = ""; var ht = header.querySelector(".panel-title"); if (ht) ht.textContent = "Candidates: " + Staff.ROLES[pickR].title; }
+    market.innerHTML = list.map(function(e) { var c = e.c, i = e.i;
+      return '<div class="candidate-card">' +
+        '<img class="candidate-portrait" src="assets/staff/' + (c.portrait || "s01.jpg") + '" alt="' + c.name + '">' +
+        '<div class="candidate-body"><div class="candidate-head"><span class="candidate-title">' + c.name + ' <span class="staff-stars">' + (c.stars || "") + '</span></span>' +
+        '<span class="candidate-salary">$' + fmt(c.salary, 2) + 'M/q</span></div>' +
+        '<div class="candidate-hint">"' + c.hint + '"</div>' +
+        '<button class="btn btn-sm btn-primary" onclick="UI.hireStaff(' + i + ')">Hire — $' + fmt(c.salary, 2) + 'M/q</button></div></div>'; }).join('');
   }
 
   function hireStaff(marketIndex) {
@@ -866,6 +847,12 @@ window.UI = (function() {
         showModal("Emergency dividend cut", "Halve the dividend to $" + fmt(GameState.company.dividendPerShare / 2, 2) + " a share, with the board's approval.\n\nCosts 1 political capital. Williams accepts it as prudence (\u22121), not as a broken promise. Okafor +1. Share price \u22126% (a normal halving: \u221218%). After the crisis, his demand will be to restore it.",
           [{ label: "Halve the dividend", style: "btn-danger", onClick: function() { var r = Financials.emergencyCut(); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
       };
+      // round 43: after the crisis, one click puts the dividend back
+      var rs = window.Crisis && Crisis.canRestore ? Crisis.canRestore() : { show: false };
+      if (rs.show) { ecr.style.display = "";
+        ecr.innerHTML += '<div style="margin-top:6px"><button class="btn btn-sm ' + (rs.ok ? 'btn-primary' : 'btn-secondary') + '" id="btn-restore-div"' + (rs.ok ? '' : ' disabled title="' + (rs.why || '') + '"') + '>Restore to pre-crisis: $' + fmt(rs.from, 2) + '</button>' +
+          '<div class="action-meta">' + (rs.ok ? 'Williams +1. Check the cover first: it should come out of cash profit.' : (rs.why || '')) + '</div></div>'; }
+      var rsb = el("btn-restore-div"); if (rsb && rs.ok) rsb.onclick = function() { var r = Crisis.restoreNow(); showToast(r.message, r.success ? "success" : "error"); renderAll(); };
       var plb = el("btn-pledge"); if (plb && pl.ok) plb.onclick = function() {
         showModal("Pledge the dividend back", "Tell the shareholders the full dividend comes back within a year of the crisis ending.\n\nWilliams +1 now. Restore it in time: Williams +0.5. Miss it: Williams \u22123 and 1 political capital.",
           [{ label: "Make the pledge", style: "btn-primary", onClick: function() { var r = Crisis.pledge(); showToast(r.message, r.success ? "success" : "error"); renderAll(); } }]);
@@ -1085,13 +1072,13 @@ window.UI = (function() {
   function confirmRenovate(propertyId) {
     var prop = GameState.portfolio.find(function(p) { return p.id === propertyId; });
     if (!prop) return;
-    var cost = fmt(prop.currentValue * 0.10, 1);
+    var cost = fmt(prop.currentValue * 0.10, 1), _ind = prop.sector === "industrial", _up = _ind ? 1.0406 : 1.1038;   // round 43
     showModal("Renovate: " + prop.name,
       "Cost: $" + cost + "M (10% of value)\n" +
       "Works: 2 quarters, the tenants stay. Rent \u221210% while they run (disruption).\n" +
-      "After: condition New. Rents rise 10% over the next year as leases roll" + (prop.occupancy < 0.97 ? "; empty space lets faster (about +" + fmt(Math.min(8, (0.97 - prop.occupancy) * 100), 0) + " points)" : "") + ".\n" +
-      "Rent now: " + fmtM(prop.annualNOI) + "/yr, then about " + fmtM(prop.annualNOI * 1.104) + "/yr.\n\n" +
-      "Return: about " + fmt(prop.annualNOI * 0.104 / Math.max(0.1, prop.currentValue * 0.10) * 100, 1) + "% a year on the cost. Worth it when that beats what money costs you (" + (typeof Market !== "undefined" ? fmt(Market.getCurrentBorrowingRate(), 1) + "%" : "your bond rate") + ").\n" +
+      "After: condition New. Rents rise " + (_ind ? "4" : "10") + "% over the next year as leases roll" + (_ind ? " (warehouse tenants care about the roof and the docks, not the lobby)" : "") + (prop.occupancy < 0.97 ? "; empty space lets faster (about +" + fmt(Math.min(8, (0.97 - prop.occupancy) * 100), 0) + " points)" : "") + ".\n" +
+      "Rent now: " + fmtM(prop.annualNOI) + "/yr, then about " + fmtM(prop.annualNOI * _up) + "/yr.\n\n" +
+      "Return: about " + fmt(prop.annualNOI * (_up - 1) / Math.max(0.1, prop.currentValue * 0.10) * 100, 1) + "% a year on the cost. Worth it when that beats what money costs you (" + (typeof Market !== "undefined" ? fmt(Market.getCurrentBorrowingRate(), 1) + "%" : "your bond rate") + ").\n" +
       "Cash plus credit line: " + fmtM((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash),
       [{ label: "Start Renovation — $" + cost + "M", style: "btn-primary", onClick: function() {
         var r = Properties.startRenovation(propertyId);
@@ -2199,6 +2186,7 @@ window.UI = (function() {
     var btn = el("btn-new-game");
     if (btn) btn.textContent = won ? "Play Again" : "Try Again";
     if (typeof Scores !== "undefined") Scores.renderGameOver();   // round 28
+    var nc = el("nerd-career"); if (nc && typeof Nerd !== "undefined") nc.innerHTML = Nerd.careerHTML();   // round 43
     // round 32: what went wrong, when the run ended early
     var pmBox = el("postmortem");
     if (pmBox) { var _kk = (typeof Ending !== "undefined") ? Ending.kind() : ""; var pm = (/fired|receivers|prey/.test(_kk) && Ending.postmortem) ? Ending.postmortem() : [];
@@ -2233,6 +2221,7 @@ window.UI = (function() {
     GameState._ratingHit       = null;   // round 34: a bond extension marks the rating down for a year
     GameState._funny           = null;   // round 35: the once-a-game small events (world.js)
     GameState._crisis = null; GameState._pledge = null; GameState._restore = null;   // round 38
+    GameState._lessons = null; GameState._myDefaults = 0; GameState._nerd = null;   // round 43
     GameState._eCut = null; GameState._eCutUsed = null; GameState._noBonusYear = null; GameState._covWaiver = null;   // round 37 / 36
     GameState._shock           = null;   // round 35: board grace after a shock you did not cause (directors.js)
     GameState.deals = null; GameState.agents = null; GameState.pr = null;   // round 22: deals.js, agents.js, pr.js
@@ -2505,6 +2494,7 @@ window.UI = (function() {
     renderAll:           renderAll,
     showModal:           showModal,
     explain:             explain,
+    selectStaffRole:     selectStaffRole,
     maybeShowTutorial:   maybeShowTutorial,
     closeModal:          closeModal,
     showToast:           showToast,

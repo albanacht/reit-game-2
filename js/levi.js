@@ -199,7 +199,7 @@ window.Levi = (() => {
         choices: [
           { label: 'Tighten belts for a year (1 political capital)', detail: 'Every department has to be talked into it. Overheads −10% for 4 quarters. No bonuses or share grants this year, for anyone, you included. Okafor +1, Petrova +0.5.',
             check: () => (GameState.board.politicalCapital || 0) >= 1, checkMsg: 'Needs 1 political capital',
-            apply() { const G = GameState, now = tq(); G._belt = { until: now + 3, noBonusYear: G.meta.year, why: l.beltFor }; l.beltFor = null; l.belt = (l.belt || 0) + 1; l.gems.belt = 'taken';
+            apply() { const G = GameState, now = tq(); G._belt = { until: now + 3, noBonusYear: G.meta.year, noBonusYears: [G.meta.year], why: l.beltFor }; l.beltFor = null; l.belt = (l.belt || 0) + 1; l.gems.belt = 'taken';
                       remember('okafor', 1, 'you tightened belts before the storm'); remember('petrova', 0.5, 'you suspended your own bonus');
                       G.board.politicalCapital = Math.max(0, (G.board.politicalCapital || 0) - 1); note('Belts tightened.');
                       return 'Done. Overheads are down a tenth for a year and the bonus pool is closed. Jenkins has already cancelled the Christmas party’s ice sculpture.'; } },
@@ -262,7 +262,7 @@ window.Levi = (() => {
           choices: [
             { label: 'One more year (2 political capital)', check: () => (G.board.politicalCapital || 0) >= 2, checkMsg: 'Needs 2 political capital',
               detail: 'Overheads −10% for 4 more quarters. No bonuses next year either.',
-              apply() { G.board.politicalCapital -= 2; B.until = tq() + 4; B.noBonusYear = G.meta.year + (G.meta.quarter >= 3 ? 1 : 0); B.y2 = true; B.saved = fmt(ga * 0.1); return 'Another year of savings. The maintenance team has started a betting pool.'; } },
+              apply() { G.board.politicalCapital -= 2; B.until = tq() + 4; const ny = G.meta.year + (G.meta.quarter >= 3 ? 1 : 0); B.noBonusYears = (B.noBonusYears || [B.noBonusYear]).concat([ny]); B.noBonusYear = ny;   /* round 43: year 1's suspension is kept (it was overwritten) */ B.y2 = true; B.saved = fmt(ga * 0.1); return 'Another year of savings. The maintenance team has started a betting pool.'; } },
             { label: 'End it here', detail: 'Overheads go back to normal next quarter.', apply() { return 'The savings end. The coffee machine is back.'; } },
           ] };
       } },

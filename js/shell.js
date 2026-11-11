@@ -247,6 +247,7 @@ window.REIT = (() => {
     if (window.PROPS && PROPS.render) PROPS.render();
     if (window.Inbox && Inbox.render) Inbox.render();
     hud();
+    if (window.fitBar) window.fitBar();   // round 43: the bar fits the screen
     noResultsYet();
     creditLine();
     if (window.BoardTab) BoardTab.render();

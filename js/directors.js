@@ -412,6 +412,8 @@ window.Directors = (() => {
       // the cause shown: the biggest thing pushing in the direction of the mood
       const j = parts[d.id].slice().sort((x, y) => a < 5 ? x.pts - y.pts : y.pts - x.pts);
       const mem = memories(d.id)[0];
+      b.causeKind = b.causeKind || {};   // round 43: a number on the scorecard, or something you did
+      b.causeKind[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? 'metric' : (mem && Math.abs(mem.d) >= 0.5 ? 'memory' : 'metric');
       b.causes[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? (j[0].pts < 0 && shockOn() ? 'not your fault, ' + shockOn() + ', but ' + j[0].why : j[0].why)
                      : mem && Math.abs(mem.d) >= 0.5 ? mem.t
                      : a >= 4.75 ? 'no complaints for now' : (j[0] ? j[0].why : 'no complaints for now');
@@ -547,7 +549,7 @@ window.Directors = (() => {
     const a = d.attitude, L = level(a), prev = B().prev[id], b = B();
     const hist = b.hist && b.hist[id];
     return { id, name: name(id), role: ROLE[id], face: face(id), attitude: a, label: L[1], cls: L[2],
-             trend: d._trend || 0, cause: b.causes[id] || '', red: RED[id] + (chairRed(id) ? '; as chair: ' + chairRed(id).text : ''), redNow: !!b.red[id],
+             trend: d._trend || 0, cause: b.causes[id] || '', causeKind: (b.causeKind || {})[id] || 'metric', red: RED[id] + (chairRed(id) ? '; as chair: ' + chairRed(id).text : ''), redNow: !!b.red[id],
              ally: ALLY[id] ? short(ALLY[id]) : null, rival: RIVAL[id] ? short(RIVAL[id]) : null,
              memory: memories(id).map(e => e.t + (e.d > 0 ? ' (+)' : ' (−)')), bond: bondOf(id),
              rep: rep(id), repWhy: (B().repWhy || {})[id] || [], stake: stakeOf(id) };

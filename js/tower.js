@@ -81,7 +81,7 @@ window.Tower = (() => {
         [lead('petrova', 'okafor'), 'With respect, Chairman, we are a listed company, not a family office.']],
         choices: [
           { label: 'Welcome him', primary: true, detail: 'Sebastian joins at $0.8M a year (overheads). Williams +1.5. Petrova −0.5.',
-            go: () => { t.seb = 'full'; surcharge(0.2); remember('williams', 1.5, 'you welcomed Sebastian'); remember('petrova', -0.5, 'the chairman’s nephew on the payroll'); note('Sebastian joined as Chief Vision Officer.'); return 'Sebastian shook every hand in the room. Twice.'; } },
+            go: () => { t.seb = 'full'; surcharge(0.2); if (window.IndexFund && IndexFund.family) IndexFund.family('sebastian');   /* round 43 */ remember('williams', 1.5, 'you welcomed Sebastian'); remember('petrova', -0.5, 'the chairman’s nephew on the payroll'); note('Sebastian joined as Chief Vision Officer.'); return 'Sebastian shook every hand in the room. Twice.'; } },
           { label: 'A smaller role: Head of Brand', detail: '$0.4M a year. Williams −0.5. Sebastian comes anyway, slightly offended.',
             go: () => { t.seb = 'brand'; surcharge(0.1); remember('williams', -0.5, 'you gave Sebastian a smaller job'); note('Sebastian joined as Head of Brand.'); return '"Head of Brand. Fine. Brands are where it starts."'; } },
           { label: 'Say no', detail: 'Williams −2.5 and remembers. Sebastian comes anyway, as a "consultant" Williams pays himself. The tower still comes next year.',

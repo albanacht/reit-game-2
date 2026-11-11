@@ -78,7 +78,7 @@ window.Inbox = (() => {
     cfo: { task: 'asset', title: 'Step 5: Hire an Asset Manager',
       body: 'Why: an empty floor is the gap shrinking. Buildings age, rents drift down about 1% a year, tenants leave. An <strong>Asset Manager</strong> keeps them full (a little more let every quarter) and unlocks <strong>lease up</strong> and <strong>renovation</strong>.<br><br>Open <strong>Staff</strong> and hire one.' },
     asset: { task: 'leaseup', title: 'Step 6: Lease up a building',
-      body: 'Why: rent we don\u2019t collect is money we still pay interest on. On <strong>Properties</strong>, click a building below 90% let to open it, and press <strong>Lease up</strong>. It costs 12% of that building\u2019s yearly rent (brokers, free months) and fills 3 to 8 points at once.<br><br><strong>Best between 65% and 85% let</strong>: there it pays for itself in about two years. Once a year per building.' },
+      body: 'Why: rent we don\u2019t collect is money we still pay interest on. On <strong>Properties</strong>, click a building below 90% let to open it, and press <strong>Lease up</strong>. It costs 12% of that building\u2019s yearly rent (brokers, free months) and fills 3 to 8 points at once.<br><br><strong>Best between 65% and 85% let</strong>: there it pays for itself in about two years. Once a year per building.<br><br>Renovate with care: it pays best on half-empty or tired buildings. A full building with happy tenants rarely needs it, and warehouse tenants care about the roof, not the lobby.' },
     leaseup: { task: 'renovate', title: 'Step 7: Renovate one',
       body: 'Why: tired buildings lose tenants and rent. Every building shows its <strong>condition</strong> on Properties (New, Good, <strong>Worn</strong>, Tired). Click a <strong>Worn</strong> one to open it and press <strong>Renovate</strong>.<br><br>It costs 10% of its value. The tenants stay; two quarters of works at 10% less rent, then <strong>rents +10%</strong> over a year and it\u2019s New again. Worth it when that beats what money costs us.' },
   };
@@ -105,6 +105,9 @@ window.Inbox = (() => {
       }
     });
   }
+  /* round 43: a closed letter shows its first sentence only */
+  const gist = b => { const t = String(b || '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    const m = t.match(/^.{20,}?[.!?](?=\s|$)/); const g = m ? m[0] : t; return g.length > 120 ? g.slice(0, 117) + '\u2026' : g; };
   const av = it => it.face ? '<img class="ib-av" src="' + esc(it.face) + '" alt="" onerror="this.style.visibility=\'hidden\'">' : '';
 
   /* -- a finished quarter --------------------------------------------------
@@ -149,11 +152,43 @@ window.Inbox = (() => {
       why: explain(events || []),
       ytd: window.Directors ? Directors.ytd() : null,
       rank: window.Rivals && GameState.rivals ? (Rivals.league((GameState.meta.quarter - 1) || 4).find(r => r.key === 'you') || {}).rank : null,
-      price: explainPrice()
+      price: explainPrice(),
+      card: resultsCard(events || [])   // round 43: four numbers, the big events, one line from Jenkins
     });
     (events || []).forEach(e => add(e.macro ? { kind: 'macro', src: e.src, tone: e.tone, title: e.headline, body: e.impact || '', more: e.more || '', factors: factors(e.src) }
                                             : { kind: 'event', tone: e.tone, title: e.headline, body: e.impact || '', more: e.more || '' }));
     snapshot();
+  }
+
+  /* -- round 43: the quarterly results as a card --------------------------------
+     Four numbers with their change since last quarter (green good, red bad), the
+     big events only, and one Jenkins line on the worst number. The full detail
+     stays one click away. */
+  function resultsCard(events) {
+    const G = GameState, s = S(), r = G.ratios || {}, h = G.history || [], last = h[h.length - 1] || {};
+    const aps = last.coreAffoPerShare != null ? last.coreAffoPerShare : (last.affoPerShare || 0), dps = G.company.dividendPerShare || 0;
+    const now = { aps, cover: dps > 0 ? aps / dps : null, debt: r.debtToAssets || 0, occ: r.occupancyPortfolio || 0 };
+    const was = s.lastTiles || null; s.lastTiles = now;
+    const d = k => was && was[k] != null && now[k] != null ? now[k] - was[k] : null;
+    const tiles = [
+      { k: 'Cash profit / share', v: '$' + aps.toFixed(2), d: d('aps'), fmt: x => (x >= 0 ? '+' : '\u2212') + '$' + Math.abs(x).toFixed(2), good: x => x >= 0, ok: aps > 0 },
+      { k: 'Dividend cover', v: now.cover == null ? 'no dividend' : now.cover.toFixed(2) + 'x', d: d('cover'), fmt: x => (x >= 0 ? '+' : '\u2212') + Math.abs(x).toFixed(2), good: x => x >= 0, ok: now.cover == null || now.cover >= 1 },
+      { k: 'Debt / assets', v: Math.round(now.debt * 100) + '%', d: d('debt'), fmt: x => (x >= 0 ? '+' : '\u2212') + Math.abs(x * 100).toFixed(0) + ' pts', good: x => x <= 0, ok: now.debt <= 0.55 },
+      { k: 'Occupancy', v: Math.round(now.occ * 100) + '%', d: d('occ'), fmt: x => (x >= 0 ? '+' : '\u2212') + Math.abs(x * 100).toFixed(0) + ' pts', good: x => x >= 0, ok: now.occ >= 0.85 },
+    ].map(t => ({ k: t.k, v: t.v, ok: t.ok, ch: t.d == null || Math.abs(t.d) < 0.005 ? '' : t.fmt(t.d), up: t.d == null ? null : t.good(t.d) }));
+    // the big events: tenants lost, buildings emptied, the crisis
+    const big = (events || []).filter(e => (e.tone === 'bad' || e.tone === 'good') && /bankrupt|vacat|did not renew|default|walked out|crisis|aftershock|re-let|took the empty|signed/i.test(plain(e.headline)))
+      .slice(0, 3).map(e => ({ bad: e.tone === 'bad', t: short(plain(e.headline)) }));
+    const snap = G._contribSnap || {};
+    (G.portfolio || []).forEach(p => { const w = snap[p.id]; if (w && !w.uc && w.occ - p.occupancy >= 0.10 && big.length < 3) big.push({ bad: true, t: p.name + ': occupancy ' + Math.round(w.occ * 100) + '% \u2192 ' + Math.round(p.occupancy * 100) + '%' }); });
+    // one line from Jenkins, on the worst number
+    const worst = (G.portfolio || []).filter(p => !p.underConstruction).sort((a, b) => a.occupancy - b.occupancy)[0];
+    const jl = now.cover != null && now.cover < 1 ? 'Dividend not covered: we paid more than we earned. Trim it, or fill ' + (worst ? worst.name + ' (' + Math.round(worst.occupancy * 100) + '% let)' : 'the empty space') + '.'
+      : now.debt > 0.55 ? 'Debt is close to the 60% limit. Keep a buffer: no more borrowing until values or profit grow.'
+      : now.occ < 0.85 && worst ? 'Too much empty space. ' + worst.name + ' is ' + Math.round(worst.occupancy * 100) + '% let: a lease-up pays for itself there.'
+      : aps <= 0 ? 'No cash profit this quarter. Check what ate it in the details.'
+      : 'All green. Look for a building that earns more than our money costs.';
+    return { tiles, big, jl };
   }
 
   /* -- "because" lines (round 2) ----------------------------------------------
@@ -356,10 +391,17 @@ window.Inbox = (() => {
         '<div class="ib-body">' + esc(it.choice || '') + (it.result ? ' — ' + esc(it.result) : '') + '</div></div>';
     }
     if (it.kind === 'summary') {
-      const good = it.rc >= 0;
-      return '<div class="ib ib-summary ' + (good ? 'up' : 'down') + '">' +
+      const good = it.rc >= 0, C = it.card, open = !C || S().open[it.id];
+      // round 43: the card first; the old detail behind "Details"
+      const card = C ? '<div class="rc-tiles">' + C.tiles.map(t => '<div class="rc-t ' + (t.ok ? 'ok' : 'bad') + '"><div class="rc-k">' + esc(t.k) + '</div><div class="rc-v">' + esc(t.v) + '</div>' +
+          (t.ch ? '<div class="rc-ch ' + (t.up ? 'up' : 'down') + '">' + (t.up ? '\u25b2 ' : '\u25bc ') + esc(t.ch) + '</div>' : '<div class="rc-ch">\u00a0</div>') + '</div>').join('') + '</div>' +
+          C.big.map(b => '<div class="rc-big ' + (b.bad ? 'bad' : 'good') + '">' + (b.bad ? '\u26a0 ' : '\u2605 ') + esc(b.t) + '</div>').join('') +
+          '<div class="rc-jen"><img src="' + JENKINS + '" alt=""><span>' + esc(C.jl) + '</span></div>' +
+          '<div class="rc-more" data-sum="' + it.id + '">' + (open ? 'Hide details \u25b4' : 'Details \u25be') + '</div>' : '';
+      return '<div class="ib ib-summary rc ' + (good ? 'up' : 'down') + '" data-id="' + it.id + '">' +
         '<div class="ib-sum-row"><span class="ib-sum-k">' + esc(it.title) + '</span>' +
-        '<span class="ib-sum-v">' + (good ? '▲ +' : '▼ ') + money(it.rc) + '</span></div>' +
+        '<span class="ib-sum-v">' + (good ? '▲ +' : '▼ ') + money(it.rc) + '<small> retained</small></span></div>' + card +
+        (open ? '<div class="rc-detail">' +
         '<div class="ib-sum-d">Retained cash · ' + esc(it.detail) + '</div>' +
         (it.ytd ? '<div class="ib-ytd">Total return ' + (it.ytd.label === 'last year' ? 'last year' : 'this year so far') + ': <b class="' + (it.ytd.you >= it.ytd.sector ? 'up' : 'down') + '">' +
           (it.ytd.you >= 0 ? '+' : '\u2212') + Math.abs(it.ytd.you * 100).toFixed(1) + '%</b> (' + (it.ytd.bench === 'rivals' ? 'rivals average ' : 'REIT sector ') + (it.ytd.sector >= 0 ? '+' : '\u2212') + Math.abs(it.ytd.sector * 100).toFixed(1) + '%)' +
@@ -372,6 +414,7 @@ window.Inbox = (() => {
           '. ' + esc(it.price.text) + '</div></div>' : '') +
         (it.actions && it.actions.length
           ? '<div class="ib-acts">' + it.actions.slice(0, 6).map(a => '<div>· ' + a + '</div>').join('') + '</div>' : '') +
+        '</div>' : '') +
         '</div>';
     }
     if (it.kind === 'macro') {        // round 17: the economy as a front page (the Ledger) or a central bank notice
@@ -393,7 +436,7 @@ window.Inbox = (() => {
       '<div class="ib-from">' + unread + esc(it.from) + (it.role ? ' <span>· ' + esc(it.role) + '</span>' : '') + '</div>' +
       '<div class="ib-title">' + esc(it.title) +
         (it.task ? (taskDone(it.task) ? ' <span class="ib-chip ok">\u2713 Done</span>' : ' <span class="ib-chip todo">To do</span>') : '') + '</div>' +
-      '<div class="ib-body">' + it.body + '</div></div>';
+      (open ? '<div class="ib-body">' + it.body + '</div>' : '<div class="ib-gist">' + esc(gist(it.body)) + ' <span class="ib-more-k">more \u25be</span></div>') + '</div>';   /* round 43: the gist first */
   }
 
   /* -- on the clock --------------------------------------------------------
@@ -504,6 +547,7 @@ window.Inbox = (() => {
       if (n && !b) { b = document.createElement('span'); b.className = 'tb-badge'; tab.appendChild(b); }
       if (b) { if (n) b.textContent = n; else b.remove(); }
     }
+    const hd = document.getElementById('ibd-handle'); if (hd) hd.innerHTML = 'Inbox' + (n ? ' <b>' + n + '</b>' : '');   /* round 43: the drawer's handle */
 
     // Advance button: blocked while a decision waits
     const adv = document.getElementById('btn-advance-quarter');
@@ -524,6 +568,7 @@ window.Inbox = (() => {
       if (window.UI && UI.openHeldDecision) UI.openHeldDecision(+b.dataset.id);
     });
     list.querySelectorAll('.ib-event.has-more, .ib-macro.has-more').forEach(m => m.onclick = () => { const s = S(), id = +m.dataset.id; s.open[id] = !s.open[id]; render(); });
+    list.querySelectorAll('.rc-more').forEach(m => m.onclick = e => { e.stopPropagation(); const s = S(), id = +m.dataset.sum; s.open[id] = !s.open[id]; render(); });   /* round 43 */
     list.querySelectorAll('.ib-msg').forEach(m => m.onclick = () => {
       const s = S(), id = +m.dataset.id, it = s.items.find(i => i.id === id);
       if (it) it.read = true;
