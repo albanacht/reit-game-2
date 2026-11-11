@@ -81,7 +81,7 @@ window.World = (() => {
       fire() {
         const p = pick(drifting().filter(x => x.occupancy < 0.95));
         const pp = nudgeOcc(p, 0.02 + rnd() * 0.04);
-        return { good: true, text: `${p.name} signed a new tenant — occupancy +${pp}pp to ${Math.round(p.occupancy*100)}%.` };
+        return { good: true, text: `${p.name} signed a new tenant: occupancy up ${Math.abs(pp)} points, to ${Math.round(p.occupancy*100)}%.` };
       }
     },
     {
@@ -90,7 +90,7 @@ window.World = (() => {
       fire() {
         const p = pick(drifting().filter(x => x.occupancy > 0.55));
         const pp = nudgeOcc(p, -(0.02 + rnd() * 0.05));
-        return { good: false, text: `A tenant at ${p.name} did not renew — occupancy ${pp}pp to ${Math.round(p.occupancy*100)}%.` };
+        return { good: false, text: `A tenant at ${p.name} did not renew: occupancy down ${Math.abs(pp)} points, to ${Math.round(p.occupancy*100)}%.` };
       }
     },
     {

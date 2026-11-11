@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>REIT SIM 2.0 — Riverton</title>
+  <title>REIT SIM 2.0: run a real estate company for 15 years</title>
+  <meta name="description" content="A free browser game. You are CEO of a listed real estate company: borrow, buy buildings, pay a rising dividend, keep a moody board on your side, and survive a financial crisis. 15 years, many endings. Desktop.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="REIT SIM 2.0: run a real estate company for 15 years">
+  <meta property="og:description" content="Free browser game. Borrow, buy buildings, keep a moody board on your side, survive a financial crisis. 15 years, many endings.">
+  <meta property="og:url" content="https://albanacht.github.io/reit-game-2/">
+  <meta property="og:image" content="https://albanacht.github.io/reit-game-2/assets/preview.jpg">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/v2.css">
   <link rel="stylesheet" href="css/shell.css">
@@ -20,6 +27,7 @@
         <p class="start-loop">Borrow cheap. Buy buildings that earn more than the loan costs. Pay your shareholders a rising dividend. Don't run out of cash.</p>
         <p class="start-subtitle">15 years. One board that votes on you every year.</p>
 
+        <div class="start-phone">Best on a desktop or laptop. On a phone it runs, but it is cramped.</div>
         <div class="start-setup">
           <div class="setup-pair">
             <div class="setup-row">
@@ -59,6 +67,7 @@
               <li>Buy and sell buildings on the <strong>Map</strong>. Every deal shows its effect first.</li>
               <li>Borrow, sell shares and set the dividend on <strong>Finance</strong>.</li>
               <li>Year 1 is a trial. From Year 2 the board votes on you.</li>
+              <li>Your score is <strong>your own wealth</strong> after 15 years: salary, bonuses and shares. The shareholders' return is shown beside it.</li>
               <li>Hover any <span class="has-tip" data-tip="Like this one. Plain English for every financial term.">underlined term</span> for a plain English explanation.</li>
             </ul>
           </details>
@@ -121,21 +130,22 @@
 
         <div id="help-mechanics" class="help-tab-content active">
           <h3>The Goal</h3>
-          <p>Survive <strong>15 years</strong> without the board firing you.</p>
+          <p>Stay CEO for <strong>15 years</strong>. Your score is <strong>your own wealth</strong> at the end (salary, bonuses, shares), shown top left in gold. The shareholders' return is shown beside it on the leaderboard.</p>
           <h3>How It Works</h3>
-          <p style="font-size:15px;line-height:1.8;">Issue debt → buy properties that yield more than the debt costs → survive negative events with what's left.</p>
+          <p style="font-size:15px;line-height:1.8;">Raise money (bonds or new shares) → buy buildings that earn more than the money costs → pay the dividend from cash profit → survive the crisis.</p>
           <h3>Each Quarter</h3>
-          <p>Press <strong>Advance Quarter</strong>. <strong>Retained Cash</strong> is what's left after all expenses — keep it positive and you're growing.</p>
+          <p>Make your moves, then press <strong>Advance quarter</strong>. The results card in the inbox shows four numbers: cash profit per share, dividend cover, debt and occupancy. Green is fine; red needs you.</p>
           <h3>The Tabs</h3>
           <ul>
-            <li><strong>💰 Capital Actions</strong> — borrow money, issue shares, set your dividend</li>
-            <li><strong>Property Market</strong> — buy buildings (higher cap rate = more income, but riskier)</li>
-            <li><strong>Portfolio</strong> — the properties you own</li>
-            <li><strong>Debt</strong> — your loans; retire them early here</li>
-            <li><strong>Staff</strong> — hire a CFO and others to unlock abilities</li>
+            <li><strong>Map</strong>: the city and your inbox. Click a building to buy it or make an offer.</li>
+            <li><strong>Properties</strong>: your buildings and everything for sale. Click a row for lease up, renovate, sell.</li>
+            <li><strong>Finance</strong>: borrow, issue company shares, set the dividend; results, debt and charts.</li>
+            <li><strong>Board</strong>: the directors, what each one judges you on, and their demands.</li>
+            <li><strong>Dealroom</strong>: deals in progress, stories, political capital.</li>
+            <li><strong>Staff</strong>: five seats to fill; each hire unlocks something.</li>
           </ul>
           <h3>The Board</h3>
-          <p>Five directors vote on you each year. <strong>Chairman Williams</strong> wants a rising dividend above all. Keep enough of them happy to survive the vote. Good results earn <strong>political capital</strong> you can spend in board fights or tough events.</p>
+          <p>From Year 2 the directors vote on you every year. Each judges one thing; <strong>Chairman Williams</strong> wants a rising dividend. Lose a vote and you are on probation; lose again and you are out. Good results earn <strong>political capital</strong>, which you spend in board fights and tough events.</p>
         </div>
 
         <div id="help-ratios" class="help-tab-content">
@@ -153,12 +163,12 @@
             <div class="re-item">
               <div class="re-name">Dividend Coverage</div>
               <div class="re-formula">FFO ÷ Dividends Paid</div>
-              <div class="re-desc">Must stay above 1.0x. Below 1.0x means you're paying dividends from capital, not earnings. The board watches this closely. Target: above 1.2x.</div>
+              <div class="re-desc">Must stay above 1.0x. The stricter test is the payout ratio (dividends ÷ AFFO, the cash profit): above 100% you're paying dividends from borrowed money. The board watches this closely.</div>
             </div>
             <div class="re-item">
               <div class="re-name">Debt / Assets</div>
               <div class="re-formula">Total Debt ÷ Total Assets</div>
-              <div class="re-desc">Your leverage ratio. Board limit is 60%. Above 60% starts triggering pressure. Above 65% is a crisis. Industrial REITs typically run 30-40%; aggressive REITs push 55%+.</div>
+              <div class="re-desc">Your leverage ratio. Your bonds cap it at 60% (a CFO can raise a little more as unsecured notes). Okafor gets unhappy above 55%. Careful REITs run 30-40%.</div>
             </div>
             <div class="re-item">
               <div class="re-name">Interest Coverage</div>
@@ -188,7 +198,7 @@
             <div class="gl-item"><span class="gl-term">NOI</span><span class="gl-def">Net Operating Income — rental revenue minus operating expenses. Does not include interest, G&A, or depreciation.</span></div>
             <div class="gl-item"><span class="gl-term">GPR</span><span class="gl-def">Gross Potential Rent — what you'd collect if every property was 100% occupied.</span></div>
             <div class="gl-item"><span class="gl-term">Cap Rate</span><span class="gl-def">Capitalization Rate — NOI divided by property value. Rising cap rates compress values; falling cap rates inflate them.</span></div>
-            <div class="gl-item"><span class="gl-term">Tranche</span><span class="gl-def">One individual debt issuance with its own amount, interest rate, and maturity date. You can have up to 10 tranches.</span></div>
+            <div class="gl-item"><span class="gl-term">Tranche</span><span class="gl-def">One individual debt issuance with its own amount, interest rate, and maturity date. You can have up to 12.</span></div>
             <div class="gl-item"><span class="gl-term">Maturity</span><span class="gl-def">When a debt tranche comes due and must be repaid or refinanced. Clustering maturities creates refinancing risk.</span></div>
             <div class="gl-item"><span class="gl-term">Spread</span><span class="gl-def">The extra interest you pay above the base rate, based on your credit rating. BBB = +1.6%, CCC = +6.0%.</span></div>
             <div class="gl-item"><span class="gl-term">LTV</span><span class="gl-def">Loan-to-Value — same as debt/assets in this game. Standard real estate leverage measure.</span></div>
@@ -305,8 +315,8 @@
             </div>
           </div>
           <p class="hint">Shape is sector, size is tier, gold dot marks tier 1. Grey markers are
-            privately held. A <b>$</b> badge marks those actively listed. Amber squares are
-            development lots.</p>
+            privately held. A red <b>SALE</b> tag marks those for sale. Amber squares are
+            development lots. Click any building to act on it.</p>
         </div>
         </div>
         <aside class="home-rail">

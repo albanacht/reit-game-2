@@ -788,3 +788,7 @@ body.ib-open #views #ibd-handle { right: 380px; }
 #topbar.fit2 .tb-tab .tb-ic { display: none; }
 #topbar.fit3 .tb-tab { padding: 0 5px; font-size: 12.5px; } #topbar.fit3 { gap: 7px; } #topbar.fit3 .tb-hud { gap: 7px !important; }
 #topbar.fit4 .hud.opt { display: none; }
+
+/* round 44: a note for phones on the start screen */
+#start-overlay .start-phone { display: none; background: #fff4d6; color: #6b4e00; border: 1px solid #e0b84a; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-weight: 600; margin: 8px 0; }
+@media (max-width: 760px) { #start-overlay .start-phone { display: block; } }

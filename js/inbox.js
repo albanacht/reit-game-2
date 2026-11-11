@@ -177,7 +177,7 @@ window.Inbox = (() => {
       { k: 'Occupancy', v: Math.round(now.occ * 100) + '%', d: d('occ'), fmt: x => (x >= 0 ? '+' : '\u2212') + Math.abs(x * 100).toFixed(0) + ' pts', good: x => x >= 0, ok: now.occ >= 0.85 },
     ].map(t => ({ k: t.k, v: t.v, ok: t.ok, ch: t.d == null || Math.abs(t.d) < 0.005 ? '' : t.fmt(t.d), up: t.d == null ? null : t.good(t.d) }));
     // the big events: tenants lost, buildings emptied, the crisis
-    const big = (events || []).filter(e => (e.tone === 'bad' || e.tone === 'good') && /bankrupt|vacat|did not renew|default|walked out|crisis|aftershock|re-let|took the empty|signed/i.test(plain(e.headline)))
+    const big = (events || []).filter(e => e.tone === 'bad' && /bankrupt|vacat|did not renew|default|walked out|crisis|aftershock/i.test(plain(e.headline)))   // the bad news that needs you; good news sits in the feed below
       .slice(0, 3).map(e => ({ bad: e.tone === 'bad', t: short(plain(e.headline)) }));
     const snap = G._contribSnap || {};
     (G.portfolio || []).forEach(p => { const w = snap[p.id]; if (w && !w.uc && w.occ - p.occupancy >= 0.10 && big.length < 3) big.push({ bad: true, t: p.name + ': occupancy ' + Math.round(w.occ * 100) + '% \u2192 ' + Math.round(p.occupancy * 100) + '%' }); });

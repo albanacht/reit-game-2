@@ -165,7 +165,7 @@ window.Journal = (() => {
     (G.portfolio || []).filter(p => p.underConstruction && (p.constructionType === 'renovation' || p.constructionType === 'repositioning')).forEach(p => {
       const ren = p.constructionType === 'renovation';
       rows.push('<div class="dr-row"><div class="dr-main"><b>' + (ren ? 'Renovating ' : 'Repositioning ') + esc(p.name) + '</b><div class="sml-note">' + p.constructionQuartersLeft + ' quarter' + (p.constructionQuartersLeft === 1 ? '' : 's') + ' left, offline meanwhile. ' +
-        (ren ? 'Reopens with rent +15%, more of it let, and in New condition.' : 'Reopens as ' + esc(p.targetSector || 'a new use') + '.') + '</div></div></div>');
+        (ren ? 'Reopens in New condition, with higher rent.' : 'Reopens as ' + esc(p.targetSector || 'a new use') + '.') + '</div></div></div>');
     });
     // round 38: everything in motion: tenants signing on incentives, rents stepping up, this year's lease-ups
     (G.portfolio || []).forEach(p => (p.lease ? p.lease.positions : []).filter(x => x.vacant && x.incent).forEach(x => {

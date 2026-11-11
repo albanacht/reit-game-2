@@ -52,10 +52,10 @@ window.Staff = (function() {
     cfo: {
       id:        "cfo",
       title:     "Chief Financial Officer",
-      blurb:     "Unlocks unsecured notes and the bond covenant amendment; can find a private placement in a squeeze.",
+      blurb:     "Unlocks unsecured notes, the bond covenant amendment, and a rescue facility if a big tenant fails.",
       salaryMin: 0.3,
       salaryMax: 0.6,
-      unlocks:   "Unsecured notes + covenant amendment + private placement",
+      unlocks:   "Unsecured notes + covenant amendment + rescue facility in a squeeze",
       candidateNames: ["Margaret Liu", "David Stern", "Aisha Rahman", "Peter Novak"],
       hints: [
         "Former treasury head at a large REIT.",
