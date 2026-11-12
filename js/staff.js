@@ -52,10 +52,10 @@ window.Staff = (function() {
     cfo: {
       id:        "cfo",
       title:     "Chief Financial Officer",
-      blurb:     "Unlocks unsecured notes, the bond covenant amendment, and a rescue facility if a big tenant fails.",
+      blurb:     "Unlocks unsecured notes and the bond covenant amendment. In a crisis: rent deferrals for struggling shops and offices, and once a game a government loan if we qualify.",
       salaryMin: 0.3,
       salaryMax: 0.6,
-      unlocks:   "Unsecured notes + covenant amendment + rescue facility in a squeeze",
+      unlocks:   "Unsecured notes + covenant amendment + better odds with the bank. In a crisis: rent deferrals, and a government loan if debt is 55–65% of assets. Not a bailout: borrow past that and no CFO can help.",
       candidateNames: ["Margaret Liu", "David Stern", "Aisha Rahman", "Peter Novak"],
       hints: [
         "Former treasury head at a large REIT.",

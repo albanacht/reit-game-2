@@ -466,6 +466,7 @@ window.Inbox = (() => {
     heldItems().forEach(i => rows.push({ tone: 'warn', k: 'On hold: ' + i.title, v: qs(i.until - now) }));
     if (window.Story && Story.clockRows) Story.clockRows().forEach(r => rows.push(r));
     if (window.IndexFund) IndexFund.clockRows().forEach(r => rows.push(r));
+    if (window.CfoAid) CfoAid.clockRows().forEach(r => rows.push(r));   // round 45
     // the credit line (revolver.js)
     if (window.Revolver && G.revolver) Revolver.clockRows().forEach(r => rows.push(r));
     // two strikes (round 4)

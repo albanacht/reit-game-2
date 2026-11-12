@@ -32,7 +32,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   // the stewardship visit, with a pill and Tex
   const v = await pg.evaluate(() => {
     War.debug({ pillUntil: 999 }); Directors.addDirector('tex', 6, 'test');
-    const items = IndexFund.agenda(7, []);
+    const items = IndexFund.agenda(7, []).map(i => typeof i.lines === 'function' ? Object.assign({}, i, { lines: i.lines() }) : i);   // round 45: Dahl's opening is counted when he speaks
     const out = { n: items.length, lines: items.map(i => JSON.stringify(i.lines).slice(0, 90)) };
     const pill = items.find(i => /poison pills/.test(JSON.stringify(i.lines))), tex = items.find(i => /Brennan/.test(JSON.stringify(i.lines)));
     out.pill = pill ? __pick(pill, /Keep it/) : null; out.tex = tex ? __pick(tex, /Keep Tex/) : null;

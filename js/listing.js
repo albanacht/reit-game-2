@@ -142,7 +142,7 @@ window.IndexFund = (() => {
     // every year: directors Granite is voting against
     (x.targets || []).forEach(tg => {
       if (!has(tg.id) || tg.year === year) return; tg.year = year;
-      items.push({ lines: [['note', 'Granite voted its 15% against ' + Directors.name(tg.id).replace(/^(Chairman|Chair|Director) /, '') + ' at the shareholders’ meeting (' + tg.why + ').']],
+      items.push({ when: () => has(tg.id), lines: [['note', 'Granite voted its 15% against ' + Directors.name(tg.id).replace(/^(Chairman|Chair|Director) /, '') + ' at the shareholders’ meeting (' + tg.why + ').']],
         effect: () => { if (window.Directors) Directors.repChange(tg.id, -10, 'Granite votes against: ' + tg.why); return Directors.name(tg.id) + '’s reputation −10 (now ' + Directors.rep(tg.id) + ').'; } });
     });
     if (x.visited) return items;
@@ -152,7 +152,9 @@ window.IndexFund = (() => {
     if (window.War && War.W().pillUntil && War.W().pillUntil > now) asks.push('pill');
     if (GameState.board.chair === 'you') asks.push('chair');
     if (has('tex')) asks.push('tex');
-    items.push({ guest: DAHL, lines: [['guest', 'Thank you for having me. Granite now owns about 15% of this company through our index funds, and we cannot sell. So we vote. ' + (asks.length ? 'I have ' + asks.length + ' request' + (asks.length > 1 ? 's' : '') + ', and one announcement.' : 'Just one announcement.')]] });
+    /* round 45: counted when he speaks, not when the agenda is written (Tex may have left by then) */
+    items.push({ guest: DAHL, lines: () => { const n = asks.filter(a => a !== 'tex' || has('tex')).length;
+      return [['guest', 'Thank you for having me. Granite now owns about 15% of this company through our index funds, and we cannot sell. So we vote. ' + (n ? 'I have ' + n + ' request' + (n > 1 ? 's' : '') + ', and one announcement.' : 'Just one announcement.')]]; } });
     const refuse = (id, why, msg) => { x.targets.push({ id, why, year: null }); return msg; };
     if (asks.indexOf('pill') > -1) items.push({ guest: DAHL, lines: [['guest', 'Your shareholder rights plan. We vote against poison pills everywhere. Please drop it.'], ['petrova', 'I said so when we adopted it.']],
       choices: [
@@ -164,7 +166,7 @@ window.IndexFund = (() => {
         { label: 'Step down as chairman', detail: (has('petrova') ? 'Petrova' : 'The lead director') + ' takes the chair (red line: ' + (Directors.CHAIR_RED.petrova ? Directors.CHAIR_RED.petrova.text : 'none') + ').', go: () => { GameState.board.chair = has('petrova') ? 'petrova' : Directors.chair(); Directors.logBoard('The CEO gave up the chair; ' + Directors.name(GameState.board.chair) + ' took it.'); x.asks.chair = 'agreed'; return Directors.name(GameState.board.chair) + ' is the new chair.'; } },
         { label: 'Stay chairman', detail: 'Granite votes against Petrova, the lead director, every year (reputation −10 a year) for not stopping it.', go: () => { x.asks.chair = 'refused'; return refuse(lead('petrova', Directors.chair()), 'an executive chairman', 'Mr Dahl closed his folder.'); } },
       ] });
-    if (asks.indexOf('tex') > -1) items.push({ guest: DAHL, lines: [['guest', 'Mr Brennan. A friend of the CEO from a Dallas deal, on the committee that votes on the CEO’s pay. We ask that he step down.'], ['tex', 'Well, I never.']],
+    if (asks.indexOf('tex') > -1) items.push({ when: () => has('tex'), guest: DAHL, lines: [['guest', 'Mr Brennan. A friend of the CEO from a Dallas deal, on the committee that votes on the CEO’s pay. We ask that he step down.'], ['tex', 'Well, I never.']],
       choices: [
         { label: 'Ask Tex to step down', detail: 'Tex leaves the board (no more term renewals to pay for). Petrova +1.', go: () => { Directors.removeDirector('tex', 'Tex Brennan stepped down at Granite’s request.'); remember('petrova', 1, 'Tex left'); x.asks.tex = 'agreed'; return 'Tex shook your hand. "No hard feelings, partner. Mostly."'; } },
         { label: 'Keep Tex', detail: 'Granite votes against Tex every year: reputation −10 a year. Below 30, he is out anyway.', go: () => { x.asks.tex = 'refused'; return refuse('tex', 'a friend of the CEO', '"They can vote all they like," said Tex.'); } },

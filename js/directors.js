@@ -410,8 +410,11 @@ window.Directors = (() => {
       const before = live ? d.attitude : (b.prev[d.id] != null ? b.prev[d.id] : a);
       d._trend = fmt(a - before); d.attitude = a; d._shown = a;
       // the cause shown: the biggest thing pushing in the direction of the mood
-      const j = parts[d.id].slice().sort((x, y) => a < 5 ? x.pts - y.pts : y.pts - x.pts);
-      const mem = memories(d.id)[0];
+      /* round 45: the cause must point the same way as the mood. Boss Alex: Chen, unhappy,
+         complained about "you hit back at Kessler", which was his own advice (a +1 memory). */
+      const down = a < 5, same = v => down ? v < 0 : v > 0;
+      const j = parts[d.id].filter(x => same(x.pts)).sort((x, y) => down ? x.pts - y.pts : y.pts - x.pts);
+      const mem = memories(d.id).filter(e => same(e.d))[0];
       b.causeKind = b.causeKind || {};   // round 43: a number on the scorecard, or something you did
       b.causeKind[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? 'metric' : (mem && Math.abs(mem.d) >= 0.5 ? 'memory' : 'metric');
       b.causes[d.id] = (j[0] && Math.abs(j[0].pts) >= 0.5) ? (j[0].pts < 0 && shockOn() ? 'not your fault, ' + shockOn() + ', but ' + j[0].why : j[0].why)

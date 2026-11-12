@@ -1199,12 +1199,13 @@ window.Story = (() => {
     try { if (window.Deals) Deals.processQuarter(out); } catch (e) { if (window.console) console.warn('deals', e); }   // round 22
     try { if (window.PR) PR.processQuarter(out); } catch (e) { if (window.console) console.warn('pr', e); }
     try { if (window.Crisis) Crisis.processQuarter(out); } catch (e) { if (window.console) console.warn('crisis', e); }   // round 38
+    try { if (window.CfoAid) CfoAid.processQuarter(out); } catch (e) { if (window.console) console.warn('cfoaid', e); }   // round 45
     try { if (window.Lessons) Lessons.processQuarter(out); } catch (e) { if (window.console) console.warn('lessons', e); }   // round 43
     try { if (window.Pay) Pay.quarter(); } catch (e) { if (window.console) console.warn('pay', e); }
     return out;
   }
   function dueCard() { return S().due; }
-  function otherAssets() { const L = S().harlow && S().harlow.loan; return (L ? fmt(L.amt - (L.prov || 0)) : 0) + otherStake(); }   // round 35: and the Harlow stake
+  function otherAssets() { const L = S().harlow && S().harlow.loan; return (L ? fmt(L.amt - (L.prov || 0)) : 0) + otherStake() + (window.CfoAid ? CfoAid.owed() : 0); }   // round 35: and the Harlow stake; round 45: deferred rent
 
   /* "On the clock" lines (inbox). */
   function clockRows() {

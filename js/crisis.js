@@ -83,7 +83,7 @@ window.Crisis = (() => {
     if (!e || pr == null || div() <= 0) return false;
     return pr * e.from / div() <= 1.0;
   }
-  const frozen = () => !!(window.Revolver && Revolver.dividendFrozen && Revolver.dividendFrozen());
+  const frozen = () => !!(window.Revolver && Revolver.dividendFrozen && Revolver.dividendFrozen()) || !!(window.CfoAid && CfoAid.strings());   // round 45: or the government loan
   function agenda(year, items) {
     const G = GameState, e = G._eCut;
     if (!e || e.restored || inCrisis() || !has('williams')) return;

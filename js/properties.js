@@ -567,6 +567,7 @@ window.Properties = (() => {
   function crisisDrop(p) {
     if (typeof Arc === "undefined" || !Arc.phase) return 0;
     const ph = Arc.phase(); if (ph !== "crisis" && ph !== "aftershock") return 0;
+    if (typeof CfoAid !== "undefined" && CfoAid.holds(p)) return 0;   // round 45: we deferred their rent, the tenants stay
     const a = GameState.arc || {}, sev = ph === "aftershock" ? (a.afterSev || 0.4) / (a.sev || 0.8) : 1;
     const v = Arc.liveVariant ? Arc.liveVariant() : a.variant;
     const base = { office: 0.08, retail: 0.08, industrial: 0.05, multifamily: 0.04 }[p.sector] || 0.06;

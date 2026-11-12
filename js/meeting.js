@@ -361,11 +361,13 @@ window.Meeting = (() => {
   function runItems(list, i, done) {
     if (!list || i >= list.length) { S.guest = null; portraits(); done(); return; }
     const it = list[i];
+    // round 45: the agenda is written when the meeting opens; skip what no longer applies (Tex left earlier in this meeting)
+    if (it.when && !it.when()) { runItems(list, i + 1, done); return; }
     S.guest = it.guest || null; portraits();
-    (it.lines || []).forEach(l => { if (l[0] === 'note' || l[0] === 'guest' || dir(l[0])) say(l[0], l[1]); });
+    ((typeof it.lines === 'function' ? it.lines() : it.lines) || []).forEach(l => { if (l[0] === 'note' || l[0] === 'guest' || dir(l[0])) say(l[0], l[1]); });
     if (it.note) say('note', it.note);
     // round 32: a breath between items. Round 38: not before an announcement (no talk, no choice), it just follows.
-    const nx = list[i + 1], quiet = nx && nx.effect && !(nx.lines || []).length && !nx.guest;
+    const nx = list[i + 1], quiet = nx && nx.effect && !(typeof nx.lines === 'function' || (nx.lines || []).length) && !nx.guest;
     const next = () => { S.guest = null; portraits(); pump(() => (nx && !quiet ? pause(() => runItems(list, i + 1, done)) : runItems(list, i + 1, done))); };
     if (it.effect) { pump(() => { const msg = it.effect(); if (msg) say('note', msg); Directors.refresh(); next(); }); return; }
     if (it.choices) {

@@ -874,7 +874,7 @@ window.Financials = (() => {
   function getCallInfo(trancheId) {
     const tranche = GameState.debtTranches.find(t => t.id === trancheId);
     if (!tranche) return null;
-    const premium = fmt(tranche.amount * CALL_PREMIUM_PCT);
+    const premium = tranche.gov ? 0 : fmt(tranche.amount * CALL_PREMIUM_PCT);   // round 45: the government loan repays at par
     return {
       principal: fmt(tranche.amount),
       premium:   premium,
@@ -888,7 +888,7 @@ window.Financials = (() => {
     if (!tranche) return { success: false, message: "Tranche not found." };
 
     // Call premium per indenture: 2.5% of principal
-    const premium   = fmt(tranche.amount * CALL_PREMIUM_PCT);
+    const premium   = tranche.gov ? 0 : fmt(tranche.amount * CALL_PREMIUM_PCT);   // round 45
     const totalCost = fmt(tranche.amount + premium);
 
     if (((typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash) < totalCost) {
@@ -1230,6 +1230,9 @@ window.Financials = (() => {
     if (typeof Revolver !== "undefined" && Revolver.dividendFrozen() &&
         newDividendPerShare > GameState.company.dividendPerShare + 0.0001) {
       return { success: false, message: "Your bank has frozen dividend increases (a condition of your credit line). You can hold or cut it." };
+    }
+    if (typeof CfoAid !== "undefined" && CfoAid.strings() && newDividendPerShare > GameState.company.dividendPerShare + 0.0001) {   // round 45
+      return { success: false, message: "The government loan's terms: no dividend increases until it is repaid. You can hold or cut it, or repay the loan early (Debt, Call)." };
     }
     const old = GameState.company.dividendPerShare;
     const change = newDividendPerShare - old;

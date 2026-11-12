@@ -106,12 +106,13 @@ window.Pay = (() => {
     const avg = (b.directors || []).reduce((a, d) => a + d.attitude, 0) / Math.max(1, (b.directors || []).length);
     const approveExtra = extra > 0 && avg >= 4.5;
     const BT = GameState._belt, belt = (BT && (BT.noBonusYear === year || (BT.noBonusYears || []).indexOf(year) > -1)) || GameState._noBonusYear === year;   // round 43: both belt years   // round 34: you suspended all bonuses (levi.js); round 35: or waived yours over Family Groceries
-    const total = belt ? 0 : fmt(B.amount + (approveExtra ? extra : 0));
+    const gov = !belt && !!(window.CfoAid && CfoAid.strings());   // round 45: the government loan's terms
+    const total = belt || gov ? 0 : fmt(B.amount + (approveExtra ? extra : 0));
     const why = 'Target ' + money(pkg().bonus) + ' × ' + B.hit + '% of the scorecard' + (B.beat ? ', +25% for beating the rivals' : '') + (B.probation ? ', halved: you are on probation' : '') +
                 (pend.length ? '. Special recognition: ' + pend.map(p => p.reason + ' (' + money(p.cash) + ')').join('; ') + (approveExtra ? '' : ' (not approved: the board is not content enough)') : '');
     c.pending = [];
-    items.push({ lines: [[chair, 'The pay committee. ' + (belt ? 'No bonuses this year, as you decided when we tightened our belts. Yours included. The board noticed.' : total > 0 ? 'Your bonus for the year is ' + money(total) + '.' : 'There is no bonus this year.')]],
-      note: belt ? 'Suspended: no bonus, no share grant for you, no share grant for the directors this year.' : why,
+    items.push({ lines: [[chair, 'The pay committee. ' + (belt ? 'No bonuses this year, as you decided when we tightened our belts. Yours included. The board noticed.' : gov ? 'No bonus this year: the government loan forbids it until we repay it.' : total > 0 ? 'Your bonus for the year is ' + money(total) + '.' : 'There is no bonus this year.')]],
+      note: belt ? 'Suspended: no bonus, no share grant for you, no share grant for the directors this year.' : gov ? 'Government loan outstanding: ' + why.replace(/^Target/, 'it would have been target') + '. Repay it early (Debt, Call) and next year’s bonus is back.' : why,
       choices: total > 0 ? [
         { label: 'Take the bonus: ' + money(total), detail: 'Into your own account. The company books it as a one-off cost.', primary: true,
           go: () => { c.cash = fmt(c.cash + total); GameState._pendingUnusual = fmt((GameState._pendingUnusual || 0) - total); c.log.push({ y: year, bonus: total, extra: approveExtra ? extra : 0 }); return 'Paid: ' + money(total) + '.'; } },
