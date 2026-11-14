@@ -693,6 +693,12 @@ window.Board = (() => {
       b.politicalCapital = Math.min(b.maxCapital, b.politicalCapital + 1);
       earned.push("A content board, a year of goodwill — +1 political capital");
     }
+    // round 46: a crisis year gives none of the above (no dividend rise, no share price gain). Standing through it earns one.
+    var ph = typeof Arc !== "undefined" && Arc.phase ? Arc.phase() : null;
+    if (!b.probation && (ph === "crisis" || ph === "aftershock")) {
+      b.politicalCapital = Math.min(b.maxCapital, b.politicalCapital + 1);
+      earned.push("You kept the company standing through a crisis year — +1 political capital");
+    }
     var yt = typeof Directors !== "undefined" && Directors.ytd ? Directors.ytd() : null;
     if (yt && yt.you > yt.sector) {
       b.politicalCapital = Math.min(b.maxCapital, b.politicalCapital + 1);

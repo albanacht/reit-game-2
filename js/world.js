@@ -1301,7 +1301,7 @@ window.World = (() => {
           from: cfo ? cfo.name + ", CFO" : "Jenkins, Chief of Staff", face: cfo ? "assets/staff/" + cfo.portrait : "assets/faces/jenkins.jpg",
           body: `${who}: "The bank reviewed us: ${why}${T.crunch && T.worse.length ? ", and markets are in crisis" : ""}. They will renew the ${money(r.limit)} line only on these terms: ` +
                 `the line cut by ${Math.round(T.cut * 100)}%, the rate up ${T.spread.toFixed(2)}%, and ` +
-                T.conds.map(c => Revolver.COND[c.id].text(c)).join("; ") + `."<br><br>` +
+                (T.conds.length ? T.conds.map(c => Revolver.COND[c.id].text(c)).join("; ") : "no other conditions") + `."<br><br>` +
                 `<i>The relationship manager who called you "a valued partner" in January is on holiday. His replacement uses the word "exposure" a lot.</i>`,
           choices: [
             { label: "Accept the terms",

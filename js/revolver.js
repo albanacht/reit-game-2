@@ -75,7 +75,18 @@ window.Revolver = (() => {
              test: c => (GameState.ratios.interestCoverage || 0) >= c.target },
   };
   function yq(t) { return (Math.floor((t - 1) / 4) + 1) + ' Q' + ((t - 1) % 4 + 1); }
-  const dividendFrozen = () => { const r = R(); return !!(r && r.conditions.some(c => c.id === 'divfreeze' && tq() < c.until)); };
+  /* round 46 (Boss Alex: he cut debt to 48%, under the bank's 51%, and stayed frozen until the deadline):
+     a condition is lifted the moment it is met, not at its deadline, and the dividend freeze goes
+     with the last of them. Fix the numbers and you are free. */
+  function settle(out) {
+    const r = R(); if (!r || !r.conditions || !r.conditions.length) return;
+    r.conditions = r.conditions.filter(c => { if (c.id === 'divfreeze' || !COND[c.id].test(c)) return true;
+      if (out) out.push({ good: true, text: 'Bank condition met early: ' + COND[c.id].text(c).replace(/ by Y.*/, '') + '. The bank has lifted it.' }); return false; });
+    if (r.conditions.length && r.conditions.every(c => c.id === 'divfreeze')) {
+      r.conditions = []; if (out) out.push({ good: true, text: 'The bank\u2019s dividend freeze has ended: every condition is met.' });
+    }
+  }
+  const dividendFrozen = () => { settle(); const r = R(); return !!(r && r.conditions.some(c => c.id === 'divfreeze' && tq() < c.until)); };
 
   // -- the quarter ------------------------------------------------------------
   /* Runs at the end of runQuarter, after cash has settled. Returns inbox lines. */
@@ -100,6 +111,7 @@ window.Revolver = (() => {
       if (r.limit < before) out.push({ good: false, text: 'Your bank cut the credit line from ' + money(before) + ' to ' + money(r.limit) + '. Every bank is doing it.' });
     }
 
+    settle(out);   // round 46: met early, lifted early
     // conditions that fall due
     r.conditions = r.conditions.filter(c => {
       if (now < c.until) return true;
@@ -191,7 +203,9 @@ window.Revolver = (() => {
       conds.push({ id: 'deleverage', target: Math.max(0.40, Math.round((now.d2a - 0.03) * 100) / 100), until: t + 8 });
     if (worse.indexOf('cover') > -1)
       conds.push({ id: 'cover', target: Math.max(1.75, Math.round(Math.min(now.cover + 0.3, 2.5) * 10) / 10), until: t + 8 });
-    conds.push({ id: 'divfreeze', until: t + 8 });
+    /* round 46 (Boss Alex: "a trap"): the dividend freeze only if YOUR numbers got worse, and for one year, not two.
+       A crisis alone makes the line dearer and smaller; it does not freeze the dividend. */
+    if (worse.length) conds.push({ id: 'divfreeze', until: t + 4 });
     return { worse, crunch, spread: 0.75 + (worse.length > 1 ? 0.5 : 0) + (crunch ? 0.5 : 0), cut: 0.25, conds };
   }
 
@@ -203,7 +217,7 @@ window.Revolver = (() => {
     r.conditions = r.conditions.filter(c => c.id !== 'divfreeze').concat(T.conds);
     r.renewAt = tq() + RENEW_EVERY; r.last = metrics();
     GameState._renewalTerms = null;
-    return 'Renewed: ' + money(r.limit) + ' line, +' + T.spread.toFixed(2) + '% on the rate. Conditions: ' + T.conds.map(c => COND[c.id].text(c)).join('; ') + '.';
+    return 'Renewed: ' + money(r.limit) + ' line, +' + T.spread.toFixed(2) + '% on the rate.' + (T.conds.length ? ' Conditions: ' + T.conds.map(c => COND[c.id].text(c)).join('; ') + '.' : ' No conditions.');
   }
   /* Numbers held up: the player picks the size. Bigger needs the bank's yes. */
   function bigOdds() {
@@ -297,7 +311,7 @@ window.Revolver = (() => {
     return rows;
   }
 
-  return { init, drawn, available, rate, costQ, spendable, processQuarter, acceptTerms, refuseTerms,
+  return { settle, init, drawn, available, rate, costQ, spendable, processQuarter, acceptTerms, refuseTerms,
            acceptOffer, pushBack, bigOdds, pushOdds, sizeFor,
            FAVOUR, canFavour, favourTerms, favourBigger, favourOdds, liftCondition, thaw,
            dividendFrozen, clockRows, COND, yq, FEE };

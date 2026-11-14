@@ -124,7 +124,12 @@ window.Rivals = (() => {
 
       // behaviour
       const V = value(k), lev = d2a(k);
-      if (r.cash < -0.05 * V || lev > S.maxLev + 0.05) {
+      /* round 46 (Boss Alex): Rennick selling buildings is the payoff of the war: we squeeze
+         him, then he has to sell. Until the war reaches that stage he never sells (he borrows
+         to cover a hole, below). After the war is over he behaves like any rival. */
+      const WW = window.War && War.W ? War.W() : null;
+      const holdsOn = k === 'ren' && WW && WW.stage !== 'crisis' && !WW.ending;
+      if (!holdsOn && (r.cash < -0.05 * V || lev > S.maxLev + 0.05)) {
         const p = bldg(k).sort((a, b) => a.occupancy - b.occupancy)[0];
         if (p && bldg(k).length > 2 && window.War && War.blockSale && War.blockSale(k, p, out)) { /* round 13: you talked the buyer out of it */ }
         else if (p && bldg(k).length > 2) { const px = fmt(p.currentValue * 0.88); dispose(k, p, px); move(k, OWN(k).short + ' sold ' + p.name + ' under pressure, for ' + money(px) + '. It is on the market.', 6, out); }
@@ -134,7 +139,7 @@ window.Rivals = (() => {
           r.shares = fmt(r.shares + n); r.cash = fmt(r.cash + raised); r.price = fmt(r.price * 0.85);
           move(k, OWN(k).short + ' sold new shares at a 30% discount to stay afloat (' + money(raised) + ').', 7, out);
         }
-      } else if (rnd() < (crisis ? S.crisisSellP : S.sellP)) {
+      } else if (!holdsOn && rnd() < (crisis ? S.crisisSellP : S.sellP)) {
         const pool = bldg(k).filter(p => !S.wants(p)); const p = (pool.length ? pool : bldg(k)).sort((a, b) => a.currentValue - b.currentValue)[0];
         if (p && bldg(k).length > 2 && window.War && War.blockSale && War.blockSale(k, p, out)) { /* blocked */ }
         else if (p && bldg(k).length > 2) { const px = fmt(p.currentValue); dispose(k, p, px); move(k, OWN(k).short + ' put ' + p.name + ' up for sale (' + money(px) + ').', 2, out); }

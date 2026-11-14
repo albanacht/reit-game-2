@@ -117,6 +117,8 @@ window.Directors = (() => {
 
   // -- what each director is judging ----------------------------------------
   /* Returns [{pts, why}] for one director. Thresholds match the scorecard. */
+  /* round 46: is a dividend rise forbidden right now? (the bank's freeze, or the government loan) */
+  function divBlocked() { return (window.Revolver && GameState.revolver && Revolver.dividendFrozen()) ? 'the bank' : (window.CfoAid && CfoAid.strings()) ? 'the government loan' : ''; }
   function judge(id) {
     const G = GameState, r = G.ratios, out = [], cr = crisis();
     const add = (pts, why) => out.push({ pts, why });
@@ -134,6 +136,7 @@ window.Directors = (() => {
       else if (d1 < d0 - 0.0005 && cutForgiven()) add(-0.5, GameState._eCut && tq() - GameState._eCut.q <= 5 ? 'you halved the dividend in the crisis, with the board\u2019s blessing' : 'you cut the dividend back to what we earn; he accepts it');
       else if ((G.meta.totalQuarters || 0) <= 4) add(0, 'no dividend target until after the first meeting');   // round 17: Year 1 is for learning
       else if (cr && g >= 0) add(0.5, 'you held the dividend through a hard year');
+      else if (divBlocked() && g >= -0.0005) add(0.5, 'you held the dividend: ' + divBlocked() + ' forbids a rise');   // round 46: he cannot blame you for a rise you are not allowed to make
       else if (g >= want) add(2.5, 'dividend up ' + pct(g) + ' in a year (target ' + pct(want) + ')');
       else if (g > 0.005) add(0.5 + 1.5 * g / want, 'dividend up ' + pct(g) + ' in a year, short of the ' + pct(want) + ' target');
       else add(-1.5, 'no dividend rise in a year (target ' + pct(want) + ')');
@@ -522,7 +525,7 @@ window.Directors = (() => {
     const d2a = r.debtToAssets || 0, okT = okaforTarget(), cov = r.interestCoverage, occ = r.occupancyPortfolio;
     rows.push({ id: 'petrova', k: 'Total return, ' + (y ? y.label : 'this year'), v: y ? pct(y.you, 1) : '—', want: y ? (y.bench === 'rivals' ? 'rivals avg ' : 'sector ') + pct(y.sector, 1) : '', ok: y ? y.you >= y.sector - 0.005 : null });
     const y1 = (G.meta.totalQuarters || 0) <= 4;
-    rows.push({ id: 'williams', k: 'Dividend growth, 12 months', v: g == null ? '—' : pct(g, 1), want: y1 ? 'from Year 2' : cr ? 'no cut (crisis)' : '≥ ' + pct(williamsTarget()), ok: g == null || y1 ? null : cr ? g >= 0 : g >= williamsTarget() });
+    rows.push({ id: 'williams', k: 'Dividend growth, 12 months', v: g == null ? '—' : pct(g, 1), want: y1 ? 'from Year 2' : cr ? 'no cut (crisis)' : divBlocked() ? 'no cut (' + divBlocked() + ' forbids a rise)' : '≥ ' + pct(williamsTarget()), ok: g == null || y1 ? null : cr || divBlocked() ? g >= -0.0005 : g >= williamsTarget() });
     const pr = payout();
     if (!y1 && pr != null) { const pv = pr >= 9 ? 'no profit' : Math.round(pr * 100) + '%', pw = '\u2264 ' + Math.round(payLine() * 100) + '%';
       rows.push({ id: 'williams', k: 'Dividend / cash profit, 12 months', v: pv, want: pw, ok: pr <= payLine() });

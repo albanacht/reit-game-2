@@ -55,6 +55,27 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await fresh();
   const s4 = await pg.evaluate(() => { const G = GameState, out = []; for (let i = 0; i < 8; i++) { const r = Financials.runQuarter(); Story.S().due = null; G._pendingDecision = null; (r.firedEvents || []).filter(e => e.isRival).forEach(e => out.push(e.headline)); } return out; });
   ok(s4.length === 0 || s4.every(h => /^◆ Rival news: /.test(h)), 'rivals: ' + (s4[0] || '(no rival moves in 8 quarters)'));
+  // 5. Rennick never sells a building before the war squeezes him; in the war's crisis stage he does
+  const s5 = await pg.evaluate(() => { const run = stage => { localStorage.clear(); UI.newGame(); UI.closeModal(); const G = GameState, A = G.arc; A.warnStart = 1; A.crisisStart = 2; A.crisisEnd = 30; A.afterStart = 999; A.afterEnd = 999;
+      if (stage) War.debug({ stage }); let n = 0;
+      for (let i = 0; i < 16; i++) { G.rivals.ren.debt *= 1.05; const q = Financials.runQuarter(); Story.S().due = null; G._pendingDecision = null; if (stage) War.W().stage = stage;
+        n += (q.firedEvents || []).filter(e => e.isRival && /Rennick (sold|put)/.test(e.headline)).length; if (G.meta.gameOver) break; }
+      return n; }; return { before: run(null), war: run('crisis') }; });
+  ok(s5.before === 0 && s5.war > 0, 'Rennick under heavy debt in a crisis: ' + s5.before + ' sales before the war, ' + s5.war + ' once the war squeezes him');
+  // 6. "the trap": bank conditions are lifted when met; Williams does not punish a rise you may not make
+  await fresh();
+  const s6 = await pg.evaluate(() => { const G = GameState, r = G.revolver; G.meta.totalQuarters = 12; G.meta.year = 4; const t = G.totalQuartersElapsed();
+    const set = () => { r.conditions = [{ id: 'deleverage', target: 0.51, until: t + 6 }, { id: 'divfreeze', until: t + 6 }]; };
+    set(); G.ratios.debtToAssets = 0.55; const held = Revolver.dividendFrozen(), n1 = r.conditions.length;
+    G.meta.totalQuarters = 12; G.meta.year = 4; { const A = G.arc, q = G.totalQuartersElapsed(); A.warnStart = q + 20; A.crisisStart = q + 24; A.crisisEnd = q + 30; A.afterStart = 999; A.afterEnd = 999; }
+    for (let i = 0; i < 6; i++) G.history.push(Object.assign({}, G.history[G.history.length - 1] || {}, { dividendPerShare: G.company.dividendPerShare })); const sg = Situation.get; Situation.get = () => ({ state: 'stable' }); Directors.refresh(); const w1 = Directors.card('williams').cause;
+    const row = Directors.scorecard().find(x => x.id === 'williams' && /Dividend growth/.test(x.k)); Situation.get = sg;
+    G.ratios.debtToAssets = 0.48; const free = Revolver.dividendFrozen(), n2 = r.conditions.length, up = Financials.setDividend(G.company.dividendPerShare * 1.05).success;
+    const T = (() => { G._renewalTerms = null; const A = G.arc, q = G.totalQuartersElapsed(); A.warnStart = q - 2; A.crisisStart = q - 1; A.crisisEnd = q + 8; r.renewAt = q; r.last = { d2a: 0.48, cover: 9, rating: 3 }; G.credit.rating = 'BBB'; Revolver.processQuarter(); return G._renewalTerms; })();
+    return { held, n1, w1, want: row && row.want, okRow: row && row.ok, free, n2, up, crisisOnly: T ? T.conds.map(c => c.id).join(',') : 'no terms' }; });
+  ok(s6.held && s6.n1 === 2 && !/no dividend rise/.test(s6.w1) && /forbids a rise/.test(s6.want || '') && s6.okRow === true, 'debt 55% (bank wants 51%): frozen, and Williams: "' + s6.w1 + '" / scorecard "' + s6.want + '"');
+  ok(!s6.free && s6.n2 === 0 && s6.up, 'debt cut to 48%: the bank lifts both conditions at once, and the dividend can rise');
+  ok(!/divfreeze/.test(s6.crisisOnly), 'a renewal in a crisis with sound numbers: no dividend freeze (conditions: ' + (s6.crisisOnly || 'none') + ')');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 4).join(' / ') : ''));
   await b.close();
 })();

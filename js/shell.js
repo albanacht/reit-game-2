@@ -258,6 +258,7 @@ window.REIT = (() => {
   function creditLine() {
     const box = document.getElementById('rcf-body');
     if (!box || !window.Revolver || !window.GameState || !GameState.revolver) return;
+    if (Revolver.settle) Revolver.settle();   // round 46: conditions already met are lifted
     const R = GameState.revolver, m = v => '$' + v.toFixed(1) + 'M';
     const used = Revolver.drawn(), pct = R.limit ? Math.min(100, used / R.limit * 100) : 0;
     const row = (k, v, cls) => '<div class="rcf-r"><span class="has-tip-k">' + k + '</span><b class="' + (cls || '') + '">' + v + '</b></div>';
