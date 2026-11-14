@@ -30,7 +30,8 @@ window.UI = (function() {
       var btn = document.createElement("button");
       btn.textContent = a.label;
       btn.className = "btn " + (a.style || "btn-secondary");
-      btn.onclick = function() { a.onClick(); closeModal(); };
+      if (a.disabled) { btn.disabled = true; btn.title = a.why || ""; if (a.why) btn.textContent = a.label + " (" + a.why + ")"; }   // round 46: show what can't work, and why
+      btn.onclick = function() { if (a.disabled) return; a.onClick(); closeModal(); };
       el("modal-actions").appendChild(btn);
     });
     var closeBtn = document.createElement("button");
@@ -1968,8 +1969,20 @@ window.UI = (function() {
     var acts = [];
     if (s.short <= 0) acts.push({ label: due.length ? 'Repay and continue' : 'Continue', style: 'btn-primary', onClick: function() { setTimeout(runQuarterAndReport, 0); } });
     else {
-      acts.push({ label: 'Refinance: a new 5-year bond for ' + fmtM(Math.ceil(s.short)) + (rate ? ' at ' + rate.toFixed(2) + '%' : ''), style: 'btn-primary', onClick: function() {
-        var r = Financials.issueDebt(Math.ceil(s.short), 5, false); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
+      /* round 46: offer only what the bond market will actually lend (Boss Alex: the button
+         asked for more than the covenant allowed, failed, and stayed clickable) */
+      var room = Financials.debtRoom ? Financials.debtRoom() : { secured: s.short, unsecured: 0 };
+      var full = (G.debtTranches || []).length >= 12, need = Math.ceil(s.short);
+      var sec = full ? 0 : Math.min(need, Math.floor(room.secured));
+      var cfoOn = typeof Staff !== "undefined" && Staff.hasRole && Staff.hasRole("cfo");
+      var uns = full || !cfoOn || room.secured >= 1 ? 0 : Math.min(need, Math.floor(room.unsecured));
+      var uRate = rate ? rate + (room.premium || 2) : null;
+      acts.push({ label: 'Refinance: a new 5-year bond for ' + fmtM(sec >= 1 ? sec : need) + (rate ? ' at ' + rate.toFixed(2) + '%' : '') + (sec >= 1 && sec < need ? ' (all the covenant allows; still short ' + fmtM(need - sec) + ')' : ''), style: 'btn-primary',
+        disabled: sec < 1, why: full ? 'already 12 bonds, the most allowed' : 'the covenant allows no more secured debt',
+        onClick: function() { var r = Financials.issueDebt(sec, 5, false); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
+      if (sec < need && room.secured < 1) acts.push({ label: 'Unsecured notes for ' + fmtM(uns >= 1 ? uns : need) + (uRate ? ' at ' + uRate.toFixed(2) + '%' : ''),
+        disabled: uns < 1, why: full ? 'already 12 bonds' : !cfoOn ? 'needs a CFO' : 'the unsecured limit is used up too',
+        onClick: function() { var r = Financials.issueDebt(uns, 5, true); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
       if (!eqUsed && nShares <= eqMax) acts.push({ label: 'Sell ' + nShares + 'M new shares (about ' + fmtM(nShares * px * 0.95) + ')', onClick: function() {
         var r = Financials.issueEquity(nShares); renderAll(); setTimeout(function() { showBondPanel(r.message); }, 0); } });
       if (canExt) acts.push({ label: 'Ask the bondholders for one more year (' + fmtM(extList * 0.02) + ' fee, +2% interest)', onClick: function() {

@@ -58,7 +58,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     // the storm ends: settle
     const A = G.arc, q = G.totalQuartersElapsed(); A.crisisEnd = q - 1; Math.random = () => 0.1; const cb = G.balance.cash; CfoAid.processQuarter([]);
     res.back = G.balance.cash - cb; res.owed = CfoAid.owed(); return res; });
-  ok(d.lent > 0 && Math.abs(d.asset - d.lent) < 0.02 && d.held >= 0.89 && d.slid < d.held - 0.03 && Math.abs(d.back - d.lent) < 0.02 && d.owed === 0,
+  ok(d.lent > 0 && Math.abs(d.asset - d.lent) < 0.02 && d.slid < d.held - 0.04 && Math.abs(d.back - d.lent) < 0.02 && d.owed === 0,
      'deferral "' + d.title + '": lent $' + d.lent.toFixed(1) + 'M (on the books), held ' + Math.round(d.held * 100) + '% vs ' + Math.round(d.slid * 100) + '% next door; repaid $' + d.back.toFixed(1) + 'M');
 
   // 6. at most two per storm

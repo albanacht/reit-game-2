@@ -1468,7 +1468,7 @@ window.Financials = (() => {
     // 7c. The rivals act: their books, buying, selling, dividends (rivals.js)
     if (typeof Rivals !== "undefined" && GameState.rivals) {
       Rivals.processQuarter().forEach(function (e) {
-        firedEvents.push({ isMacro: false, harmful: false, isRival: true, headline: "\u25c6 " + e.text, body: "", impact: "" });
+        firedEvents.push({ isMacro: false, harmful: false, isRival: true, headline: "\u25c6 Rival news: " + e.text, body: "", impact: "" });   // round 46: Boss Alex read a rival's sale as the Rennick war starting
       });
     }
 

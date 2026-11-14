@@ -56,7 +56,10 @@ window.Revolver = (() => {
     return fmt(d * rate() / 100 / 4 + undrawn * FEE / 100 / 4);
   }
   /* What the player can spend right now: cash plus the unused line. */
-  const spendable = () => fmt(GameState.balance.cash + available());
+  /* round 46: cash below zero IS the line in use, and available() already takes it off.
+     It was cash + available, which counted a draw twice: $17M drawn on a $21M line
+     showed −$14M spendable (truly $4M), and a bond the line could repay defaulted. */
+  const spendable = () => fmt(Math.max(0, GameState.balance.cash) + available());
 
   function metrics() {
     const G = GameState, order = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC'];

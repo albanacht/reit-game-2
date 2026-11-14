@@ -63,7 +63,7 @@ window.CfoAid = (() => {
   function bankTight(due) {
     const R = window.Revolver && GameState.revolver ? GameState.revolver : null;
     if (!R) return true;
-    return R.frozen || Revolver.available() < due;
+    return R.frozen || Revolver.spendable() < due;
   }
   function govSize() { return Math.round(clamp((GameState.balance.totalAssets || 300) * 0.05, 15, 40)); }
   function govRate() { return fmt(Math.max(0.5, (GameState.market && GameState.market.baseInterestRate) || 3)); }
