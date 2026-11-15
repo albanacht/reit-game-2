@@ -122,6 +122,7 @@ window.Directors = (() => {
   function judge(id) {
     const G = GameState, r = G.ratios, out = [], cr = crisis();
     const add = (pts, why) => out.push({ pts, why });
+    const econ = !!(window.Arc && Arc.phase && Arc.phase() === 'crisis');
     if (id === 'williams') {
       const d0 = ago(4, 'dividendPerShare') != null ? ago(4, 'dividendPerShare') : (G.board.startYearDividend || G.company.dividendPerShare);
       const d1 = G.company.dividendPerShare, g = d0 > 0 ? d1 / d0 - 1 : 0, want = williamsTarget();
@@ -135,10 +136,11 @@ window.Directors = (() => {
       }
       else if (d1 < d0 - 0.0005 && cutForgiven()) add(-0.5, GameState._eCut && tq() - GameState._eCut.q <= 5 ? 'you halved the dividend in the crisis, with the board\u2019s blessing' : 'you cut the dividend back to what we earn; he accepts it');
       else if ((G.meta.totalQuarters || 0) <= 4) add(0, 'no dividend target until after the first meeting');   // round 17: Year 1 is for learning
-      else if (cr && g >= 0) add(0.5, 'you held the dividend through a hard year');
+      else if (econ && g >= 0) add(0.5, 'you held the dividend through a hard year');   // round 46: only when the ECONOMY is in crisis (it also fired when the company alone was under strain, in a calm market)
       else if (divBlocked() && g >= -0.0005) add(0.5, 'you held the dividend: ' + divBlocked() + ' forbids a rise');   // round 46: he cannot blame you for a rise you are not allowed to make
       else if (g >= want) add(2.5, 'dividend up ' + pct(g) + ' in a year (target ' + pct(want) + ')');
       else if (g > 0.005) add(0.5 + 1.5 * g / want, 'dividend up ' + pct(g) + ' in a year, short of the ' + pct(want) + ' target');
+      else if (cr && g >= -0.0005) add(-0.5, 'no dividend rise this year; he is giving you time while the company is under strain');   // round 46: our own trouble: no praise, a little patience
       else add(-1.5, 'no dividend rise in a year (target ' + pct(want) + ')');
     }
     if (id === 'petrova') {
@@ -518,6 +520,7 @@ window.Directors = (() => {
   // -- the scorecard: what each director is judging, visible all year -------
   function scorecard() {
     const G = GameState, r = G.ratios, rows = [], cr = crisis(), y = ytd();
+    const econ = !!(window.Arc && Arc.phase && Arc.phase() === 'crisis');
     // same base as the Chairman's judgement: 12 months ago, or the start of the year
     const d0 = ago(4, 'dividendPerShare') != null ? ago(4, 'dividendPerShare') : (G.board.startYearDividend || null),
           d1 = G.company.dividendPerShare, g = d0 > 0 && H().length ? d1 / d0 - 1 : null;
@@ -525,7 +528,7 @@ window.Directors = (() => {
     const d2a = r.debtToAssets || 0, okT = okaforTarget(), cov = r.interestCoverage, occ = r.occupancyPortfolio;
     rows.push({ id: 'petrova', k: 'Total return, ' + (y ? y.label : 'this year'), v: y ? pct(y.you, 1) : '—', want: y ? (y.bench === 'rivals' ? 'rivals avg ' : 'sector ') + pct(y.sector, 1) : '', ok: y ? y.you >= y.sector - 0.005 : null });
     const y1 = (G.meta.totalQuarters || 0) <= 4;
-    rows.push({ id: 'williams', k: 'Dividend growth, 12 months', v: g == null ? '—' : pct(g, 1), want: y1 ? 'from Year 2' : cr ? 'no cut (crisis)' : divBlocked() ? 'no cut (' + divBlocked() + ' forbids a rise)' : '≥ ' + pct(williamsTarget()), ok: g == null || y1 ? null : cr || divBlocked() ? g >= -0.0005 : g >= williamsTarget() });
+    rows.push({ id: 'williams', k: 'Dividend growth, 12 months', v: g == null ? '—' : pct(g, 1), want: y1 ? 'from Year 2' : econ ? 'no cut (crisis)' : divBlocked() ? 'no cut (' + divBlocked() + ' forbids a rise)' : '≥ ' + pct(williamsTarget()), ok: g == null || y1 ? null : econ || divBlocked() ? g >= -0.0005 : g >= williamsTarget() });
     const pr = payout();
     if (!y1 && pr != null) { const pv = pr >= 9 ? 'no profit' : Math.round(pr * 100) + '%', pw = '\u2264 ' + Math.round(payLine() * 100) + '%';
       rows.push({ id: 'williams', k: 'Dividend / cash profit, 12 months', v: pv, want: pw, ok: pr <= payLine() });

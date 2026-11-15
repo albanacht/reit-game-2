@@ -325,7 +325,7 @@ window.UI = (function() {
     var countEl = el("debt-tranche-count");
     if (countEl) {
       var c = GameState.debtTranches.length;
-      countEl.textContent = c + "/10 tranches";
+      countEl.textContent = c + "/12 bonds";
       countEl.className = c >= 9 ? "text-red" : c >= 7 ? "text-yellow" : "text-green";
     }
   }
@@ -488,9 +488,10 @@ window.UI = (function() {
     });
     if (soon.length === 0) return null;
     var totalDue = soon.reduce(function(sum, t) { return sum + t.amount; }, 0);
-    if (GameState.balance.cash >= totalDue) return null;
-    var shortfall = fmt(totalDue - GameState.balance.cash);
-    var q = soon[0].quartersUntilMaturity;
+    var have = (typeof Revolver !== "undefined" && GameState.revolver) ? Revolver.spendable() : GameState.balance.cash;
+    if (have >= totalDue) return null;
+    var shortfall = fmt(totalDue - have);
+    var q = Math.max.apply(null, soon.map(function(t) { return t.quartersUntilMaturity; }));   // round 46: the furthest of them ("within 1 quarter" was wrong when one was 2 away)
     return "$" + fmt(totalDue) + "M of debt matures within " + q + " quarter" + (q === 1 ? "" : "s") +
            " and we're $" + shortfall + "M short. Issue debt now while our rating holds, or sell an asset before we're forced to at fire-sale prices.";
   }

@@ -1186,6 +1186,7 @@ window.Story = (() => {
     const out = [];
     if (!window.GameState || !GameState.meta || GameState.meta.gameOver) return out;
     GameState.pnl.loanInterest = 0;
+    try { if (window.Sales) Sales.processQuarter(); } catch (e) { if (window.console) console.warn('sales', e); }   // round 46: buyers first, so other cards cannot crowd them out
     try { harlowQuarter(out); } catch (e) { if (window.console) console.warn('story', e); }
     try { esgQuarter(); brennanQuarter(out); texPayQuarter(out); nudges(); } catch (e) { if (window.console) console.warn('story', e); }
     try { if (window.War) War.processQuarter(out); } catch (e) { if (window.console) console.warn('war', e); }
@@ -1195,7 +1196,6 @@ window.Story = (() => {
     try { if (window.Levi) Levi.processQuarter(out); } catch (e) { if (window.console) console.warn('levi', e); }
     try { if (window.Mayor) Mayor.processQuarter(out); } catch (e) { if (window.console) console.warn('mayor', e); }   // round 33
     try { if (window.IndexFund) IndexFund.processQuarter(out); } catch (e) { if (window.console) console.warn('index', e); }
-    try { if (window.Sales) Sales.processQuarter(); } catch (e) { if (window.console) console.warn('sales', e); }
     try { if (window.Deals) Deals.processQuarter(out); } catch (e) { if (window.console) console.warn('deals', e); }   // round 22
     try { if (window.PR) PR.processQuarter(out); } catch (e) { if (window.console) console.warn('pr', e); }
     try { if (window.Crisis) Crisis.processQuarter(out); } catch (e) { if (window.console) console.warn('crisis', e); }   // round 38

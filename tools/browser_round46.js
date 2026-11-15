@@ -76,6 +76,19 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   ok(s6.held && s6.n1 === 2 && !/no dividend rise/.test(s6.w1) && /forbids a rise/.test(s6.want || '') && s6.okRow === true, 'debt 55% (bank wants 51%): frozen, and Williams: "' + s6.w1 + '" / scorecard "' + s6.want + '"');
   ok(!s6.free && s6.n2 === 0 && s6.up, 'debt cut to 48%: the bank lifts both conditions at once, and the dividend can rise');
   ok(!/divfreeze/.test(s6.crisisOnly), 'a renewal in a crisis with sound numbers: no dividend freeze (conditions: ' + (s6.crisisOnly || 'none') + ')');
+  // 7. listed buildings get buyers even when another card is waiting every quarter; the asking price follows the value
+  await fresh();
+  const s7 = await pg.evaluate(() => { const G = GameState, p = G.portfolio[0], t = Tower.T(); G.debtTranches.forEach(x => { x.maturityYear += 12; });
+    Sales.list(p.id, 'value'); const ask0 = p.listing.ask; p.currentValue = Math.round(p.currentValue * 0.9 * 10) / 10; p.baseValue = p.currentValue;
+    let offers = 0, asks = [], odds = [];
+    for (let i = 0; i < 12 && p.listing; i++) { Story.S().due = 'tower_plot_fake'; Story.S().due = null; G._pendingDecision = null;
+      Financials.runQuarter(); asks.push(p.listing ? p.listing.ask / p.currentValue : 1); odds.push(Sales.offerOdds(p));
+      if (Story.S().due === 'sale_offer') { offers++; Story.S().due = null; Story.S().saleOffer = null; } else Story.S().due = null; }
+    // the lot, postponed: asked again a year later, not next quarter
+    t.stage = 'plot'; t.size = 'small'; t.plotQ = G.totalQuartersElapsed(); const card = World.DECISIONS.find(x => x.id === 'tower_plot').build(); const ch = card.choices[card.choices.length - 1]; ch.apply();
+    return { ask0, ratio: Math.max.apply(null, asks), minOdds: Math.min.apply(null, odds), offers, label: ch.label, wait: t.plotQ - G.totalQuartersElapsed() }; });
+  ok(s7.ratio < 1.06 && s7.minOdds >= 0.17 && s7.offers >= 1, 'a listed building after a 10% fall in value: asking price follows the value, odds never below ' + Math.round(s7.minOdds * 100) + '%, ' + s7.offers + ' offer(s) in 12 quarters');
+  ok(/Not this year/.test(s7.label) && s7.wait === 4, 'the tower lot: "' + s7.label + '" comes back in ' + s7.wait + ' quarters');
   ok(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 4).join(' / ') : ''));
   await b.close();
 })();

@@ -92,6 +92,9 @@ window.Mayor = (() => {
       if (port().mayorLost) { m.stage = 'none'; note('Frank is gone: no story.'); return; }
       if (s.due && !(Story.lowDue && Story.lowDue())) return;
       if (!(rnd() < 0.5 || G.meta.quarter >= 3 || G.meta.year === 13)) return;
+      // round 46: while the tower is agreed but not started (the lot not bought yet), Frank waits for it; from Year 13 Q3 he takes any office
+      const ts = window.Tower ? Tower.T().stage : '';
+      if ((ts === 'task' || ts === 'plot' || ts === 'finance') && !(G.meta.year === 13 && G.meta.quarter >= 3)) return;
       const T = target(); if (!T) { if (G.meta.year === 13 && G.meta.quarter === 4) m.stage = 'none'; return; }
       Object.assign(m, { stage: 'offer', bld: T.p.id, pre: T.pre }); s.due = 'mayor_offer';
       return;

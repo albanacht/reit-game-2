@@ -56,7 +56,13 @@ window.Sales = (() => {
 
   function processQuarter() {
     const s = S(), now = tq();
-    if (s.due) return;
+    /* round 46 (Boss Alex: two buildings listed, 42% a quarter, nobody came):
+       1. the asking price follows the building's value (it stayed where it was listed while values
+          fell, so "at value" quietly became "above value" and the real odds fell to 5%);
+       2. buyers are rolled FIRST each quarter (story.js) and may push aside a minor card; before,
+          any other card waiting in the inbox (the tower lot, every quarter) meant no buyer came. */
+    (GameState.portfolio || []).forEach(p => { if (p.listing) p.listing.ask = fmt(p.currentValue * (MODES[p.listing.mode] || 1)); });
+    if (s.due && !(window.Story && Story.lowDue && Story.lowDue())) return;
     const listed = (GameState.portfolio || []).filter(p => p.listing && now > p.listing.since);
     for (const p of listed) {
       if (rnd() >= offerOdds(p)) continue;

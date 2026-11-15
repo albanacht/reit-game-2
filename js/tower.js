@@ -383,8 +383,8 @@ window.Tower = (() => {
               apply() { buyLot(price); return 'The Fifth Street lot is ours. Sebastian posed with the gold shovel.'; } },
             ...(war ? [{ label: 'Make the land office "lose" Kessler’s bid: ' + money(P.plot) + ' (1 political capital)', detail: 'Tex or Chen makes a call.', costType: 'capital', cost: 1, check: () => spendable() >= P.plot && cap() >= 1, checkMsg: 'Needs 1 political capital and the cash',
               apply() { spendPC(1); buyLot(P.plot); if (window.War) War.W().log.push({ q: tq(), t: 'Beat Kessler to the Fifth Street lot.' }); return 'Kessler’s bid arrived "after the deadline". The lot is ours.'; } }] : []),
-            { label: 'Not this quarter', detail: 'The lot waits for the next auction. Williams −0.5.',
-              apply() { t.plotQ = tq() + 1; remember('williams', -0.5, 'you delayed his tower'); return 'Postponed. Williams asked twice why.'; } },
+            { label: 'Not this year', detail: 'The lot waits for next year’s auction. Williams −0.5.',   /* round 46: it came back every quarter and crowded out every other card */
+              apply() { t.plotQ = tq() + 4; remember('williams', -0.5, 'you delayed his tower'); return 'Postponed. Williams asked twice why.'; } },
           ] };
       } },
     { id: 'tower_finance', system: true, story: true,

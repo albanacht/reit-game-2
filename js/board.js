@@ -133,7 +133,7 @@ window.Board = (() => {
     petrova: [
       { id: "share_price",  text: () => `Share price must not fall below current level.`,          metric: "sharePriceHeld",      target: () => 1,               higher: true  },
       { id: "no_equity",    text: () => `No equity issuance this year — shareholders hate dilution.`, metric: "noEquityIssued",   target: () => 1,               higher: true  },
-      { id: "price_growth", text: (t) => `Grow the share price by at least ${t}% this year.`,       metric: "sharePriceGrowthPct", target: (y) => Math.min(8, 3 + y), higher: true  },
+      { id: "price_growth", text: (t) => `Grow the share price by at least ${t}% this year.`,       metric: "sharePriceGrowthPct", target: (y) => Math.min(6, 3 + y), higher: true  },
     ],
     hassan: [
       { id: "occupancy",    text: (t) => `Portfolio occupancy must exceed ${t}%.`,                metric: "occupancyPortfolio",  target: (y) => 0.86,           higher: true  },
@@ -395,7 +395,7 @@ window.Board = (() => {
         if (pnav < 0.70) return mk(id, "pet_buyback", function(t) { return "Buy back at least " + t + "% of our shares this year. We trade at " + Math.round(pnav * 100) + "% of NAV."; }, "buybackPct", 2, true);
         if (pnav > 1.10) return mk(id, "pet_issue", function(t) { return "We trade above NAV. Sell at least " + t + "% new shares this year and put the money to work."; }, "equityIssuedPct", 5, true);
         if (failing("Total return")) return mk(id, "beat_rivals", "Beat the rivals\u2019 total return this year.", "beatRivals", 1, true);
-        return mk(id, "price_growth", function(t) { return "Grow the share price at least " + t + "% this year."; }, "sharePriceGrowthPct", 8, true);
+        return mk(id, "price_growth", function(t) { return "Grow the share price at least " + t + "% this year."; }, "sharePriceGrowthPct", 6, true);   // round 46: 6% (4% eased). 8% a year on price alone is a lot for a REIT; the dividend comes on top
       case "grace":
         var e = typeof Story !== "undefined" && Story.esgScore ? Story.esgScore() : 0;
         if (e < 60) return mk(id, "moss_score", function(t) { return "Get our ESG score to at least " + t + "."; }, "esgScore", Math.min(60, e + 15), true);
@@ -565,6 +565,7 @@ window.Board = (() => {
     var t = m.target;
     if (m.metric === "esgScore") return t - 10;
     if (COUNT_METRICS[m.metric]) return Math.max(1, t - 1);
+    if (m.metric === "sharePriceGrowthPct") return Math.max(2, t - 2);   // round 46: 6% eases to 4%
     if (SHARE_METRICS[m.metric]) return m.higher ? t - 0.06 : t + 0.06;
     return m.higher ? t * 0.75 : t * 1.12;
   }
